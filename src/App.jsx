@@ -34,6 +34,63 @@ const defaultSettings = {
   lastBackupAt: '',
 };
 
+const exerciseLibrary = [
+  {
+    name: 'Bench Press',
+    category: 'Push',
+    targets: 'Prsne misice, sprednja rama, triceps',
+    primaryTarget: 'Prsa',
+    howTo:
+      'Lopatice potegni nazaj, stopala naj bodo stabilno na tleh, palico spuscas kontrolirano na sredino prsnega kosa in jo potisnes nazaj gor.',
+    cues: 'Komolci naj ne gredo prevec narazen. Zapestja drzi ravno in jedro napeto.',
+  },
+  {
+    name: 'Squat',
+    category: 'Legs',
+    targets: 'Kvadricepsi, zadnja loza, gluteusi, jedro',
+    primaryTarget: 'Noge in gluteusi',
+    howTo:
+      'Stopi v sirino ramen, prsa odpri, spusti se z boki nazaj in dol, dokler drzis stabilen hrbet, potem se eksplozivno dvigni.',
+    cues: 'Kolena naj sledijo smeri prstov. Peta naj ostane na tleh, hrbet pa nevtralen.',
+  },
+  {
+    name: 'Deadlift',
+    category: 'Pull',
+    targets: 'Zadnja loza, gluteusi, spodnji hrbet, trapez',
+    primaryTarget: 'Posterior chain',
+    howTo:
+      'Palica naj bo nad sredino stopala, primitev cvrsta, hrbet raven, potem potisnes tla stran od sebe in palico dvigujes ob telesu.',
+    cues: 'Ne zaokrozuj hrbta. Gib zacni z nogami in boki, ne z vlecenjem z rokami.',
+  },
+  {
+    name: 'Overhead Press',
+    category: 'Push',
+    targets: 'Ramena, triceps, zgornji prsni del, jedro',
+    primaryTarget: 'Ramena',
+    howTo:
+      'Palico ali utezi zacni v visini ramen, stisni jedro in dvigni tezo nad glavo po ravni liniji, nato jo kontrolirano spusti.',
+    cues: 'Rebra naj ne uidejo ven. Glava se umakne nazaj, nato gre pod tezo naprej.',
+  },
+  {
+    name: 'Barbell Row',
+    category: 'Pull',
+    targets: 'Sirsi hrbet, zadnja rama, biceps, srednji hrbet',
+    primaryTarget: 'Hrbet',
+    howTo:
+      'Nagni se naprej z ravnim hrbtom, palico potegni proti spodnjemu delu reber in jo kontrolirano spusti nazaj.',
+    cues: 'Ne zibaj telesa. Komolce vodi nazaj in drzi vrat v nevtralnem polozaju.',
+  },
+  {
+    name: 'Hip Thrust',
+    category: 'Legs',
+    targets: 'Gluteusi, zadnja loza, jedro',
+    primaryTarget: 'Gluteusi',
+    howTo:
+      'Zgornji del hrbta nasloni na klop, stopala postavi stabilno, nato dvigni boke do polne iztegnitve in stisni gluteuse na vrhu.',
+    cues: 'Brada naj bo rahlo proti prsnemu kosu. Gib naj ne prihaja iz kriznega dela hrbta.',
+  },
+];
+
 function loadWorkouts() {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) {
@@ -131,7 +188,7 @@ function App() {
   const [toast, setToast] = useState('');
   const [formData, setFormData] = useState({
     date: new Date().toISOString().slice(0, 10),
-    exercise: '',
+    exercise: exerciseLibrary[0].name,
     weight: '',
     sets: '',
     reps: '',
@@ -317,7 +374,7 @@ function App() {
     setSelectedExercise(workout.exercise);
     setFormData((current) => ({
       ...current,
-      exercise: '',
+      exercise: workout.exercise,
       weight: '',
       sets: '',
       reps: '',
@@ -411,6 +468,13 @@ function App() {
               onClick={() => setActiveSection('history')}
             >
               <span aria-hidden="true">::</span> Zgodovina
+            </button>
+            <button
+              className={`nav-btn ${activeSection === 'exercises' ? 'active' : ''}`}
+              type="button"
+              onClick={() => setActiveSection('exercises')}
+            >
+              <span aria-hidden="true">++</span> Vaje
             </button>
             <button
               className={`nav-btn ${activeSection === 'settings' ? 'active' : ''}`}
@@ -530,14 +594,20 @@ function App() {
                     <div className="form-row">
                       <div className="input-group">
                         <label htmlFor="exercise">Vaja</label>
-                        <input
+                        <select
                           id="exercise"
                           name="exercise"
                           value={formData.exercise}
                           onChange={handleInputChange}
-                          placeholder="Npr. Bench Press"
                           required
-                        />
+                          className="premium-select"
+                        >
+                          {exerciseLibrary.map((exercise) => (
+                            <option key={exercise.name} value={exercise.name}>
+                              {exercise.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
 
                       <div className="input-group">
@@ -718,6 +788,41 @@ function App() {
                       : 'Backup se ni bil ustvarjen.'}
                   </p>
                 </div>
+              </div>
+            </section>
+          ) : null}
+
+          {activeSection === 'exercises' ? (
+            <section className="exercise-section glass-panel fade-in-up">
+              <div className="panel-header">
+                <h3>Knjiznica vaj</h3>
+                <span className="history-count">{exerciseLibrary.length} vaj</span>
+              </div>
+
+              <div className="exercise-grid">
+                {exerciseLibrary.map((exercise) => (
+                  <article className="exercise-card" key={exercise.name}>
+                    <div className="exercise-top">
+                      <div>
+                        <p className="exercise-category">{exercise.category}</p>
+                        <h4>{exercise.name}</h4>
+                      </div>
+                      <span className="exercise-badge">{exercise.primaryTarget}</span>
+                    </div>
+
+                    <div className="exercise-copy">
+                      <p>
+                        <strong>Targeta:</strong> {exercise.targets}
+                      </p>
+                      <p>
+                        <strong>Izvedba:</strong> {exercise.howTo}
+                      </p>
+                      <p>
+                        <strong>Pazi na:</strong> {exercise.cues}
+                      </p>
+                    </div>
+                  </article>
+                ))}
               </div>
             </section>
           ) : null}

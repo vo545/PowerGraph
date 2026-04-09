@@ -228,6 +228,7 @@ p {
 .greeting p {
   color: var(--text-secondary);
   font-size: 15px;
+  max-width: 720px;
 }
 
 .user-actions {
@@ -254,6 +255,22 @@ p {
 .theme-toggle:hover {
   background: var(--bg-glass-hover);
   transform: rotate(15deg);
+}
+
+.topbar-actions {
+  align-items: center;
+}
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .avatar img {
@@ -353,6 +370,20 @@ p {
   padding: 24px;
 }
 
+.section-intro {
+  padding: 22px 24px;
+}
+
+.section-intro h3 {
+  margin-bottom: 8px;
+  font-size: 24px;
+}
+
+.section-intro p:last-child {
+  color: var(--text-secondary);
+  max-width: 760px;
+}
+
 .backup-banner {
   display: flex;
   justify-content: space-between;
@@ -403,6 +434,19 @@ p {
 
 .set-builder {
   min-width: 0;
+}
+
+.helper-card {
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: grid;
+  gap: 4px;
+}
+
+.helper-card p:last-child {
+  color: var(--text-secondary);
 }
 
 .set-list {
@@ -778,6 +822,22 @@ p {
   flex-wrap: wrap;
   color: var(--text-secondary);
   font-weight: 600;
+}
+
+.empty-state {
+  min-height: 220px;
+  border: 1px dashed rgba(148, 163, 184, 0.24);
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 24px;
+  color: var(--text-secondary);
+}
+
+.empty-state h4 {
+  color: var(--text-primary);
+  margin-bottom: 8px;
 }
 
 @keyframes fadeInUp {

@@ -101,6 +101,13 @@ const getExerciseInfo = (exercise) => exerciseInfo[exercise] ?? { sl: exercise, 
 const getExerciseName = (exercise, lang) => getExerciseInfo(exercise)[lang] ?? exercise;
 const getWorkoutStorageKey = (email) => `${WORKOUTS_KEY_PREFIX}${email}`;
 const getSettingsStorageKey = (email) => `${SETTINGS_KEY_PREFIX}${email}`;
+function getUserBadge(email) {
+  const local = (email || '').split('@')[0].trim();
+  if (!local) return 'U';
+  const parts = local.split(/[._-]+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return local.slice(0, Math.min(2, local.length)).toUpperCase();
+}
 
 function sanitizeSettings(input) {
   const safe = { ...defaultSettings };
@@ -201,6 +208,13 @@ export default function App() {
 
   const copy = ui[settings.language];
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
+  const sectionDescriptions = {
+    dashboard: settings.language === 'sl' ? 'Pregled napredka, statistike in hiter vnos novega treninga.' : 'A quick overview of progress, stats, and fast workout logging.',
+    history: settings.language === 'sl' ? 'Preglej pretekle vnose in hitro preveri svoje zadnje treninge.' : 'Review past entries and quickly check your latest sessions.',
+    exercises: settings.language === 'sl' ? 'Knjižnica vaj z opisi izvedbe, targeti in osnovnimi cue-ji.' : 'Exercise library with execution notes, targets, and key cues.',
+    advisor: settings.language === 'sl' ? 'Pameten dnevni predlog na podlagi tvojih preteklih treningov.' : 'A smart daily suggestion based on your recent training history.',
+    settings: settings.language === 'sl' ? 'Uredi lokalne nastavitve, backup in prikaz podatkov.' : 'Adjust local preferences, backups, and data display.',
+  };
   const exerciseOptions = useMemo(() => [...new Set([...Object.values(sections).flat(), ...workouts.map((w) => w.exercise)])].sort(), [workouts]);
   const selectedWorkouts = useMemo(() => workouts.filter((w) => w.exercise === selectedExercise).sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id), [selectedExercise, workouts]);
   const sortedWorkouts = useMemo(() => [...workouts].sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id), [workouts]);
@@ -208,6 +222,7 @@ export default function App() {
   const selectedStats = useMemo(() => selectedWorkouts.reduce((a, w) => ({ workouts: a.workouts + 1, sets: a.sets + getSetCount(w), reps: a.reps + getTotalReps(w), volumeKg: a.volumeKg + getVolume(w), bestKg: Math.max(a.bestKg, w.weight) }), { workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }), [selectedWorkouts]);
   const perExercise = useMemo(() => Object.values(workouts.reduce((map, w) => { const item = map[w.exercise] ?? { name: w.exercise, workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }; item.workouts += 1; item.sets += getSetCount(w); item.reps += getTotalReps(w); item.volumeKg += getVolume(w); item.bestKg = Math.max(item.bestKg, w.weight); map[w.exercise] = item; return map; }, {})).sort((a, b) => b.volumeKg - a.volumeKg), [workouts]);
   const backupDue = useMemo(() => !settings.lastBackupAt || Math.floor((Date.now() - new Date(settings.lastBackupAt).getTime()) / 86400000) >= Number(settings.backupReminderDays), [settings.backupReminderDays, settings.lastBackupAt]);
+  const selectedFormExerciseInfo = getExerciseInfo(formData.exercise);
 
   const advisor = useMemo(() => {
     const latestSectionDate = {};
@@ -385,11 +400,27 @@ export default function App() {
       <aside className="glass-panel sidebar">
         <div className="brand"><div className="logo-icon">P</div><h2>{copy.app}</h2></div>
         <nav className="nav-menu">{nav.map(([id, label]) => <button key={id} className={`nav-btn ${activeSection === id ? 'active' : ''}`} type="button" onClick={() => setActiveSection(id)}>{label}</button>)}</nav>
-        <div className="sidebar-footer"><button className="theme-toggle" type="button" onClick={() => setTheme((c) => (c === 'dark' ? 'light' : 'dark'))}>{theme === 'dark' ? 'L' : 'D'}</button></div>
       </aside>
 
       <main className="main-content">
-        <header className="topbar"><div className="greeting"><h2>{copy.title}</h2><p>{copy.subtitle}</p></div><div className="settings-button-row"><span className="settings-copy">{currentUser}</span><button className="action-btn-outline" type="button" onClick={logout}>{copy.logout}</button></div></header>
+        <header className="topbar">
+          <div className="greeting">
+            <h2>{copy.title}</h2>
+            <p>{copy.subtitle}</p>
+          </div>
+          <div className="settings-button-row topbar-actions">
+            <span className="user-chip">{getUserBadge(currentUser)}</span>
+            <button className="theme-toggle" type="button" onClick={() => setTheme((c) => (c === 'dark' ? 'light' : 'dark'))}>{theme === 'dark' ? 'L' : 'D'}</button>
+            <button className="action-btn-outline" type="button" onClick={logout}>{copy.logout}</button>
+          </div>
+        </header>
+        <section className="glass-panel section-intro fade-in-up">
+          <div>
+            <p className="exercise-category">{nav.find(([id]) => id === activeSection)?.[1]}</p>
+            <h3>{nav.find(([id]) => id === activeSection)?.[1]}</h3>
+            <p>{sectionDescriptions[activeSection]}</p>
+          </div>
+        </section>
         {backupDue && <section className="glass-panel backup-banner fade-in-up"><div><h3>{copy.backupTitle}</h3><p>{copy.backupText}</p></div><button className="action-btn-primary" type="button" onClick={exportData}>{copy.export}</button></section>}
 
         {activeSection === 'dashboard' && <>
@@ -400,7 +431,7 @@ export default function App() {
 
             <section className="glass-panel chart-panel fade-in-up">
               <div className="panel-header"><h3>{copy.chart}</h3><select className="premium-select" value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)}>{exerciseOptions.map((name) => <option key={name} value={name}>{getExerciseName(name, settings.language)}</option>)}</select></div>
-              <div className="chart-container">{selectedWorkouts.length ? <Line data={chartData} options={chartOptions} /> : <p>{copy.noChart}</p>}</div>
+              <div className="chart-container">{selectedWorkouts.length ? <Line data={chartData} options={chartOptions} /> : <div className="empty-state"><h4>{copy.chart}</h4><p>{copy.noChart}</p></div>}</div>
             </section>
 
             <section className="glass-panel action-panel fade-in-up">
@@ -408,6 +439,10 @@ export default function App() {
               <form className="premium-form" onSubmit={saveWorkout}>
                 <div className="input-group"><label htmlFor="date">{copy.date}</label><input id="date" type="date" value={formData.date} onChange={(e) => setFormData((c) => ({ ...c, date: e.target.value }))} /></div>
                 <div className="input-group"><label htmlFor="exercise">{copy.exercise}</label><select id="exercise" className="premium-select" value={formData.exercise} onChange={(e) => setFormData((c) => ({ ...c, exercise: e.target.value }))}>{Object.values(sections).flat().map((name) => <option key={name} value={name}>{getExerciseName(name, settings.language)}</option>)}</select></div>
+                <div className="helper-card">
+                  <p><strong>{sectionNames[findSection(formData.exercise)]}</strong></p>
+                  <p>{localize(selectedFormExerciseInfo.targets, settings.language)}</p>
+                </div>
                 <div className="input-group"><label htmlFor="weight">{copy.weight}</label><input id="weight" type="number" step="0.5" min="0" value={formData.weight} onChange={(e) => setFormData((c) => ({ ...c, weight: e.target.value }))} placeholder={`0 ${settings.units}`} /></div>
                 <div className="input-group set-builder"><label>{copy.repsPerSet}</label><div className="set-list">{formData.setDetails.map((value, index) => <div className="set-row" key={`set-${index + 1}`}><span className="set-label">{copy.sets} {index + 1}</span><input type="number" min="1" step="1" value={value} onChange={(e) => changeSet(index, e.target.value)} /><button className="mini-btn" type="button" onClick={() => removeSet(index)}>-</button></div>)}</div><button className="action-btn-outline add-set-btn" type="button" onClick={addSet}>{copy.addSet}</button></div>
                 <button className="action-btn-primary full-width" type="submit">{copy.save}</button>
@@ -425,7 +460,7 @@ export default function App() {
           </section>
         </>}
 
-        {activeSection === 'history' && <section className="glass-panel history-section fade-in-up"><div className="panel-header"><h3>{copy.recent}</h3><span className="history-count">{sortedWorkouts.length}</span></div><div className="history-list">{sortedWorkouts.length ? sortedWorkouts.map((w) => <article className="history-item" key={w.id}><div><h3>{getExerciseName(w.exercise, settings.language)}</h3><p>{formatDateValue(w.date, settings.dateFormat)}</p></div><div className="history-metrics"><span>{formatWeight(w.weight, settings.units)}</span><span>{getSetCount(w)} {copy.sets.toLowerCase()}</span><span>{formatSetDetails(w)}</span></div></article>) : <p>{copy.noHistory}</p>}</div></section>}
+        {activeSection === 'history' && <section className="glass-panel history-section fade-in-up"><div className="panel-header"><h3>{copy.recent}</h3><span className="history-count">{sortedWorkouts.length}</span></div><div className="history-list">{sortedWorkouts.length ? sortedWorkouts.map((w) => <article className="history-item" key={w.id}><div><h3>{getExerciseName(w.exercise, settings.language)}</h3><p>{formatDateValue(w.date, settings.dateFormat)}</p></div><div className="history-metrics"><span>{formatWeight(w.weight, settings.units)}</span><span>{getSetCount(w)} {copy.sets.toLowerCase()}</span><span>{formatSetDetails(w)}</span></div></article>) : <div className="empty-state"><h4>{copy.recent}</h4><p>{copy.noHistory}</p></div>}</div></section>}
 
         {activeSection === 'exercises' && <section className="glass-panel exercise-section fade-in-up"><div className="panel-header"><h3>{copy.exercises}</h3></div>{Object.entries(sections).map(([section, names]) => <div className="exercise-section-block" key={section}><div className="exercise-section-header"><h4>{sectionNames[section]}</h4><span className="exercise-badge">{names.length}</span></div><div className="exercise-grid">{names.map((name) => { const meta = getExerciseInfo(name); return <article className="exercise-card" key={name}><div className="exercise-top"><div><p className="exercise-category">{sectionNames[section]}</p><h4>{getExerciseName(name, settings.language)}</h4></div><span className="exercise-badge">{localize(meta.primary, settings.language)}</span></div><div className="exercise-copy"><p><strong>{copy.target}:</strong> {localize(meta.targets, settings.language)}</p><p><strong>{copy.primary}:</strong> {localize(meta.primary, settings.language)}</p><p><strong>{copy.howTo}:</strong> {localize(meta.howTo, settings.language)}</p><p><strong>{copy.cues}:</strong> {localize(meta.cues, settings.language)}</p></div></article>; })}</div></div>)}</section>}
 

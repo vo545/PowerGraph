@@ -64,7 +64,7 @@ function loadCalHistory(email) {
   } catch { return []; }
 }
 
-const defaultSettings = { units: 'kg', language: 'sl', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, calorieTrackerMode: 'simple' };
+const defaultSettings = { units: 'kg', language: 'sl', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, calorieTrackerMode: 'simple', geminiKey: '' };
 
 const ui = {
   sl: {
@@ -207,6 +207,10 @@ const ui = {
     calEstHistory: 'Knjižnica hran',
     calEstHistoryEmpty: 'Še ni iskanj. Poišči prvo jed zgoraj.',
     calEstSaved: 'Shranjeno v knjižnico.',
+    calEstAiResponse: 'Ocena AI',
+    calEstNoKey: 'Vnesi Gemini API ključ v Nastavitve za AI ocene. Brezplačno pridobi na aistudio.google.com',
+    geminiKey: 'Gemini API ključ',
+    geminiKeyHelp: 'Brezplačno na aistudio.google.com → Get API key',
   },
   en: {
     app: 'PowerGraph',
@@ -348,6 +352,10 @@ const ui = {
     calEstHistory: 'Food library',
     calEstHistoryEmpty: 'No searches yet. Look up your first food above.',
     calEstSaved: 'Saved to library.',
+    calEstAiResponse: 'AI estimate',
+    calEstNoKey: 'Enter a Gemini API key in Settings to get AI estimates. Get it free at aistudio.google.com',
+    geminiKey: 'Gemini API key',
+    geminiKeyHelp: 'Free at aistudio.google.com → Get API key',
   },
 };
 
@@ -505,6 +513,7 @@ function sanitizeSettings(input) {
     if (typeof input.lastBackupAt === 'string') safe.lastBackupAt = input.lastBackupAt;
     if (Number(input.calorieGoal) >= 1000 && Number(input.calorieGoal) <= 10000) safe.calorieGoal = Number(input.calorieGoal);
     if (input.calorieTrackerMode === 'simple' || input.calorieTrackerMode === 'advanced') safe.calorieTrackerMode = input.calorieTrackerMode;
+    if (typeof input.geminiKey === 'string') safe.geminiKey = input.geminiKey;
   }
   return safe;
 }
@@ -845,38 +854,58 @@ export default function App() {
     setCalLoading(true);
     setCalError('');
     setCalResult(null);
+
+    // 1. Instant local lookup
     const normalized = normalizeFoodQuery(calQuery);
     const local = LOCAL_FOODS[normalized];
-    if (local) {
+    if (local && !settings.geminiKey) {
       const total = Math.round((local.kcal * Number(calGrams)) / 100);
-      const result = { name: local.name, kcalPer100: local.kcal, total };
+      const result = { name: local.name, kcalPer100: local.kcal, total, aiText: null };
       setCalResult(result);
       setCalHistory(prev => [{ id: Date.now(), name: local.name, grams: Number(calGrams), kcalPer100: local.kcal, total, date: new Date().toISOString().slice(0, 10) }, ...prev]);
       setToast(copy.calEstSaved);
       setCalLoading(false);
       return;
     }
-    try {
-      const url = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(calQuery.trim())}&fields=product_name,nutriments&page_size=5&sort_by=unique_scans_n`;
-      const res = await fetch(url);
-      const data = await res.json();
-      const product = data.products?.find(p => {
-        const n = p.nutriments;
-        return n && (n['energy-kcal_100g'] > 0 || n['energy_100g'] > 0);
-      });
-      if (!product) { setCalError('noResult'); setCalLoading(false); return; }
-      const n = product.nutriments;
-      const kcalPer100 = n['energy-kcal_100g'] || Math.round((n['energy_100g'] || 0) / 4.184);
-      const total = Math.round((kcalPer100 * Number(calGrams)) / 100);
-      const result = { name: product.product_name || calQuery, kcalPer100: Math.round(kcalPer100), total };
-      setCalResult(result);
-      setCalHistory(prev => [{ id: Date.now(), name: result.name, grams: Number(calGrams), kcalPer100: Math.round(kcalPer100), total, date: new Date().toISOString().slice(0, 10) }, ...prev]);
-      setToast(copy.calEstSaved);
-    } catch {
-      setCalError('error');
-    } finally {
-      setCalLoading(false);
+
+    // 2. Gemini AI estimate
+    if (settings.geminiKey) {
+      try {
+        const prompt = `You are a nutritionist. The user ate: "${calQuery.trim()}", ${calGrams}g.
+Give a realistic average calorie estimate for this food (not a branded product).
+Briefly state what ingredients/preparation you assumed (1 sentence).
+Then on a new line write exactly: KCAL_PER_100G: <number>
+Then on a new line write exactly: TOTAL_KCAL: <number>
+Be concise. Use average homemade/generic values, not brand values.`;
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${settings.geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+        });
+        if (!res.ok) { setCalError('error'); setCalLoading(false); return; }
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const per100Match = text.match(/KCAL_PER_100G:\s*(\d+)/i);
+        const totalMatch = text.match(/TOTAL_KCAL:\s*(\d+)/i);
+        if (!per100Match || !totalMatch) { setCalError('noResult'); setCalLoading(false); return; }
+        const kcalPer100 = Number(per100Match[1]);
+        const total = Number(totalMatch[1]);
+        const aiText = text.replace(/KCAL_PER_100G:\s*\d+/i, '').replace(/TOTAL_KCAL:\s*\d+/i, '').trim();
+        const result = { name: calQuery.trim(), kcalPer100, total, aiText };
+        setCalResult(result);
+        setCalHistory(prev => [{ id: Date.now(), name: calQuery.trim(), grams: Number(calGrams), kcalPer100, total, date: new Date().toISOString().slice(0, 10) }, ...prev]);
+        setToast(copy.calEstSaved);
+      } catch {
+        setCalError('error');
+      } finally {
+        setCalLoading(false);
+      }
+      return;
     }
+
+    // 3. No API key — show message
+    setCalError('noKey');
+    setCalLoading(false);
   }
   function deleteCalHistoryEntry(id) { setCalHistory(prev => prev.filter(e => e.id !== id)); }
 
@@ -1050,22 +1079,31 @@ export default function App() {
             </form>
             {calError === 'noResult' && <p className="auth-error">{copy.calEstNoResult}</p>}
             {calError === 'error' && <p className="auth-error">{copy.calEstError}</p>}
+            {calError === 'noKey' && <p className="auth-error">{copy.calEstNoKey}</p>}
             {calResult && (
-              <div className="dashboard-grid" style={{marginTop:'1.5rem'}}>
-                <article className="glass-panel stat-card fade-in-up">
-                  <div className="stat-icon blue-glow">K</div>
-                  <div>
-                    <p className="stat-title">{calResult.name}</p>
-                    <h3 className="stat-value">{calResult.kcalPer100} <span style={{fontSize:'0.9rem',opacity:.7}}>{copy.calEstPer100}</span></h3>
+              <div style={{marginTop:'1.5rem'}}>
+                <div className="dashboard-grid">
+                  <article className="glass-panel stat-card fade-in-up">
+                    <div className="stat-icon blue-glow">K</div>
+                    <div>
+                      <p className="stat-title">{calResult.name}</p>
+                      <h3 className="stat-value">{calResult.kcalPer100} <span style={{fontSize:'0.9rem',opacity:.7}}>{copy.calEstPer100}</span></h3>
+                    </div>
+                  </article>
+                  <article className="glass-panel stat-card fade-in-up">
+                    <div className="stat-icon green-glow">∑</div>
+                    <div>
+                      <p className="stat-title">{calGrams}g → {copy.calEstTotal}</p>
+                      <h3 className="stat-value">{calResult.total} kcal</h3>
+                    </div>
+                  </article>
+                </div>
+                {calResult.aiText && (
+                  <div className="glass-panel" style={{marginTop:'1rem',padding:'1rem'}}>
+                    <p className="settings-label" style={{marginBottom:'0.4rem'}}>{copy.calEstAiResponse}</p>
+                    <p style={{fontSize:'0.9rem',lineHeight:1.5,opacity:.85}}>{calResult.aiText}</p>
                   </div>
-                </article>
-                <article className="glass-panel stat-card fade-in-up">
-                  <div className="stat-icon green-glow">∑</div>
-                  <div>
-                    <p className="stat-title">{calGrams}g → {copy.calEstTotal}</p>
-                    <h3 className="stat-value">{calResult.total} kcal</h3>
-                  </div>
-                </article>
+                )}
               </div>
             )}
           </section>
@@ -1089,7 +1127,7 @@ export default function App() {
           </section>
         </>)}
 
-        {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
+        {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><label className="settings-label" htmlFor="geminiKey">{copy.geminiKey}</label><input id="geminiKey" type="password" className="full-width" placeholder="AIza..." value={settings.geminiKey} onChange={(e) => setSettings((c) => ({ ...c, geminiKey: e.target.value }))} /><p className="settings-copy" style={{marginTop:'0.4rem'}}>{copy.geminiKeyHelp}</p></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
       </main>
       {toast ? <div className="toast-container"><div className="toast">{toast}</div></div> : null}
     </div>

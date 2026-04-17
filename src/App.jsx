@@ -1023,21 +1023,10 @@ export default function App() {
     setCalResult(null);
 
     const effectiveKey = import.meta.env.VITE_GEMINI_KEY || '';
-
-    // 1. Instant local lookup (only if no AI key available)
     const normalized = normalizeFoodQuery(calQuery);
     const local = LOCAL_FOODS[normalized];
-    if (local && !effectiveKey) {
-      const total = Math.round((local.kcal * Number(calGrams)) / 100);
-      const result = { name: local.name, kcalPer100: local.kcal, total, aiText: null };
-      setCalResult(result);
-      setCalHistory(prev => [{ id: Date.now(), name: local.name, grams: Number(calGrams), kcalPer100: local.kcal, total, date: new Date().toISOString().slice(0, 10) }, ...prev]);
-      setToast(copy.calEstSaved);
-      setCalLoading(false);
-      return;
-    }
 
-    // 2. Gemini AI estimate
+    // 1. Gemini AI estimate (if key available)
     if (effectiveKey) {
       try {
         const prompt = `You are a nutritionist. The user ate: "${calQuery.trim()}", ${calGrams}g.
@@ -1051,29 +1040,39 @@ Be concise. Use average homemade/generic values, not brand values.`;
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
         });
-        if (!res.ok) { setCalError('error'); setCalLoading(false); return; }
-        const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        const per100Match = text.match(/KCAL_PER_100G:\s*(\d+)/i);
-        const totalMatch = text.match(/TOTAL_KCAL:\s*(\d+)/i);
-        if (!per100Match || !totalMatch) { setCalError('noResult'); setCalLoading(false); return; }
-        const kcalPer100 = Number(per100Match[1]);
-        const total = Number(totalMatch[1]);
-        const aiText = text.replace(/KCAL_PER_100G:\s*\d+/i, '').replace(/TOTAL_KCAL:\s*\d+/i, '').trim();
-        const result = { name: calQuery.trim(), kcalPer100, total, aiText };
-        setCalResult(result);
-        setCalHistory(prev => [{ id: Date.now(), name: calQuery.trim(), grams: Number(calGrams), kcalPer100, total, date: new Date().toISOString().slice(0, 10) }, ...prev]);
-        setToast(copy.calEstSaved);
-      } catch {
-        setCalError('error');
-      } finally {
-        setCalLoading(false);
-      }
+        if (res.ok) {
+          const data = await res.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const per100Match = text.match(/KCAL_PER_100G:\s*(\d+)/i);
+          const totalMatch = text.match(/TOTAL_KCAL:\s*(\d+)/i);
+          if (per100Match && totalMatch) {
+            const kcalPer100 = Number(per100Match[1]);
+            const total = Number(totalMatch[1]);
+            const aiText = text.replace(/KCAL_PER_100G:\s*\d+/i, '').replace(/TOTAL_KCAL:\s*\d+/i, '').trim();
+            const result = { name: calQuery.trim(), kcalPer100, total, aiText };
+            setCalResult(result);
+            setCalHistory(prev => [{ id: Date.now(), name: calQuery.trim(), grams: Number(calGrams), kcalPer100, total, date: new Date().toISOString().slice(0, 10) }, ...prev]);
+            setToast(copy.calEstSaved);
+            setCalLoading(false);
+            return;
+          }
+        }
+      } catch { /* fall through to local lookup */ }
+    }
+
+    // 2. Fallback: local database
+    if (local) {
+      const total = Math.round((local.kcal * Number(calGrams)) / 100);
+      const result = { name: local.name, kcalPer100: local.kcal, total, aiText: null };
+      setCalResult(result);
+      setCalHistory(prev => [{ id: Date.now(), name: local.name, grams: Number(calGrams), kcalPer100: local.kcal, total, date: new Date().toISOString().slice(0, 10) }, ...prev]);
+      setToast(copy.calEstSaved);
+      setCalLoading(false);
       return;
     }
 
-    // 3. No API key — show message
-    setCalError('noKey');
+    // 3. Nothing found
+    setCalError('noResult');
     setCalLoading(false);
   }
   function deleteCalHistoryEntry(id) { setCalHistory(prev => prev.filter(e => e.id !== id)); }

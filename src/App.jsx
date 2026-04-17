@@ -493,9 +493,9 @@ function loadWorkouts(email) {
   if (!email) return [];
   try {
     const stored = JSON.parse(localStorage.getItem(getWorkoutStorageKey(email)) || 'null');
-    return Array.isArray(stored) ? stored.map(normalizeWorkout) : seedWorkouts;
+    return Array.isArray(stored) ? stored.map(normalizeWorkout) : [];
   } catch {
-    return seedWorkouts;
+    return [];
   }
 }
 

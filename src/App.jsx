@@ -1029,10 +1029,12 @@ export default function App() {
     setCalError('');
     setCalResult(null);
 
-    // 1. Instant local lookup
+    const effectiveKey = settings.geminiKey || import.meta.env.VITE_GEMINI_KEY || '';
+
+    // 1. Instant local lookup (only if no AI key available)
     const normalized = normalizeFoodQuery(calQuery);
     const local = LOCAL_FOODS[normalized];
-    if (local && !settings.geminiKey) {
+    if (local && !effectiveKey) {
       const total = Math.round((local.kcal * Number(calGrams)) / 100);
       const result = { name: local.name, kcalPer100: local.kcal, total, aiText: null };
       setCalResult(result);
@@ -1043,7 +1045,7 @@ export default function App() {
     }
 
     // 2. Gemini AI estimate
-    if (settings.geminiKey) {
+    if (effectiveKey) {
       try {
         const prompt = `You are a nutritionist. The user ate: "${calQuery.trim()}", ${calGrams}g.
 Give a realistic average calorie estimate for this food (not a branded product).
@@ -1051,7 +1053,7 @@ Briefly state what ingredients/preparation you assumed (1 sentence).
 Then on a new line write exactly: KCAL_PER_100G: <number>
 Then on a new line write exactly: TOTAL_KCAL: <number>
 Be concise. Use average homemade/generic values, not brand values.`;
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${settings.geminiKey}`, {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${effectiveKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),

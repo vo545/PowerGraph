@@ -6,10 +6,63 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
 
 const WORKOUTS_KEY_PREFIX = 'powergraph_workouts_';
 const CALORIES_KEY_PREFIX = 'powergraph_calories_';
+const CAL_HISTORY_KEY_PREFIX = 'powergraph_calhistory_';
 const THEME_KEY = 'powergraph_theme';
 const SETTINGS_KEY_PREFIX = 'powergraph_settings_';
 const USERS_KEY = 'powergraph_users';
 const SESSION_KEY = 'powergraph_session';
+
+const LOCAL_FOODS = {
+  'piscanec': { name: 'Piščanec (prsi)', kcal: 165 }, 'piscancje prsi': { name: 'Piščančje prsi', kcal: 165 },
+  'riz': { name: 'Kuhan riž', kcal: 130 }, 'banana': { name: 'Banana', kcal: 89 },
+  'jajce': { name: 'Jajce', kcal: 155 }, 'jajca': { name: 'Jajce', kcal: 155 },
+  'mleko': { name: 'Mleko', kcal: 61 }, 'sir': { name: 'Trdi sir', kcal: 402 },
+  'kruh': { name: 'Beli kruh', kcal: 265 }, 'testenine': { name: 'Kuhane testenine', kcal: 131 },
+  'jogurt': { name: 'Navadni jogurt', kcal: 59 }, 'losos': { name: 'Losos', kcal: 208 },
+  'tuna': { name: 'Tuna (v vodi)', kcal: 116 }, 'tunina': { name: 'Tunina', kcal: 116 },
+  'jabolko': { name: 'Jabolko', kcal: 52 }, 'pomaranca': { name: 'Pomaranča', kcal: 47 },
+  'brokoli': { name: 'Brokoli', kcal: 34 }, 'krompir': { name: 'Kuhan krompir', kcal: 77 },
+  'ovseni kosmici': { name: 'Ovseni kosmiči', kcal: 389 }, 'ovsena kasa': { name: 'Ovsena kaša', kcal: 389 },
+  'arasidovo maslo': { name: 'Arašidovo maslo', kcal: 588 }, 'cokolada': { name: 'Mlečna čokolada', kcal: 546 },
+  'mandlji': { name: 'Mandlji', kcal: 579 }, 'svinjina': { name: 'Svinjina', kcal: 242 },
+  'govedina': { name: 'Govedina', kcal: 250 }, 'orehi': { name: 'Orehi', kcal: 654 },
+  'olivno olje': { name: 'Olivno olje', kcal: 884 }, 'maslo': { name: 'Maslo', kcal: 717 },
+  'med': { name: 'Med', kcal: 304 }, 'sladkor': { name: 'Beli sladkor', kcal: 387 },
+  'avokado': { name: 'Avokado', kcal: 160 }, 'jagode': { name: 'Jagode', kcal: 32 },
+  'borovnice': { name: 'Borovnice', kcal: 57 }, 'kivi': { name: 'Kivi', kcal: 61 },
+  'grozdje': { name: 'Grozdje', kcal: 69 }, 'lubenica': { name: 'Lubenica', kcal: 30 },
+  'chicken': { name: 'Chicken breast', kcal: 165 }, 'chicken breast': { name: 'Chicken breast', kcal: 165 },
+  'rice': { name: 'Cooked rice', kcal: 130 }, 'egg': { name: 'Egg', kcal: 155 }, 'eggs': { name: 'Egg', kcal: 155 },
+  'milk': { name: 'Whole milk', kcal: 61 }, 'cheese': { name: 'Hard cheese', kcal: 402 },
+  'bread': { name: 'White bread', kcal: 265 }, 'pasta': { name: 'Cooked pasta', kcal: 131 },
+  'yogurt': { name: 'Plain yogurt', kcal: 59 }, 'yoghurt': { name: 'Plain yogurt', kcal: 59 },
+  'salmon': { name: 'Salmon', kcal: 208 }, 'apple': { name: 'Apple', kcal: 52 },
+  'orange': { name: 'Orange', kcal: 47 }, 'broccoli': { name: 'Broccoli', kcal: 34 },
+  'potato': { name: 'Boiled potato', kcal: 77 }, 'oats': { name: 'Rolled oats', kcal: 389 },
+  'oatmeal': { name: 'Oatmeal', kcal: 389 }, 'peanut butter': { name: 'Peanut butter', kcal: 588 },
+  'chocolate': { name: 'Milk chocolate', kcal: 546 }, 'almonds': { name: 'Almonds', kcal: 579 },
+  'pork': { name: 'Pork', kcal: 242 }, 'beef': { name: 'Beef', kcal: 250 },
+  'walnuts': { name: 'Walnuts', kcal: 654 }, 'olive oil': { name: 'Olive oil', kcal: 884 },
+  'butter': { name: 'Butter', kcal: 717 }, 'honey': { name: 'Honey', kcal: 304 },
+  'sugar': { name: 'Sugar', kcal: 387 }, 'avocado': { name: 'Avocado', kcal: 160 },
+  'strawberry': { name: 'Strawberries', kcal: 32 }, 'strawberries': { name: 'Strawberries', kcal: 32 },
+  'blueberry': { name: 'Blueberries', kcal: 57 }, 'blueberries': { name: 'Blueberries', kcal: 57 },
+  'kiwi': { name: 'Kiwi', kcal: 61 }, 'grapes': { name: 'Grapes', kcal: 69 },
+  'watermelon': { name: 'Watermelon', kcal: 30 },
+};
+
+function normalizeFoodQuery(s) {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
+function getCalHistoryKey(email) { return `${CAL_HISTORY_KEY_PREFIX}${email}`; }
+function loadCalHistory(email) {
+  if (!email) return [];
+  try {
+    const stored = JSON.parse(localStorage.getItem(getCalHistoryKey(email)) || '[]');
+    return Array.isArray(stored) ? stored : [];
+  } catch { return []; }
+}
 
 const defaultSettings = { units: 'kg', language: 'sl', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, calorieTrackerMode: 'simple' };
 
@@ -151,6 +204,9 @@ const ui = {
     calEstLoading: 'Iščem...',
     calEstError: 'Napaka pri iskanju. Preveri povezavo.',
     calEstPlaceholder: 'npr. piščanec, banana, riž',
+    calEstHistory: 'Knjižnica hran',
+    calEstHistoryEmpty: 'Še ni iskanj. Poišči prvo jed zgoraj.',
+    calEstSaved: 'Shranjeno v knjižnico.',
   },
   en: {
     app: 'PowerGraph',
@@ -289,6 +345,9 @@ const ui = {
     calEstLoading: 'Searching...',
     calEstError: 'Search failed. Check your connection.',
     calEstPlaceholder: 'e.g. chicken, banana, rice',
+    calEstHistory: 'Food library',
+    calEstHistoryEmpty: 'No searches yet. Look up your first food above.',
+    calEstSaved: 'Saved to library.',
   },
 };
 
@@ -554,6 +613,7 @@ export default function App() {
   const [calResult, setCalResult] = useState(null);
   const [calLoading, setCalLoading] = useState(false);
   const [calError, setCalError] = useState('');
+  const [calHistory, setCalHistory] = useState(() => loadCalHistory(localStorage.getItem(SESSION_KEY) || ''));
 
   const copy = ui[settings.language];
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -634,6 +694,7 @@ export default function App() {
     setWorkouts(loadWorkouts(currentUser));
     setCalorieEntries(loadCalories(currentUser));
     setSettings(loadSettings(currentUser));
+    setCalHistory(loadCalHistory(currentUser));
     setSelectedExercise('Bench Press');
     setActiveSection('dashboard');
   }, [currentUser]);
@@ -649,6 +710,10 @@ export default function App() {
     if (!currentUser) return;
     localStorage.setItem(getSettingsStorageKey(currentUser), JSON.stringify(settings));
   }, [currentUser, settings]);
+  useEffect(() => {
+    if (!currentUser) return;
+    localStorage.setItem(getCalHistoryKey(currentUser), JSON.stringify(calHistory));
+  }, [calHistory, currentUser]);
   useEffect(() => { previousExerciseRef.current = selectedExercise; previousCountRef.current = selectedWorkouts.length; }, [selectedExercise, selectedWorkouts.length]);
   useEffect(() => { if (!toast) return undefined; const id = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(id); }, [toast]);
 
@@ -709,6 +774,7 @@ export default function App() {
     setCurrentUser('');
     setWorkouts([]);
     setCalorieEntries([]);
+    setCalHistory([]);
     setSettings(defaultSettings);
     setAuthError('');
     setAuthForm({ email: '', password: '', confirmPassword: '' });
@@ -753,7 +819,7 @@ export default function App() {
     reader.onload = () => { try { const parsed = JSON.parse(String(reader.result)); const imported = Array.isArray(parsed) ? parsed : parsed.workouts; if (!Array.isArray(imported)) throw new Error('invalid'); setWorkouts(imported.map(normalizeWorkout)); if (Array.isArray(parsed.calorieEntries)) setCalorieEntries(parsed.calorieEntries); if (parsed.settings) setSettings(sanitizeSettings(parsed.settings)); setToast(copy.importDone); } catch { setToast(copy.importFail); } finally { event.target.value = ''; } };
     reader.readAsText(file);
   }
-  function clearData() { if (!window.confirm(copy.clearConfirm)) return; setWorkouts([]); setCalorieEntries([]); setToast(copy.cleared); }
+  function clearData() { if (!window.confirm(copy.clearConfirm)) return; setWorkouts([]); setCalorieEntries([]); setCalHistory([]); setToast(copy.cleared); }
   function deleteWorkout(id) { setWorkouts((current) => current.filter((item) => item.id !== id)); if (editingWorkoutId === id) setEditingWorkoutId(null); }
   function startEditWorkout(workout) { setEditingWorkoutId(workout.id); setFormData({ date: workout.date, exercise: workout.exercise, weight: String(workout.weight), setDetails: workout.setDetails.map(String) }); setActiveSection('dashboard'); }
   function saveWorkoutEdit() {
@@ -779,21 +845,40 @@ export default function App() {
     setCalLoading(true);
     setCalError('');
     setCalResult(null);
+    const normalized = normalizeFoodQuery(calQuery);
+    const local = LOCAL_FOODS[normalized];
+    if (local) {
+      const total = Math.round((local.kcal * Number(calGrams)) / 100);
+      const result = { name: local.name, kcalPer100: local.kcal, total };
+      setCalResult(result);
+      setCalHistory(prev => [{ id: Date.now(), name: local.name, grams: Number(calGrams), kcalPer100: local.kcal, total, date: new Date().toISOString().slice(0, 10) }, ...prev]);
+      setToast(copy.calEstSaved);
+      setCalLoading(false);
+      return;
+    }
     try {
-      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(calQuery.trim())}&json=1&fields=product_name,nutriments&page_size=5&search_simple=1`;
+      const url = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(calQuery.trim())}&fields=product_name,nutriments&page_size=5&sort_by=unique_scans_n`;
       const res = await fetch(url);
       const data = await res.json();
-      const product = data.products?.find(p => p.nutriments?.['energy-kcal_100g'] > 0);
+      const product = data.products?.find(p => {
+        const n = p.nutriments;
+        return n && (n['energy-kcal_100g'] > 0 || n['energy_100g'] > 0);
+      });
       if (!product) { setCalError('noResult'); setCalLoading(false); return; }
-      const kcalPer100 = product.nutriments['energy-kcal_100g'];
+      const n = product.nutriments;
+      const kcalPer100 = n['energy-kcal_100g'] || Math.round((n['energy_100g'] || 0) / 4.184);
       const total = Math.round((kcalPer100 * Number(calGrams)) / 100);
-      setCalResult({ name: product.product_name || calQuery, kcalPer100: Math.round(kcalPer100), total });
+      const result = { name: product.product_name || calQuery, kcalPer100: Math.round(kcalPer100), total };
+      setCalResult(result);
+      setCalHistory(prev => [{ id: Date.now(), name: result.name, grams: Number(calGrams), kcalPer100: Math.round(kcalPer100), total, date: new Date().toISOString().slice(0, 10) }, ...prev]);
+      setToast(copy.calEstSaved);
     } catch {
       setCalError('error');
     } finally {
       setCalLoading(false);
     }
   }
+  function deleteCalHistoryEntry(id) { setCalHistory(prev => prev.filter(e => e.id !== id)); }
 
   const nav = [['dashboard', copy.dashboard], ['history', copy.history], ['exercises', copy.exercises], ['advisor', copy.advisor], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['settings', copy.settings]];
 
@@ -947,7 +1032,7 @@ export default function App() {
           </section>
         </>}
 
-        {activeSection === 'ocenjevalec' && (
+        {activeSection === 'ocenjevalec' && (<>
           <section className="glass-panel action-panel fade-in-up">
             <div className="panel-header"><h3>{copy.calEstTitle}</h3></div>
             <form className="premium-form" onSubmit={searchCalories}>
@@ -984,7 +1069,25 @@ export default function App() {
               </div>
             )}
           </section>
-        )}
+          <section className="glass-panel history-section fade-in-up">
+            <div className="panel-header"><h3>{copy.calEstHistory}</h3><span className="history-count">{calHistory.length}</span></div>
+            <div className="history-list">
+              {calHistory.length ? calHistory.map(entry => (
+                <article className="history-item" key={entry.id}>
+                  <div>
+                    <h3>{entry.name}</h3>
+                    <p>{entry.date} · {entry.grams} g</p>
+                  </div>
+                  <div className="history-metrics">
+                    <span>{entry.kcalPer100} {copy.calEstPer100}</span>
+                    <span style={{fontWeight:700}}>{entry.total} kcal</span>
+                  </div>
+                  <button className="action-btn-outline danger-button" type="button" onClick={() => deleteCalHistoryEntry(entry.id)}>{copy.delete}</button>
+                </article>
+              )) : <div className="empty-state"><p>{copy.calEstHistoryEmpty}</p></div>}
+            </div>
+          </section>
+        </>)}
 
         {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
       </main>

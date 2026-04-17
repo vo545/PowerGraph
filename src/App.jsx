@@ -140,6 +140,17 @@ const ui = {
     trackerMode: 'Na\u010din trackerja',
     simpleTracker: 'Osnovni tracker',
     advancedTracker: 'Napredni tracker',
+    ocenjevalec: 'Ocenjevalec kalorij',
+    calEstTitle: 'Poišči kalorije',
+    calEstFood: 'Ime jedi',
+    calEstGrams: 'Količina (g)',
+    calEstSearch: 'Išči',
+    calEstPer100: 'kcal / 100 g',
+    calEstTotal: 'Skupaj kcal',
+    calEstNoResult: 'Jed ni bila najdena. Poskusi z drugim imenom.',
+    calEstLoading: 'Iščem...',
+    calEstError: 'Napaka pri iskanju. Preveri povezavo.',
+    calEstPlaceholder: 'npr. piščanec, banana, riž',
   },
   en: {
     app: 'PowerGraph',
@@ -267,6 +278,17 @@ const ui = {
     trackerMode: 'Tracker mode',
     simpleTracker: 'Simple tracker',
     advancedTracker: 'Advanced tracker',
+    ocenjevalec: 'Calorie Estimator',
+    calEstTitle: 'Find Calories',
+    calEstFood: 'Food name',
+    calEstGrams: 'Amount (g)',
+    calEstSearch: 'Search',
+    calEstPer100: 'kcal / 100 g',
+    calEstTotal: 'Total kcal',
+    calEstNoResult: 'Food not found. Try a different name.',
+    calEstLoading: 'Searching...',
+    calEstError: 'Search failed. Check your connection.',
+    calEstPlaceholder: 'e.g. chicken, banana, rice',
   },
 };
 
@@ -527,6 +549,11 @@ export default function App() {
   const [authForm, setAuthForm] = useState({ email: '', password: '', confirmPassword: '' });
   const [formData, setFormData] = useState({ date: new Date().toISOString().slice(0, 10), exercise: 'Bench Press', weight: '', setDetails: ['12', '10', '8'] });
   const [calorieForm, setCalorieForm] = useState({ date: new Date().toISOString().slice(0, 10), mealType: 'breakfast', name: '', calories: '', protein: '', carbs: '', fat: '' });
+  const [calQuery, setCalQuery] = useState('');
+  const [calGrams, setCalGrams] = useState('');
+  const [calResult, setCalResult] = useState(null);
+  const [calLoading, setCalLoading] = useState(false);
+  const [calError, setCalError] = useState('');
 
   const copy = ui[settings.language];
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -536,6 +563,7 @@ export default function App() {
     exercises: settings.language === 'sl' ? 'Knjižnica vaj z opisi izvedbe, targeti in osnovnimi cue-ji.' : 'Exercise library with execution notes, targets, and key cues.',
     advisor: settings.language === 'sl' ? 'Pameten dnevni predlog na podlagi tvojih preteklih treningov.' : 'A smart daily suggestion based on your recent training history.',
     calories: settings.language === 'sl' ? 'Belezi obroke, kalorije in osnovne makrote po dnevih.' : 'Track meals, calories, and basic macros by day.',
+    ocenjevalec: settings.language === 'sl' ? 'Vpisi jed in grame ter izvedi iskanje kalorij.' : 'Enter a food and grams to look up its calorie count.',
     settings: settings.language === 'sl' ? 'Uredi lokalne nastavitve, backup in prikaz podatkov.' : 'Adjust local preferences, backups, and data display.',
   };
   const exerciseOptions = useMemo(() => [...new Set([...Object.values(sections).flat(), ...workouts.map((w) => w.exercise)])].sort(), [workouts]);
@@ -745,7 +773,29 @@ export default function App() {
   }
   function cancelMealEdit() { setEditingMealId(null); setCalorieForm({ date: new Date().toISOString().slice(0, 10), mealType: 'breakfast', name: '', calories: '', protein: '', carbs: '', fat: '' }); }
 
-  const nav = [['dashboard', copy.dashboard], ['history', copy.history], ['exercises', copy.exercises], ['advisor', copy.advisor], ['calories', copy.calories], ['settings', copy.settings]];
+  async function searchCalories(e) {
+    e.preventDefault();
+    if (!calQuery.trim() || !calGrams) return;
+    setCalLoading(true);
+    setCalError('');
+    setCalResult(null);
+    try {
+      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(calQuery.trim())}&json=1&fields=product_name,nutriments&page_size=5&search_simple=1`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const product = data.products?.find(p => p.nutriments?.['energy-kcal_100g'] > 0);
+      if (!product) { setCalError('noResult'); setCalLoading(false); return; }
+      const kcalPer100 = product.nutriments['energy-kcal_100g'];
+      const total = Math.round((kcalPer100 * Number(calGrams)) / 100);
+      setCalResult({ name: product.product_name || calQuery, kcalPer100: Math.round(kcalPer100), total });
+    } catch {
+      setCalError('error');
+    } finally {
+      setCalLoading(false);
+    }
+  }
+
+  const nav = [['dashboard', copy.dashboard], ['history', copy.history], ['exercises', copy.exercises], ['advisor', copy.advisor], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['settings', copy.settings]];
 
   if (!currentUser) {
     return (
@@ -896,6 +946,45 @@ export default function App() {
             </div>
           </section>
         </>}
+
+        {activeSection === 'ocenjevalec' && (
+          <section className="glass-panel action-panel fade-in-up">
+            <div className="panel-header"><h3>{copy.calEstTitle}</h3></div>
+            <form className="premium-form" onSubmit={searchCalories}>
+              <div className="input-group">
+                <label>{copy.calEstFood}</label>
+                <input type="text" value={calQuery} onChange={e => setCalQuery(e.target.value)} placeholder={copy.calEstPlaceholder} />
+              </div>
+              <div className="input-group">
+                <label>{copy.calEstGrams}</label>
+                <input type="number" min="1" value={calGrams} onChange={e => setCalGrams(e.target.value)} placeholder="100" />
+              </div>
+              <button className="action-btn-primary" type="submit" disabled={calLoading}>
+                {calLoading ? copy.calEstLoading : copy.calEstSearch}
+              </button>
+            </form>
+            {calError === 'noResult' && <p className="auth-error">{copy.calEstNoResult}</p>}
+            {calError === 'error' && <p className="auth-error">{copy.calEstError}</p>}
+            {calResult && (
+              <div className="dashboard-grid" style={{marginTop:'1.5rem'}}>
+                <article className="glass-panel stat-card fade-in-up">
+                  <div className="stat-icon blue-glow">K</div>
+                  <div>
+                    <p className="stat-title">{calResult.name}</p>
+                    <h3 className="stat-value">{calResult.kcalPer100} <span style={{fontSize:'0.9rem',opacity:.7}}>{copy.calEstPer100}</span></h3>
+                  </div>
+                </article>
+                <article className="glass-panel stat-card fade-in-up">
+                  <div className="stat-icon green-glow">∑</div>
+                  <div>
+                    <p className="stat-title">{calGrams}g → {copy.calEstTotal}</p>
+                    <h3 className="stat-value">{calResult.total} kcal</h3>
+                  </div>
+                </article>
+              </div>
+            )}
+          </section>
+        )}
 
         {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
       </main>

@@ -467,6 +467,8 @@ const ui = {
     rankCurrentLabel: 'Trenutni rang',
     restDay: 'Počitkov dan',
     restDayDone: '✓ Počitkov dan',
+    restDayLast: 'Zadnji počitek',
+    restDayNever: 'Še nikoli',
     cheatDay: 'Goljufiv dan',
     cheatDayDone: '✓ Goljufiv dan',
     recapRank: 'Tvoj rang',
@@ -677,6 +679,8 @@ const ui = {
     rankCurrentLabel: 'Current rank',
     restDay: 'Rest day',
     restDayDone: '✓ Rest day',
+    restDayLast: 'Last rest',
+    restDayNever: 'Never',
     cheatDay: 'Cheat day',
     cheatDayDone: '✓ Cheat day',
     recapRank: 'Your rank',
@@ -1509,12 +1513,6 @@ Be concise. Use average homemade/generic values, not brand values.`;
             </section>
           </div>
 
-          <div style={{display:'flex',justifyContent:'flex-end',marginTop:'0.5rem'}}>
-            <button className="action-btn-outline" type="button" onClick={toggleRestDay} style={{fontSize:'0.82rem',padding:'0.35rem 0.9rem'}}>
-              {restDays.includes(new Date().toISOString().slice(0,10)) ? copy.restDayDone : copy.restDay}
-            </button>
-          </div>
-
           <div className="dashboard-grid">
             <section className="glass-panel action-panel fade-in-up">
               <div className="panel-header"><h3>{copy.prTitle}</h3></div>
@@ -1534,7 +1532,11 @@ Be concise. Use average homemade/generic values, not brand values.`;
                 <div className="settings-button-row" style={{justifyContent:'center',gap:'0.5rem',marginTop:'0.75rem'}}>
                   <button className="action-btn-primary" type="button" onClick={toggleTimer}>{timerActive ? copy.timerPause : copy.timerStart}</button>
                   <button className="action-btn-outline" type="button" onClick={resetTimer}>{copy.timerReset}</button>
+                  <button className="action-btn-outline" type="button" onClick={toggleRestDay}>
+                    {restDays.includes(new Date().toISOString().slice(0,10)) ? copy.restDayDone : copy.restDay}
+                  </button>
                 </div>
+                {(() => { const last = [...restDays].filter(d => d !== new Date().toISOString().slice(0,10)).sort().at(-1); return <p style={{fontSize:'0.75rem',opacity:0.5,marginTop:'0.5rem'}}>{copy.restDayLast}: {last ? last : copy.restDayNever}</p>; })()}
               </div>
             </section>
           </div>

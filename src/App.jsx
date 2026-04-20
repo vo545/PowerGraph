@@ -1532,11 +1532,16 @@ Be concise. Use average homemade/generic values, not brand values.`;
                 <div className="settings-button-row" style={{justifyContent:'center',gap:'0.5rem',marginTop:'0.75rem'}}>
                   <button className="action-btn-primary" type="button" onClick={toggleTimer}>{timerActive ? copy.timerPause : copy.timerStart}</button>
                   <button className="action-btn-outline" type="button" onClick={resetTimer}>{copy.timerReset}</button>
-                  <button className="action-btn-outline" type="button" onClick={toggleRestDay}>
-                    {restDays.includes(new Date().toISOString().slice(0,10)) ? copy.restDayDone : copy.restDay}
-                  </button>
                 </div>
-                {(() => { const last = [...restDays].filter(d => d !== new Date().toISOString().slice(0,10)).sort().at(-1); return <p style={{fontSize:'0.75rem',opacity:0.5,marginTop:'0.5rem'}}>{copy.restDayLast}: {last ? last : copy.restDayNever}</p>; })()}
+              </div>
+            </section>
+            <section className="glass-panel action-panel fade-in-up">
+              <div className="panel-header"><h3>{copy.restDay}</h3></div>
+              <div style={{textAlign:'center',padding:'1rem 0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'1rem',flex:1}}>
+                <button className={`action-btn-${restDays.includes(new Date().toISOString().slice(0,10)) ? 'primary' : 'outline'}`} type="button" onClick={toggleRestDay} style={{minWidth:'10rem'}}>
+                  {restDays.includes(new Date().toISOString().slice(0,10)) ? copy.restDayDone : copy.restDay}
+                </button>
+                <p style={{fontSize:'0.78rem',opacity:0.5,margin:0}}>{copy.restDayLast}: {(() => { const last = [...restDays].filter(d => d !== new Date().toISOString().slice(0,10)).sort().at(-1); return last || copy.restDayNever; })()}</p>
               </div>
             </section>
           </div>

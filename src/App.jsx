@@ -456,6 +456,15 @@ const ui = {
     adminLoginEvent: 'Prijava',
     adminSignupEvent: 'Registracija',
     adminNoLogins: 'Še ni zabeleženih prijav.',
+    adminCommands: 'Admin ukazi',
+    adminShowRecap: 'Prikaži mesečni povzetek',
+    adminRankUp: '▲ Rang gor',
+    adminDemote: '▼ Rang dol',
+    adminBonusPts: 'Bonus točke',
+    adminRankUpDone: 'Rang povišan',
+    adminDemoteDone: 'Rang znižan',
+    adminMaxRank: 'Že na max rangu',
+    adminMinRank: 'Že na min rangu',
     loading: 'Nalagam...',
     rankings: 'Lestvica rangov',
     rankTitle: 'Moj rang',
@@ -672,6 +681,15 @@ const ui = {
     adminLoginEvent: 'Login',
     adminSignupEvent: 'Signup',
     adminNoLogins: 'No logins recorded yet.',
+    adminCommands: 'Admin Commands',
+    adminShowRecap: 'Show monthly recap',
+    adminRankUp: '▲ Rank up',
+    adminDemote: '▼ Demote',
+    adminBonusPts: 'Bonus pts',
+    adminRankUpDone: 'Rank increased',
+    adminDemoteDone: 'Rank decreased',
+    adminMaxRank: 'Already at max rank',
+    adminMinRank: 'Already at min rank',
     loading: 'Loading...',
     rankings: 'Rankings',
     rankTitle: 'My rank',
@@ -859,6 +877,10 @@ function loadUsers() {
     return [];
   }
 }
+
+function getAdminBonusKey(email) { return `powergraph_adminbonus_${email}`; }
+function loadAdminBonus(email) { if (!email) return 0; try { return Number(localStorage.getItem(getAdminBonusKey(email)) || 0); } catch { return 0; } }
+function saveAdminBonus(email, pts) { localStorage.setItem(getAdminBonusKey(email), String(pts)); }
 
 function recordLogin(email, type) {
   try {
@@ -1051,6 +1073,7 @@ export default function App() {
   const [showRecap, setShowRecap] = useState(false);
   const [recapData, setRecapData] = useState(null);
   const [adminLogs, setAdminLogs] = useState(null);
+  const [adminBonus, setAdminBonus] = useState(() => loadAdminBonus(localStorage.getItem(SESSION_KEY) || ''));
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [commentText, setCommentText] = useState('');
   const [restDays, setRestDays] = useState(() => loadRestDays(localStorage.getItem(SESSION_KEY) || ''));
@@ -1119,11 +1142,12 @@ export default function App() {
   }, [copy.planCardio, copy.planStrength, copy.reasonBalance, copy.reasonCold, copy.reasonEmpty, workouts]);
 
   const rankData = useMemo(() => {
-    const pts = calculatePoints(workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, settings.calorieGoal);
+    const base = calculatePoints(workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, settings.calorieGoal);
+    const pts = base + adminBonus;
     const rank = getRank(pts, settings.language);
     const nextRank = RANKS.find(r => r.min > pts);
     return { pts, rank, nextRank };
-  }, [workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, settings.calorieGoal, settings.language]);
+  }, [workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, settings.calorieGoal, settings.language, adminBonus]);
 
   const chartData = useMemo(() => ({ labels: selectedWorkouts.map((w, i) => `${formatDateValue(w.date, settings.dateFormat)} #${i + 1}`), datasets: [{ data: selectedWorkouts.map((w) => Math.round(convertWeight(getVolume(w), settings.units))), borderColor: '#60a5fa', backgroundColor: 'rgba(59,130,246,0.18)', fill: true, tension: 0.3, borderWidth: 3, pointRadius: 4 }] }), [selectedWorkouts, settings.dateFormat, settings.units]);
   const chartOptions = useMemo(() => {
@@ -1152,6 +1176,7 @@ export default function App() {
     setBodyWeightEntries(loadBodyWeight(currentUser));
     setRestDays(loadRestDays(currentUser));
     setCheatDays(loadCheatDays(currentUser));
+    setAdminBonus(loadAdminBonus(currentUser));
     setSelectedExercise('Bench Press');
     setActiveSection('dashboard');
     // Monthly recap check
@@ -1320,6 +1345,49 @@ export default function App() {
   function deleteWorkout(id) { setWorkouts((current) => current.filter((item) => item.id !== id)); if (editingWorkoutId === id) setEditingWorkoutId(null); }
   function saveComment(id) { setWorkouts(cur => cur.map(w => w.id === id ? { ...w, comment: commentText.trim() } : w)); setEditingCommentId(null); setCommentText(''); }
   function startEditComment(w) { setEditingCommentId(w.id); setCommentText(w.comment || ''); }
+
+  function adminShowRecap() {
+    const now = new Date();
+    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+    const allW = loadWorkouts(currentUser);
+    const prevMonthWorkouts = allW.filter(w => w.date.startsWith(prevKey));
+    const prevMonthStart = `${prevKey}-01`;
+    const beforePRs = allW.filter(w => w.date < prevMonthStart).reduce((m, w) => { if (!m[w.exercise] || w.weight > m[w.exercise]) m[w.exercise] = w.weight; return m; }, {});
+    const monthPRs = prevMonthWorkouts.reduce((m, w) => { if (!m[w.exercise] || w.weight > m[w.exercise]) m[w.exercise] = w.weight; return m; }, {});
+    const broken = Object.entries(monthPRs).filter(([ex, w]) => !beforePRs[ex] || w > beforePRs[ex]).map(([ex, w]) => ({ exercise: ex, weight: w, prev: beforePRs[ex] || 0 }));
+    setRecapData({ month: prevKey, workoutCount: prevMonthWorkouts.length || allW.length, broken });
+    setShowRecap(true);
+  }
+
+  function adminChangeRank(email, direction) {
+    const wList = loadWorkouts(email);
+    const cList = loadCalories(email);
+    const bwList = loadBodyWeight(email);
+    const rDays = loadRestDays(email);
+    const cDays = loadCheatDays(email);
+    const sett = loadSettings(email);
+    const currentBonus = loadAdminBonus(email);
+    const basePts = calculatePoints(wList, cList, bwList, rDays, cDays, sett.calorieGoal);
+    const totalPts = basePts + currentBonus;
+    if (direction === 'up') {
+      const nextRank = RANKS.find(r => r.min > totalPts);
+      if (!nextRank) { setToast(copy.adminMaxRank); return; }
+      const newBonus = currentBonus + (nextRank.min - totalPts);
+      saveAdminBonus(email, newBonus);
+      if (email === currentUser) setAdminBonus(newBonus);
+      setToast(`${copy.adminRankUpDone}: ${email}`);
+    } else {
+      const rankIdx = RANKS.findIndex(r => r.min > totalPts) - 1;
+      const currentRankIdx = rankIdx < 0 ? RANKS.length - 1 : rankIdx;
+      if (currentRankIdx <= 0) { setToast(copy.adminMinRank); return; }
+      const prevRankMin = RANKS[currentRankIdx - 1].min;
+      const newBonus = currentBonus - (totalPts - prevRankMin) - 1;
+      saveAdminBonus(email, newBonus);
+      if (email === currentUser) setAdminBonus(newBonus);
+      setToast(`${copy.adminDemoteDone}: ${email}`);
+    }
+  }
   function startEditWorkout(workout) { setEditingWorkoutId(workout.id); setFormData({ date: workout.date, exercise: workout.exercise, weight: String(workout.weight), setDetails: workout.setDetails.map(String) }); setActiveSection('dashboard'); }
   function saveWorkoutEdit() {
     const cleanSets = formData.setDetails.map((v) => Number(v) || 0).filter((v) => v > 0);
@@ -1823,14 +1891,27 @@ Be concise. Use average homemade/generic values, not brand values.`;
             const wList = loadWorkouts(u.email);
             const cList = loadCalories(u.email);
             const bwList = loadBodyWeight(u.email);
+            const rDays = loadRestDays(u.email);
+            const cDays = loadCheatDays(u.email);
+            const sett = loadSettings(u.email);
+            const bonus = loadAdminBonus(u.email);
+            const basePts = calculatePoints(wList, cList, bwList, rDays, cDays, sett.calorieGoal);
+            const totalPts = basePts + bonus;
+            const userRank = getRank(totalPts, settings.language);
             const lastW = wList.length ? [...wList].sort((a, b) => new Date(b.date) - new Date(a.date))[0].date : null;
-            return { email: u.email, createdAt: u.createdAt, workouts: wList.length, meals: cList.length, bw: bwList.length, lastWorkout: lastW };
+            return { email: u.email, createdAt: u.createdAt, workouts: wList.length, meals: cList.length, bw: bwList.length, lastWorkout: lastW, rank: userRank, pts: totalPts, bonus };
           });
           const totalWorkouts = userStats.reduce((s, u) => s + u.workouts, 0);
           const loginLogs = adminLogs || [];
           const recentLogins = [...loginLogs].reverse().slice(0, 100);
           return (
             <>
+              <section className="glass-panel action-panel fade-in-up">
+                <div className="panel-header"><h3>{copy.adminCommands}</h3></div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:'0.75rem',padding:'0.5rem 0'}}>
+                  <button className="action-btn-outline" type="button" onClick={adminShowRecap}>{copy.adminShowRecap}</button>
+                </div>
+              </section>
               <div className="dashboard-grid">
                 <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">U</div><div><p className="stat-title">{copy.adminTotalUsers}</p><h3 className="stat-value">{allUsers.length}</h3></div></article>
                 <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">T</div><div><p className="stat-title">{copy.adminTotalWorkouts}</p><h3 className="stat-value">{totalWorkouts}</h3></div></article>

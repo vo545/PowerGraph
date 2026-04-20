@@ -457,10 +457,14 @@ const ui = {
     adminSignupEvent: 'Registracija',
     adminNoLogins: 'Še ni zabeleženih prijav.',
     loading: 'Nalagam...',
+    rankings: 'Lestvica rangov',
     rankTitle: 'Moj rang',
     rankPoints: 'točk',
     rankNext: 'Do naslednjega ranga',
     rankMax: 'Dosegel si najvišji rang!',
+    rankProgress: 'Napredek do naslednjega',
+    rankAllRanks: 'Vse stopnje',
+    rankCurrentLabel: 'Trenutni rang',
     restDay: 'Počitkov dan',
     restDayDone: '✓ Počitkov dan',
     cheatDay: 'Goljufiv dan',
@@ -663,10 +667,14 @@ const ui = {
     adminSignupEvent: 'Signup',
     adminNoLogins: 'No logins recorded yet.',
     loading: 'Loading...',
+    rankings: 'Rankings',
     rankTitle: 'My rank',
     rankPoints: 'points',
     rankNext: 'To next rank',
     rankMax: 'You reached the highest rank!',
+    rankProgress: 'Progress to next rank',
+    rankAllRanks: 'All ranks',
+    rankCurrentLabel: 'Current rank',
     restDay: 'Rest day',
     restDayDone: '✓ Rest day',
     cheatDay: 'Cheat day',
@@ -1043,6 +1051,7 @@ export default function App() {
     advisor: settings.language === 'sl' ? 'Pameten dnevni predlog na podlagi tvojih preteklih treningov.' : 'A smart daily suggestion based on your recent training history.',
     calories: settings.language === 'sl' ? 'Beleži obroke, kalorije in osnovne makrote po dnevih.' : 'Track meals, calories, and basic macros by day.',
     ocenjevalec: settings.language === 'sl' ? 'Vpiši jed in grame ter izvedi iskanje kalorij.' : 'Enter a food and grams to look up its calorie count.',
+    rankings: settings.language === 'sl' ? 'Preglej svoj rang, točke in napredek skozi vse stopnje.' : 'View your rank, points, and progression through all tiers.',
     bodyweight: settings.language === 'sl' ? 'Sledi telesni teži in izračunaj dnevne kalorijske potrebe.' : 'Track your body weight and calculate your daily calorie needs.',
     settings: settings.language === 'sl' ? 'Uredi lokalne nastavitve, backup in prikaz podatkov.' : 'Adjust local preferences, backups, and data display.',
     admin: settings.language === 'sl' ? 'Pregled vseh registriranih uporabnikov in njihovih podatkov.' : 'Overview of all registered users and their data.',
@@ -1414,7 +1423,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
     localStorage.setItem(getCheatKey(currentUser), JSON.stringify(updated));
   }
 
-  const nav = [['dashboard', copy.dashboard], ['history', copy.history], ['exercises', copy.exercises], ['advisor', copy.advisor], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['bodyweight', copy.bodyweight], ['settings', copy.settings], ...(currentUser === ADMIN_EMAIL ? [['admin', copy.admin]] : [])];
+  const nav = [['dashboard', copy.dashboard], ['history', copy.history], ['exercises', copy.exercises], ['advisor', copy.advisor], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['rankings', copy.rankings], ['bodyweight', copy.bodyweight], ['settings', copy.settings], ...(currentUser === ADMIN_EMAIL ? [['admin', copy.admin]] : [])];
 
   if (!currentUser) {
     return (
@@ -1481,7 +1490,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
               <div style={{flex:1,minWidth:0}}>
                 <p className="stat-title">{copy.rankTitle}</p>
                 <h3 className="stat-value" style={{fontSize:'1.1rem'}}>{rankData.rank.displayName}</h3>
-                <p style={{fontSize:'0.78rem',opacity:0.6}}>{rankData.pts} {copy.rankPoints}{rankData.nextRank ? ` · ${copy.rankNext}: ${rankData.nextRank.min - rankData.pts}` : ` · ${copy.rankMax}`}</p>
+                <p style={{fontSize:'0.78rem',opacity:0.6}}>{rankData.pts} {copy.rankPoints}</p>
               </div>
               <button className="action-btn-outline" type="button" onClick={toggleRestDay} style={{alignSelf:'center',whiteSpace:'nowrap',flexShrink:0}}>
                 {restDays.includes(new Date().toISOString().slice(0,10)) ? copy.restDayDone : copy.restDay}
@@ -1665,6 +1674,63 @@ Be concise. Use average homemade/generic values, not brand values.`;
             </div>
           </section>
         </>)}
+
+        {activeSection === 'rankings' && (
+          <div className="dashboard-grid">
+            <section className="glass-panel chart-panel fade-in-up" style={{gridColumn:'span 2'}}>
+              <div className="panel-header"><h3>{copy.rankCurrentLabel}</h3></div>
+              <div style={{padding:'1rem 0'}}>
+                <div style={{display:'flex',alignItems:'center',gap:'1.2rem',marginBottom:'1.5rem'}}>
+                  <div style={{background:'linear-gradient(135deg,#f59e0b,#ef4444)',borderRadius:'50%',width:'3.5rem',height:'3.5rem',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.5rem',flexShrink:0}}>★</div>
+                  <div>
+                    <h2 style={{fontSize:'1.8rem',fontWeight:700,margin:0}}>{rankData.rank.displayName}</h2>
+                    <p style={{opacity:0.7,margin:0}}>{rankData.pts} {copy.rankPoints}</p>
+                  </div>
+                </div>
+                {rankData.nextRank ? (<>
+                  <p style={{fontSize:'0.85rem',opacity:0.7,marginBottom:'0.5rem'}}>{copy.rankProgress}: {rankData.nextRank.min - rankData.pts} {copy.rankPoints}</p>
+                  <div style={{background:'rgba(148,163,184,0.15)',borderRadius:'999px',height:'0.6rem',overflow:'hidden'}}>
+                    <div style={{
+                      background:'linear-gradient(90deg,#f59e0b,#ef4444)',
+                      height:'100%',
+                      borderRadius:'999px',
+                      width:`${Math.min(100,Math.round(((rankData.pts - rankData.rank.min) / (rankData.nextRank.min - rankData.rank.min)) * 100))}%`,
+                      transition:'width 0.6s ease'
+                    }} />
+                  </div>
+                  <p style={{fontSize:'0.78rem',opacity:0.5,marginTop:'0.4rem',textAlign:'right'}}>{rankData.nextRank.min - rankData.pts} / {rankData.nextRank.min - rankData.rank.min} {copy.rankPoints}</p>
+                </>) : (
+                  <p style={{fontSize:'0.9rem',opacity:0.7}}>{copy.rankMax}</p>
+                )}
+              </div>
+            </section>
+
+            <section className="glass-panel history-section fade-in-up" style={{gridColumn:'span 2'}}>
+              <div className="panel-header"><h3>{copy.rankAllRanks}</h3></div>
+              <div className="history-list">
+                {RANKS.map((r, i) => {
+                  const isCurrent = rankData.rank.name === r.name;
+                  const isUnlocked = rankData.pts >= r.min;
+                  const rankName = settings.language === 'en' ? r.nameEn : r.name;
+                  return (
+                    <article key={r.name} className="history-item" style={{opacity: isUnlocked ? 1 : 0.4, background: isCurrent ? 'rgba(245,158,11,0.08)' : undefined, borderLeft: isCurrent ? '3px solid #f59e0b' : '3px solid transparent'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'0.8rem'}}>
+                        <span style={{fontSize:'1.1rem'}}>{isUnlocked ? '★' : '☆'}</span>
+                        <div>
+                          <h3 style={{margin:0,fontWeight: isCurrent ? 700 : 500}}>{rankName}{isCurrent ? ' ←' : ''}</h3>
+                          <p style={{margin:0,fontSize:'0.8rem',opacity:0.6}}>{r.min} {copy.rankPoints}</p>
+                        </div>
+                      </div>
+                      {isUnlocked && !isCurrent && <span style={{fontSize:'0.8rem',opacity:0.6}}>✓</span>}
+                      {isCurrent && <span style={{fontSize:'0.8rem',color:'#f59e0b',fontWeight:600}}>{copy.rankCurrentLabel}</span>}
+                      {!isUnlocked && <span style={{fontSize:'0.8rem',opacity:0.5}}>{r.min - rankData.pts} {copy.rankPoints}</span>}
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
+        )}
 
         {activeSection === 'bodyweight' && <>
           <div className="dashboard-grid">

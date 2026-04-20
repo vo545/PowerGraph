@@ -984,3 +984,89 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+/* PR badge */
+.pr-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 6px;
+  vertical-align: middle;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.pr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.pr-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-glass);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-glass);
+}
+
+.pr-value {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 1rem;
+}
+
+/* Recap modal */
+.recap-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.recap-modal {
+  max-width: 480px;
+  width: 100%;
+  padding: 2rem;
+  animation: fadeInUp 0.4s ease;
+}
+
+.recap-header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.recap-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.recap-motivation {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary-glow);
+  margin-bottom: 1.5rem;
+  padding: 0.75rem;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}

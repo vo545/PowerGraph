@@ -7,6 +7,8 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
 const WORKOUTS_KEY_PREFIX = 'powergraph_workouts_';
 const CALORIES_KEY_PREFIX = 'powergraph_calories_';
 const CAL_HISTORY_KEY_PREFIX = 'powergraph_calhistory_';
+const BODYWEIGHT_KEY_PREFIX = 'powergraph_bodyweight_';
+const RECAP_KEY_PREFIX = 'powergraph_recap_';
 const THEME_KEY = 'powergraph_theme';
 const SETTINGS_KEY_PREFIX = 'powergraph_settings_';
 const USERS_KEY = 'powergraph_users';
@@ -141,7 +143,7 @@ const LOCAL_FOODS = {
   'cherry': { name: 'Cherry', kcal: 63 }, 'cherries': { name: 'Cherries', kcal: 63 },
   'raspberry': { name: 'Raspberry', kcal: 52 }, 'raspberries': { name: 'Raspberries', kcal: 52 },
   'blackberry': { name: 'Blackberry', kcal: 43 }, 'pineapple': { name: 'Pineapple', kcal: 50 },
-  'mango': { name: 'Mango', kcal: 60 }, 'lemon': { name: 'Lemon', kcal: 29 },
+  'lemon': { name: 'Lemon', kcal: 29 },
   'dates': { name: 'Dates', kcal: 277 }, 'raisins': { name: 'Raisins', kcal: 299 },
   'fig': { name: 'Fig', kcal: 74 }, 'figs': { name: 'Figs', kcal: 74 },
   // --- Oreščki / Nuts & Seeds ---
@@ -168,7 +170,7 @@ const LOCAL_FOODS = {
   'cokolada': { name: 'Mlečna čokolada', kcal: 546 }, 'temna cokolada': { name: 'Temna čokolada', kcal: 598 },
   'bela cokolada': { name: 'Bela čokolada', kcal: 539 }, 'sladkor': { name: 'Beli sladkor', kcal: 387 },
   'med': { name: 'Med', kcal: 304 }, 'nutella': { name: 'Nutella', kcal: 539 },
-  'marmelada': { name: 'Marmelada', kcal: 278 }, 'med': { name: 'Med', kcal: 304 },
+  'marmelada': { name: 'Marmelada', kcal: 278 },
   'cokoladni namaz': { name: 'Čokoladni namaz', kcal: 539 },
   'chocolate': { name: 'Milk chocolate', kcal: 546 }, 'dark chocolate': { name: 'Dark chocolate', kcal: 598 },
   'white chocolate': { name: 'White chocolate', kcal: 539 }, 'sugar': { name: 'Sugar', kcal: 387 },
@@ -200,7 +202,7 @@ const LOCAL_FOODS = {
   'tacos': { name: 'Tacos', kcal: 226 }, 'burrito': { name: 'Burrito', kcal: 206 },
   'sandwich': { name: 'Sendvič (šunka+sir)', kcal: 250 }, 'sendvic': { name: 'Sendvič', kcal: 250 },
   'wrap': { name: 'Wrap (piščanec)', kcal: 230 }, 'hotdog': { name: 'Hot dog', kcal: 290 },
-  'hot dog': { name: 'Hot dog', kcal: 290 }, 'nachos': { name: 'Nachos s sirom', kcal: 346 },
+  'nachos': { name: 'Nachos s sirom', kcal: 346 },
   'quesadilla': { name: 'Quesadilla', kcal: 304 }, 'gyros': { name: 'Gyros', kcal: 215 },
   'falafel': { name: 'Falafel', kcal: 333 }, 'paella': { name: 'Paella', kcal: 162 },
   // --- Pijače / Drinks ---
@@ -230,6 +232,15 @@ function normalizeFoodQuery(s) {
 }
 
 function getCalHistoryKey(email) { return `${CAL_HISTORY_KEY_PREFIX}${email}`; }
+function getBodyWeightKey(email) { return `${BODYWEIGHT_KEY_PREFIX}${email}`; }
+function getRecapKey(email) { return `${RECAP_KEY_PREFIX}${email}`; }
+function loadBodyWeight(email) {
+  if (!email) return [];
+  try {
+    const stored = JSON.parse(localStorage.getItem(getBodyWeightKey(email)) || '[]');
+    return Array.isArray(stored) ? stored : [];
+  } catch { return []; }
+}
 function loadCalHistory(email) {
   if (!email) return [];
   try {
@@ -382,6 +393,44 @@ const ui = {
     calEstHistoryEmpty: 'Še ni iskanj. Poišči prvo jed zgoraj.',
     calEstSaved: 'Shranjeno v knjižnico.',
     calEstAiResponse: 'Ocena AI',
+    prTitle: 'Osebni rekordi',
+    prBadge: 'PR',
+    prNoData: 'Še ni PR-jev. Dodaj trening!',
+    timerTitle: 'Odmor med serijami',
+    timerStart: 'Start',
+    timerPause: 'Pavza',
+    timerReset: 'Ponastavi',
+    timerDone: 'Čas potekel!',
+    bodyweight: 'Telesna teža',
+    bwTitle: 'Sledenje telesni teži',
+    bwAdd: 'Dodaj meritev',
+    bwDate: 'Datum meritve',
+    bwWeight: 'Teža (kg)',
+    bwSave: 'Shrani meritev',
+    bwNoData: 'Še ni meritev.',
+    tdeeTitle: 'Kalkulator kalorij',
+    tdeeCurrentWeight: 'Trenutna teža (kg)',
+    tdeeGoalWeight: 'Ciljna teža (kg)',
+    tdeeWeeks: 'Čas (tedni)',
+    tdeeActivity: 'Aktivnost',
+    tdeeSedentary: 'Sedeč (malo ali nič vadbe)',
+    tdeeLight: 'Lahka (1–3x/teden)',
+    tdeeModerate: 'Zmerna (3–5x/teden)',
+    tdeeActive: 'Aktivna (6–7x/teden)',
+    tdeeVeryActive: 'Zelo aktivna (2x/dan)',
+    tdeeCalculate: 'Izračunaj',
+    tdeeTDEE: 'Ocena TDEE',
+    tdeeTarget: 'Dnevni cilj kalorij',
+    tdeeAdjustment: 'Prilagoditev / dan',
+    recapTitle: 'Mesečni pregled',
+    recapClose: 'Zapri',
+    recapMonth: 'Mesec',
+    recapWorkouts: 'Opravljeni treningi',
+    recapPRs: 'Podrti rekordi',
+    recapNoPRs: 'Ta mesec ni bilo novih rekordov.',
+    recapMotivation: 'BRAVO! Odlično si delal ta mesec!',
+    recapPRDetail: 'Podrl si rekord za',
+    recapOn: 'za vajo',
   },
   en: {
     app: 'PowerGraph',
@@ -524,6 +573,44 @@ const ui = {
     calEstHistoryEmpty: 'No searches yet. Look up your first food above.',
     calEstSaved: 'Saved to library.',
     calEstAiResponse: 'AI estimate',
+    prTitle: 'Personal Records',
+    prBadge: 'PR',
+    prNoData: 'No PRs yet. Add a workout!',
+    timerTitle: 'Rest timer',
+    timerStart: 'Start',
+    timerPause: 'Pause',
+    timerReset: 'Reset',
+    timerDone: 'Time is up!',
+    bodyweight: 'Body Weight',
+    bwTitle: 'Body weight tracking',
+    bwAdd: 'Add measurement',
+    bwDate: 'Measurement date',
+    bwWeight: 'Weight (kg)',
+    bwSave: 'Save measurement',
+    bwNoData: 'No measurements yet.',
+    tdeeTitle: 'Calorie Calculator',
+    tdeeCurrentWeight: 'Current weight (kg)',
+    tdeeGoalWeight: 'Goal weight (kg)',
+    tdeeWeeks: 'Timeframe (weeks)',
+    tdeeActivity: 'Activity level',
+    tdeeSedentary: 'Sedentary (little/no exercise)',
+    tdeeLight: 'Light (1–3x/week)',
+    tdeeModerate: 'Moderate (3–5x/week)',
+    tdeeActive: 'Active (6–7x/week)',
+    tdeeVeryActive: 'Very active (2x/day)',
+    tdeeCalculate: 'Calculate',
+    tdeeTDEE: 'TDEE estimate',
+    tdeeTarget: 'Daily calorie target',
+    tdeeAdjustment: 'Adjustment / day',
+    recapTitle: 'Monthly recap',
+    recapClose: 'Close',
+    recapMonth: 'Month',
+    recapWorkouts: 'Workouts completed',
+    recapPRs: 'Records broken',
+    recapNoPRs: 'No new records this month.',
+    recapMotivation: 'BRAVO! You did great this month!',
+    recapPRDetail: 'You broke your record on',
+    recapOn: 'on exercise',
   },
 };
 
@@ -635,15 +722,6 @@ const exerciseEquipment = {
   'Cable Crunch': { sl: 'Kabelski \u0161kripec z vrvjo', en: 'Cable station with rope attachment' },
 };
 
-const seedWorkouts = [
-  { id: 1, date: '2026-03-10', exercise: 'Bench Press', weight: 70, setDetails: [8, 8, 8, 8] },
-  { id: 2, date: '2026-03-12', exercise: 'Squat', weight: 100, setDetails: [5, 5, 5, 5, 5] },
-  { id: 3, date: '2026-03-14', exercise: 'Barbell Row', weight: 65, setDetails: [10, 10, 9, 8] },
-  { id: 4, date: '2026-03-17', exercise: 'Bench Press', weight: 75, setDetails: [8, 8, 7, 6] },
-  { id: 5, date: '2026-03-20', exercise: 'Overhead Press', weight: 42.5, setDetails: [8, 8, 7] },
-  { id: 6, date: '2026-03-26', exercise: 'Squat', weight: 110, setDetails: [5, 5, 4, 4, 4] },
-  { id: 7, date: '2026-04-02', exercise: 'Lat Pulldown', weight: 60, setDetails: [12, 12, 10, 10] },
-];
 
 const normalizeWorkout = (w, i = 0) => ({ id: w.id ?? Date.now() + i, date: w.date ?? new Date().toISOString().slice(0, 10), exercise: w.exercise ?? 'Bench Press', weight: Number(w.weight ?? 0), setDetails: (Array.isArray(w.setDetails) ? w.setDetails : []).map((v) => Number(v) || 0).filter((v) => v > 0).length ? (Array.isArray(w.setDetails) ? w.setDetails : []).map((v) => Number(v) || 0).filter((v) => v > 0) : [1] });
 const getSetCount = (w) => w.setDetails.length;
@@ -790,6 +868,15 @@ export default function App() {
   const [calLoading, setCalLoading] = useState(false);
   const [calError, setCalError] = useState('');
   const [calHistory, setCalHistory] = useState(() => loadCalHistory(localStorage.getItem(SESSION_KEY) || ''));
+  const [bodyWeightEntries, setBodyWeightEntries] = useState(() => loadBodyWeight(localStorage.getItem(SESSION_KEY) || ''));
+  const [bwForm, setBwForm] = useState({ date: new Date().toISOString().slice(0, 10), weight: '' });
+  const [tdeeForm, setTdeeForm] = useState({ currentWeight: '', goalWeight: '', weeks: '12', activityLevel: 'moderate' });
+  const [tdeeResult, setTdeeResult] = useState(null);
+  const [timerSeconds, setTimerSeconds] = useState(90);
+  const [timerActive, setTimerActive] = useState(false);
+  const [timerPreset, setTimerPreset] = useState(90);
+  const [showRecap, setShowRecap] = useState(false);
+  const [recapData, setRecapData] = useState(null);
 
   const copy = ui[settings.language];
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -800,6 +887,7 @@ export default function App() {
     advisor: settings.language === 'sl' ? 'Pameten dnevni predlog na podlagi tvojih preteklih treningov.' : 'A smart daily suggestion based on your recent training history.',
     calories: settings.language === 'sl' ? 'Belezi obroke, kalorije in osnovne makrote po dnevih.' : 'Track meals, calories, and basic macros by day.',
     ocenjevalec: settings.language === 'sl' ? 'Vpisi jed in grame ter izvedi iskanje kalorij.' : 'Enter a food and grams to look up its calorie count.',
+    bodyweight: settings.language === 'sl' ? 'Sledi telesni teži in izračunaj dnevne kalorijske potrebe.' : 'Track your body weight and calculate your daily calorie needs.',
     settings: settings.language === 'sl' ? 'Uredi lokalne nastavitve, backup in prikaz podatkov.' : 'Adjust local preferences, backups, and data display.',
   };
   const exerciseOptions = useMemo(() => [...new Set([...Object.values(sections).flat(), ...workouts.map((w) => w.exercise)])].sort(), [workouts]);
@@ -824,6 +912,9 @@ export default function App() {
   const analyticsCalories = useMemo(() => calorieEntries.filter((entry) => new Date(entry.date) >= analyticsCutoff), [analyticsCutoff, calorieEntries]);
   const analyticsTraining = useMemo(() => analyticsWorkouts.reduce((acc, workout) => ({ workouts: acc.workouts + 1, sets: acc.sets + getSetCount(workout), volumeKg: acc.volumeKg + getVolume(workout) }), { workouts: 0, sets: 0, volumeKg: 0 }), [analyticsWorkouts]);
   const analyticsFood = useMemo(() => analyticsCalories.reduce((acc, entry) => ({ entries: acc.entries + 1, calories: acc.calories + Number(entry.calories || 0), protein: acc.protein + Number(entry.protein || 0) }), { entries: 0, calories: 0, protein: 0 }), [analyticsCalories]);
+  const personalRecords = useMemo(() => workouts.reduce((map, w) => { if (!map[w.exercise] || w.weight > map[w.exercise]) map[w.exercise] = w.weight; return map; }, {}), [workouts]);
+  const bwSorted = useMemo(() => [...bodyWeightEntries].sort((a, b) => new Date(a.date) - new Date(b.date)).slice(-30), [bodyWeightEntries]);
+  const bodyWeightChartData = useMemo(() => ({ labels: bwSorted.map((e) => formatDateValue(e.date, settings.dateFormat)), datasets: [{ data: bwSorted.map((e) => e.weight), borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.18)', fill: true, tension: 0.3, borderWidth: 3, pointRadius: 4 }] }), [bwSorted, settings.dateFormat]);
 
   const advisor = useMemo(() => {
     const latestSectionDate = {};
@@ -871,8 +962,28 @@ export default function App() {
     setCalorieEntries(loadCalories(currentUser));
     setSettings(loadSettings(currentUser));
     setCalHistory(loadCalHistory(currentUser));
+    setBodyWeightEntries(loadBodyWeight(currentUser));
     setSelectedExercise('Bench Press');
     setActiveSection('dashboard');
+    // Monthly recap check
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const lastSeen = localStorage.getItem(getRecapKey(currentUser)) || '';
+    if (lastSeen !== currentMonthKey) {
+      const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+      const allW = loadWorkouts(currentUser);
+      const prevMonthWorkouts = allW.filter((w) => w.date.startsWith(prevKey));
+      if (prevMonthWorkouts.length) {
+        const prevMonthStart = `${prevKey}-01`;
+        const beforePRs = allW.filter((w) => w.date < prevMonthStart).reduce((m, w) => { if (!m[w.exercise] || w.weight > m[w.exercise]) m[w.exercise] = w.weight; return m; }, {});
+        const monthPRs = prevMonthWorkouts.reduce((m, w) => { if (!m[w.exercise] || w.weight > m[w.exercise]) m[w.exercise] = w.weight; return m; }, {});
+        const broken = Object.entries(monthPRs).filter(([ex, w]) => !beforePRs[ex] || w > beforePRs[ex]).map(([ex, w]) => ({ exercise: ex, weight: w, prev: beforePRs[ex] || 0 }));
+        setRecapData({ month: prevKey, workoutCount: prevMonthWorkouts.length, broken });
+        setShowRecap(true);
+      }
+      localStorage.setItem(getRecapKey(currentUser), currentMonthKey);
+    }
   }, [currentUser]);
   useEffect(() => {
     if (!currentUser) return;
@@ -890,6 +1001,15 @@ export default function App() {
     if (!currentUser) return;
     localStorage.setItem(getCalHistoryKey(currentUser), JSON.stringify(calHistory));
   }, [calHistory, currentUser]);
+  useEffect(() => {
+    if (!currentUser) return;
+    localStorage.setItem(getBodyWeightKey(currentUser), JSON.stringify(bodyWeightEntries));
+  }, [bodyWeightEntries, currentUser]);
+  useEffect(() => {
+    if (!timerActive || timerSeconds <= 0) return undefined;
+    const id = window.setTimeout(() => setTimerSeconds((s) => s - 1), 1000);
+    return () => window.clearTimeout(id);
+  }, [timerActive, timerSeconds]);
   useEffect(() => { previousExerciseRef.current = selectedExercise; previousCountRef.current = selectedWorkouts.length; }, [selectedExercise, selectedWorkouts.length]);
   useEffect(() => { if (!toast) return undefined; const id = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(id); }, [toast]);
 
@@ -925,7 +1045,7 @@ export default function App() {
         }
         const nextUsers = [...users, { email, passwordHash, createdAt: new Date().toISOString() }];
         localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
-        localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify(seedWorkouts));
+        localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify([]));
         localStorage.setItem(getSettingsStorageKey(email), JSON.stringify(defaultSettings));
         setCurrentUser(email);
       } else {
@@ -951,9 +1071,12 @@ export default function App() {
     setWorkouts([]);
     setCalorieEntries([]);
     setCalHistory([]);
+    setBodyWeightEntries([]);
     setSettings(defaultSettings);
     setAuthError('');
     setAuthForm({ email: '', password: '', confirmPassword: '' });
+    setShowRecap(false);
+    setRecapData(null);
   }
 
   function changeSet(index, value) { setFormData((c) => ({ ...c, setDetails: c.setDetails.map((item, i) => (i === index ? value : item)) })); }
@@ -969,7 +1092,7 @@ export default function App() {
     setFormData((c) => ({ ...c, weight: '', setDetails: [''] }));
     setToast(copy.saved);
   }
-  function exportData() { downloadFile(`powergraph-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ workouts, calorieEntries, settings }, null, 2), 'application/json'); setSettings((c) => ({ ...c, lastBackupAt: new Date().toISOString() })); setToast(copy.backupDone); }
+  function exportData() { downloadFile(`powergraph-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ workouts, calorieEntries, settings, calHistory, bodyWeightEntries }, null, 2), 'application/json'); setSettings((c) => ({ ...c, lastBackupAt: new Date().toISOString() })); setToast(copy.backupDone); }
   function saveMeal(event) {
     event.preventDefault();
     if (!calorieForm.name || !calorieForm.calories || !calorieForm.date) return;
@@ -992,10 +1115,10 @@ export default function App() {
     const [file] = event.target.files ?? [];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => { try { const parsed = JSON.parse(String(reader.result)); const imported = Array.isArray(parsed) ? parsed : parsed.workouts; if (!Array.isArray(imported)) throw new Error('invalid'); setWorkouts(imported.map(normalizeWorkout)); if (Array.isArray(parsed.calorieEntries)) setCalorieEntries(parsed.calorieEntries); if (parsed.settings) setSettings(sanitizeSettings(parsed.settings)); setToast(copy.importDone); } catch { setToast(copy.importFail); } finally { event.target.value = ''; } };
+    reader.onload = () => { try { const parsed = JSON.parse(String(reader.result)); const imported = Array.isArray(parsed) ? parsed : parsed.workouts; if (!Array.isArray(imported)) throw new Error('invalid'); setWorkouts(imported.map(normalizeWorkout)); if (Array.isArray(parsed.calorieEntries)) setCalorieEntries(parsed.calorieEntries); if (parsed.settings) setSettings(sanitizeSettings(parsed.settings)); if (Array.isArray(parsed.calHistory)) setCalHistory(parsed.calHistory); if (Array.isArray(parsed.bodyWeightEntries)) setBodyWeightEntries(parsed.bodyWeightEntries); setToast(copy.importDone); } catch { setToast(copy.importFail); } finally { event.target.value = ''; } };
     reader.readAsText(file);
   }
-  function clearData() { if (!window.confirm(copy.clearConfirm)) return; setWorkouts([]); setCalorieEntries([]); setCalHistory([]); setToast(copy.cleared); }
+  function clearData() { if (!window.confirm(copy.clearConfirm)) return; setWorkouts([]); setCalorieEntries([]); setCalHistory([]); setBodyWeightEntries([]); setToast(copy.cleared); }
   function deleteWorkout(id) { setWorkouts((current) => current.filter((item) => item.id !== id)); if (editingWorkoutId === id) setEditingWorkoutId(null); }
   function startEditWorkout(workout) { setEditingWorkoutId(workout.id); setFormData({ date: workout.date, exercise: workout.exercise, weight: String(workout.weight), setDetails: workout.setDetails.map(String) }); setActiveSection('dashboard'); }
   function saveWorkoutEdit() {
@@ -1077,7 +1200,33 @@ Be concise. Use average homemade/generic values, not brand values.`;
   }
   function deleteCalHistoryEntry(id) { setCalHistory(prev => prev.filter(e => e.id !== id)); }
 
-  const nav = [['dashboard', copy.dashboard], ['history', copy.history], ['exercises', copy.exercises], ['advisor', copy.advisor], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['settings', copy.settings]];
+  function saveBodyWeight(event) {
+    event.preventDefault();
+    if (!bwForm.weight || !bwForm.date) return;
+    const entry = { id: Date.now(), date: bwForm.date, weight: Number(bwForm.weight) };
+    setBodyWeightEntries((c) => [...c, entry].sort((a, b) => new Date(b.date) - new Date(a.date)));
+    setBwForm((c) => ({ ...c, weight: '' }));
+  }
+  function deleteBodyWeightEntry(id) { setBodyWeightEntries((c) => c.filter((e) => e.id !== id)); }
+  function calculateTDEE(event) {
+    event.preventDefault();
+    const cw = Number(tdeeForm.currentWeight);
+    const gw = Number(tdeeForm.goalWeight);
+    const weeks = Number(tdeeForm.weeks);
+    if (!cw || !gw || !weeks) return;
+    const activityFactors = { sedentary: 26, light: 30, moderate: 33, active: 37, veryactive: 40 };
+    const factor = activityFactors[tdeeForm.activityLevel] || 33;
+    const tdee = Math.round(cw * factor);
+    const totalKcal = (cw - gw) * 7700;
+    const dailyAdjustment = Math.round(totalKcal / (weeks * 7));
+    const target = tdee - dailyAdjustment;
+    setTdeeResult({ tdee, target, dailyAdjustment });
+  }
+  function startTimer(preset) { setTimerPreset(preset); setTimerSeconds(preset); setTimerActive(true); }
+  function toggleTimer() { if (timerSeconds <= 0) { setTimerSeconds(timerPreset); setTimerActive(true); } else { setTimerActive((a) => !a); } }
+  function resetTimer() { setTimerActive(false); setTimerSeconds(timerPreset); }
+
+  const nav = [['dashboard', copy.dashboard], ['history', copy.history], ['exercises', copy.exercises], ['advisor', copy.advisor], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['bodyweight', copy.bodyweight], ['settings', copy.settings]];
 
   if (!currentUser) {
     return (
@@ -1164,6 +1313,30 @@ Be concise. Use average homemade/generic values, not brand values.`;
             </section>
           </div>
 
+          <div className="dashboard-grid">
+            <section className="glass-panel action-panel fade-in-up">
+              <div className="panel-header"><h3>{copy.prTitle}</h3></div>
+              {Object.keys(personalRecords).length ? (
+                <div className="pr-list">{Object.entries(personalRecords).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([ex, w]) => (
+                  <div className="pr-row" key={ex}><span>{getExerciseName(ex, settings.language)}</span><strong className="pr-value">{formatWeight(w, settings.units)} <span className="pr-badge">{copy.prBadge}</span></strong></div>
+                ))}</div>
+              ) : <div className="empty-state"><p>{copy.prNoData}</p></div>}
+            </section>
+            <section className="glass-panel action-panel fade-in-up">
+              <div className="panel-header"><h3>{copy.timerTitle}</h3></div>
+              <div className="timer-display" style={{textAlign:'center',padding:'1rem 0'}}>
+                <div className="timer-clock" style={{fontSize:'3.5rem',fontWeight:700,letterSpacing:'0.05em',color: timerSeconds <= 5 && timerActive ? 'var(--error)' : 'var(--text-primary)'}}>{timerSeconds <= 0 ? copy.timerDone : `${Math.floor(timerSeconds/60).toString().padStart(2,'0')}:${(timerSeconds%60).toString().padStart(2,'0')}`}</div>
+                <div className="settings-button-row" style={{justifyContent:'center',gap:'0.5rem',marginTop:'1rem'}}>
+                  {[60, 90, 120, 180].map((s) => <button key={s} className={`action-btn-outline ${timerPreset === s && !timerActive ? 'active-filter' : ''}`} type="button" onClick={() => startTimer(s)}>{s < 60 ? `${s}s` : `${s/60}min`}</button>)}
+                </div>
+                <div className="settings-button-row" style={{justifyContent:'center',gap:'0.5rem',marginTop:'0.75rem'}}>
+                  <button className="action-btn-primary" type="button" onClick={toggleTimer}>{timerActive ? copy.timerPause : copy.timerStart}</button>
+                  <button className="action-btn-outline" type="button" onClick={resetTimer}>{copy.timerReset}</button>
+                </div>
+              </div>
+            </section>
+          </div>
+
           <section className="glass-panel stats-section fade-in-up">
             <div className="panel-header"><h3>{copy.byExercise}</h3><div className="settings-button-row"><button className={`action-btn-outline ${analyticsRange === 'week' ? 'active-filter' : ''}`} type="button" onClick={() => setAnalyticsRange('week')}>{copy.weekly}</button><button className={`action-btn-outline ${analyticsRange === 'month' ? 'active-filter' : ''}`} type="button" onClick={() => setAnalyticsRange('month')}>{copy.monthly}</button></div></div>
             <div className="stats-split">
@@ -1174,7 +1347,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
           </section>
         </>}
 
-        {activeSection === 'history' && <section className="glass-panel history-section fade-in-up"><div className="panel-header"><h3>{copy.recent}</h3><span className="history-count">{sortedWorkouts.length}</span></div><div className="history-list">{sortedWorkouts.length ? sortedWorkouts.map((w) => <article className="history-item" key={w.id}><div><h3>{getExerciseName(w.exercise, settings.language)}</h3><p>{formatDateValue(w.date, settings.dateFormat)}</p></div><div className="history-metrics"><span>{formatWeight(w.weight, settings.units)}</span><span>{getSetCount(w)} {copy.sets.toLowerCase()}</span><span>{formatSetDetails(w)}</span></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={() => startEditWorkout(w)}>{copy.edit}</button><button className="action-btn-outline danger-button" type="button" onClick={() => deleteWorkout(w.id)}>{copy.delete}</button></div></article>) : <div className="empty-state"><h4>{copy.recent}</h4><p>{copy.noHistory}</p></div>}</div></section>}
+        {activeSection === 'history' && <section className="glass-panel history-section fade-in-up"><div className="panel-header"><h3>{copy.recent}</h3><span className="history-count">{sortedWorkouts.length}</span></div><div className="history-list">{sortedWorkouts.length ? sortedWorkouts.map((w) => <article className="history-item" key={w.id}><div><h3>{getExerciseName(w.exercise, settings.language)}{personalRecords[w.exercise] === w.weight ? <span className="pr-badge">{copy.prBadge}</span> : null}</h3><p>{formatDateValue(w.date, settings.dateFormat)}</p></div><div className="history-metrics"><span>{formatWeight(w.weight, settings.units)}</span><span>{getSetCount(w)} {copy.sets.toLowerCase()}</span><span>{formatSetDetails(w)}</span></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={() => startEditWorkout(w)}>{copy.edit}</button><button className="action-btn-outline danger-button" type="button" onClick={() => deleteWorkout(w.id)}>{copy.delete}</button></div></article>) : <div className="empty-state"><h4>{copy.recent}</h4><p>{copy.noHistory}</p></div>}</div></section>}
 
         {activeSection === 'exercises' && <section className="glass-panel exercise-section fade-in-up"><div className="panel-header"><h3>{copy.exercises}</h3></div>{Object.entries(sections).map(([section, names]) => <div className="exercise-section-block" key={section}><div className="exercise-section-header"><h4>{sectionNames[section]}</h4><span className="exercise-badge">{names.length}</span></div><div className="exercise-grid">{names.map((name) => { const meta = getExerciseInfo(name); return <article className="exercise-card" key={name}><div className="exercise-top"><div><p className="exercise-category">{sectionNames[section]}</p><h4>{getExerciseName(name, settings.language)}</h4></div><span className="exercise-badge">{localize(meta.primary, settings.language)}</span></div><div className="exercise-copy"><p><strong>{copy.target}:</strong> {localize(meta.targets, settings.language)}</p><p><strong>{copy.primary}:</strong> {localize(meta.primary, settings.language)}</p><p><strong>{copy.equipment}:</strong> {localize(meta.equipment, settings.language)}</p><p><strong>{copy.howTo}:</strong> {localize(meta.howTo, settings.language)}</p><p><strong>{copy.cues}:</strong> {localize(meta.cues, settings.language)}</p></div></article>; })}</div></div>)}</section>}
 
@@ -1294,9 +1467,85 @@ Be concise. Use average homemade/generic values, not brand values.`;
           </section>
         </>)}
 
+        {activeSection === 'bodyweight' && <>
+          <div className="dashboard-grid">
+            <section className="glass-panel chart-panel fade-in-up">
+              <div className="panel-header"><h3>{copy.bwTitle}</h3></div>
+              <div className="chart-container">{bwSorted.length ? <Line data={bodyWeightChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8' } }, y: { beginAtZero: false, grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8' } } } }} /> : <div className="empty-state"><p>{copy.bwNoData}</p></div>}</div>
+            </section>
+            <section className="glass-panel action-panel fade-in-up">
+              <div className="panel-header"><h3>{copy.bwAdd}</h3></div>
+              <form className="premium-form" onSubmit={saveBodyWeight}>
+                <div className="input-group"><label>{copy.bwDate}</label><input type="date" value={bwForm.date} onChange={(e) => setBwForm((c) => ({ ...c, date: e.target.value }))} /></div>
+                <div className="input-group"><label>{copy.bwWeight}</label><input type="number" step="0.1" min="20" value={bwForm.weight} onChange={(e) => setBwForm((c) => ({ ...c, weight: e.target.value }))} placeholder="70.5" /></div>
+                <button className="action-btn-primary full-width" type="submit">{copy.bwSave}</button>
+              </form>
+            </section>
+          </div>
+          <div className="dashboard-grid">
+            <section className="glass-panel action-panel fade-in-up">
+              <div className="panel-header"><h3>{copy.tdeeTitle}</h3></div>
+              <form className="premium-form" onSubmit={calculateTDEE}>
+                <div className="input-group"><label>{copy.tdeeCurrentWeight}</label><input type="number" step="0.1" min="20" value={tdeeForm.currentWeight} onChange={(e) => setTdeeForm((c) => ({ ...c, currentWeight: e.target.value }))} placeholder="80" /></div>
+                <div className="input-group"><label>{copy.tdeeGoalWeight}</label><input type="number" step="0.1" min="20" value={tdeeForm.goalWeight} onChange={(e) => setTdeeForm((c) => ({ ...c, goalWeight: e.target.value }))} placeholder="75" /></div>
+                <div className="input-group"><label>{copy.tdeeWeeks}</label><input type="number" min="1" value={tdeeForm.weeks} onChange={(e) => setTdeeForm((c) => ({ ...c, weeks: e.target.value }))} placeholder="12" /></div>
+                <div className="input-group"><label>{copy.tdeeActivity}</label><select className="premium-select" value={tdeeForm.activityLevel} onChange={(e) => setTdeeForm((c) => ({ ...c, activityLevel: e.target.value }))}><option value="sedentary">{copy.tdeeSedentary}</option><option value="light">{copy.tdeeLight}</option><option value="moderate">{copy.tdeeModerate}</option><option value="active">{copy.tdeeActive}</option><option value="veryactive">{copy.tdeeVeryActive}</option></select></div>
+                <button className="action-btn-primary full-width" type="submit">{copy.tdeeCalculate}</button>
+              </form>
+              {tdeeResult && (
+                <div className="stats-list" style={{marginTop:'1rem'}}>
+                  <div className="stats-row"><span>{copy.tdeeTDEE}</span><strong>{tdeeResult.tdee} kcal</strong></div>
+                  <div className="stats-row"><span>{copy.tdeeAdjustment}</span><strong style={{color: tdeeResult.dailyAdjustment > 0 ? 'var(--error)' : 'var(--secondary-glow)'}}>{tdeeResult.dailyAdjustment > 0 ? '-' : '+'}{Math.abs(tdeeResult.dailyAdjustment)} kcal</strong></div>
+                  <div className="stats-row"><span>{copy.tdeeTarget}</span><strong style={{fontSize:'1.1rem'}}>{tdeeResult.target} kcal</strong></div>
+                </div>
+              )}
+            </section>
+            <section className="glass-panel history-section fade-in-up">
+              <div className="panel-header"><h3>{copy.bwTitle}</h3><span className="history-count">{bodyWeightEntries.length}</span></div>
+              <div className="history-list">{bodyWeightEntries.length ? [...bodyWeightEntries].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0,20).map((e) => (
+                <article className="history-item" key={e.id}>
+                  <div><h3>{e.weight} kg</h3><p>{formatDateValue(e.date, settings.dateFormat)}</p></div>
+                  <button className="action-btn-outline danger-button" type="button" onClick={() => deleteBodyWeightEntry(e.id)}>{copy.delete}</button>
+                </article>
+              )) : <div className="empty-state"><p>{copy.bwNoData}</p></div>}</div>
+            </section>
+          </div>
+        </>}
+
         {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
       </main>
       {toast ? <div className="toast-container"><div className="toast">{toast}</div></div> : null}
+      {showRecap && recapData && (
+        <div className="recap-overlay" onClick={() => setShowRecap(false)}>
+          <div className="recap-modal glass-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="recap-header">
+              <div className="recap-icon">🏆</div>
+              <h2>{copy.recapTitle}</h2>
+              <p className="settings-copy">{recapData.month}</p>
+            </div>
+            <p className="recap-motivation">{copy.recapMotivation}</p>
+            <div className="stats-list" style={{marginBottom:'1rem'}}>
+              <div className="stats-row"><span>{copy.recapWorkouts}</span><strong style={{fontSize:'1.2rem'}}>{recapData.workoutCount}</strong></div>
+              <div className="stats-row"><span>{copy.recapPRs}</span><strong style={{fontSize:'1.2rem'}}>{recapData.broken.length}</strong></div>
+            </div>
+            {recapData.broken.length > 0 ? (
+              <div className="pr-list">
+                {recapData.broken.map((pr) => (
+                  <div className="pr-row" key={pr.exercise}>
+                    <span>{getExerciseName(pr.exercise, settings.language)}</span>
+                    <strong className="pr-value">
+                      {formatWeight(pr.weight, settings.units)}
+                      {pr.prev > 0 ? <span style={{fontSize:'0.8rem',opacity:.7,marginLeft:'0.4rem'}}>↑{formatWeight(pr.weight - pr.prev, settings.units)}</span> : null}
+                      <span className="pr-badge">{copy.prBadge}</span>
+                    </strong>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="settings-copy">{copy.recapNoPRs}</p>}
+            <button className="action-btn-primary full-width" style={{marginTop:'1.5rem'}} type="button" onClick={() => setShowRecap(false)}>{copy.recapClose}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

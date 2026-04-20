@@ -943,31 +943,113 @@ p {
 }
 
 @media (max-width: 768px) {
+  /* Layout */
   .app-container {
     flex-direction: column;
+    padding-bottom: 68px;
   }
 
+  /* Bottom navigation bar */
   .sidebar {
-    width: auto;
-    margin: 10px;
-    padding: 20px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    margin: 0;
+    padding: 6px 4px 10px;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: row;
+  }
+
+  .brand {
+    display: none;
   }
 
   .nav-menu {
     flex-direction: row;
     overflow-x: auto;
+    gap: 2px;
+    flex: 1;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .nav-menu::-webkit-scrollbar {
+    display: none;
   }
 
   .nav-btn {
+    padding: 8px 14px;
+    font-size: 13px;
     white-space: nowrap;
+    min-height: 44px;
+    border-left: none;
+    border-bottom: 3px solid transparent;
   }
 
+  .nav-btn.active {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--primary-glow);
+    border-left: none;
+    border-bottom: 3px solid var(--primary-glow);
+  }
+
+  /* Main content */
   .main-content {
-    padding: 10px;
+    padding: 12px 12px 20px;
+    gap: 16px;
   }
 
-  .topbar,
-  .panel-header,
+  /* Topbar */
+  .topbar {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 0;
+    margin-bottom: 4px;
+    gap: 10px;
+  }
+
+  .greeting h2 {
+    font-size: 20px;
+  }
+
+  .greeting p {
+    display: none;
+  }
+
+  /* Stat cards — 2 per row */
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .chart-panel,
+  .action-panel {
+    grid-column: span 2;
+  }
+
+  .stat-card {
+    padding: 14px 12px;
+    gap: 10px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .stat-value {
+    font-size: 1.4rem;
+  }
+
+  /* Panel header — wrap instead of column */
+  .panel-header {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* History, forms etc. */
   .history-item,
   .form-row,
   .backup-banner,
@@ -982,6 +1064,17 @@ p {
 
   .set-row {
     grid-template-columns: 1fr;
+  }
+
+  /* Touch-friendly buttons */
+  .action-btn-primary,
+  .action-btn-outline {
+    min-height: 44px;
+  }
+
+  /* Timer font */
+  .timer-clock {
+    font-size: 2.8rem !important;
   }
 }
 

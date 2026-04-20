@@ -14,6 +14,7 @@ const SETTINGS_KEY_PREFIX = 'powergraph_settings_';
 const USERS_KEY = 'powergraph_users';
 const SESSION_KEY = 'powergraph_session';
 const ADMIN_EMAIL = 'vid.oreskovic@gmail.com';
+const LOGINS_KEY = 'powergraph_logins';
 
 const LOCAL_FOODS = {
   // --- Meso / Meat ---
@@ -443,6 +444,10 @@ const ui = {
     adminLastWorkout: 'Zadnji trening',
     adminNever: 'Nikoli',
     adminNoUsers: 'Ni registriranih uporabnikov.',
+    adminLoginHistory: 'Zgodovina prijav',
+    adminLoginEvent: 'Prijava',
+    adminSignupEvent: 'Registracija',
+    adminNoLogins: 'Še ni zabeleženih prijav.',
   },
   en: {
     app: 'PowerGraph',
@@ -634,6 +639,10 @@ const ui = {
     adminLastWorkout: 'Last workout',
     adminNever: 'Never',
     adminNoUsers: 'No registered users.',
+    adminLoginHistory: 'Login history',
+    adminLoginEvent: 'Login',
+    adminSignupEvent: 'Signup',
+    adminNoLogins: 'No logins recorded yet.',
   },
 };
 
@@ -799,6 +808,14 @@ function loadUsers() {
   } catch {
     return [];
   }
+}
+
+function recordLogin(email, type) {
+  try {
+    const logs = JSON.parse(localStorage.getItem(LOGINS_KEY) || '[]');
+    logs.push({ email, type, ts: new Date().toISOString() });
+    localStorage.setItem(LOGINS_KEY, JSON.stringify(logs.slice(-500)));
+  } catch {}
 }
 
 async function hashPassword(value) {
@@ -1071,6 +1088,7 @@ export default function App() {
         localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
         localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify([]));
         localStorage.setItem(getSettingsStorageKey(email), JSON.stringify(defaultSettings));
+        recordLogin(email, 'signup');
         setCurrentUser(email);
       } else {
         if (!existing) {
@@ -1081,6 +1099,7 @@ export default function App() {
           setAuthError(copy.authWrongPassword);
           return;
         }
+        recordLogin(email, 'login');
         setCurrentUser(email);
       }
       setAuthForm({ email: '', password: '', confirmPassword: '' });
@@ -1546,6 +1565,9 @@ Be concise. Use average homemade/generic values, not brand values.`;
             return { email: u.email, createdAt: u.createdAt, workouts: wList.length, meals: cList.length, bw: bwList.length, lastWorkout: lastW };
           });
           const totalWorkouts = userStats.reduce((s, u) => s + u.workouts, 0);
+          let loginLogs = [];
+          try { loginLogs = JSON.parse(localStorage.getItem(LOGINS_KEY) || '[]'); } catch {}
+          const recentLogins = [...loginLogs].reverse().slice(0, 100);
           return (
             <>
               <div className="dashboard-grid">
@@ -1570,6 +1592,23 @@ Be concise. Use average homemade/generic values, not brand values.`;
                         <div className="stats-row"><span>{copy.adminMeals}</span><strong>{u.meals}</strong></div>
                         <div className="stats-row"><span>{copy.adminBodyWeight}</span><strong>{u.bw}</strong></div>
                         <div className="stats-row"><span>{copy.adminLastWorkout}</span><strong>{u.lastWorkout ? formatDateValue(u.lastWorkout, settings.dateFormat) : copy.adminNever}</strong></div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+              <section className="glass-panel history-section fade-in-up">
+                <div className="panel-header"><h3>{copy.adminLoginHistory}</h3><span className="history-count">{loginLogs.length}</span></div>
+                <div className="history-list">
+                  {recentLogins.length === 0 && <div className="empty-state"><p>{copy.adminNoLogins}</p></div>}
+                  {recentLogins.map((entry, i) => (
+                    <article className="history-item" key={i}>
+                      <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+                        <div className="stat-icon" style={{width:'2rem',height:'2rem',fontSize:'0.75rem',flexShrink:0,background: entry.type === 'signup' ? 'var(--secondary-glow)' : 'var(--primary-glow)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center'}}>{entry.type === 'signup' ? 'R' : 'P'}</div>
+                        <div>
+                          <h3 style={{fontSize:'0.9rem'}}>{entry.email}</h3>
+                          <p style={{fontSize:'0.78rem',opacity:0.6}}>{entry.type === 'signup' ? copy.adminSignupEvent : copy.adminLoginEvent} · {new Date(entry.ts).toLocaleString()}</p>
+                        </div>
                       </div>
                     </article>
                   ))}

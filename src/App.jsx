@@ -1485,12 +1485,10 @@ Be concise. Use average homemade/generic values, not brand values.`;
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">#</div><div><p className="stat-title">{copy.workouts}</p><h3 className="stat-value">{overall.workouts}</h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">S</div><div><p className="stat-title">{copy.totalSets}</p><h3 className="stat-value">{overall.sets}</h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow">V</div><div><p className="stat-title">{copy.totalVolume}</p><h3 className="stat-value">{formatVolume(overall.volumeKg, settings.units)}</h3></div></article>
-            <article className="glass-panel stat-card fade-in-up" style={{gridColumn:'span 1'}}>
-              <div className="stat-icon" style={{background:'linear-gradient(135deg,#f59e0b,#ef4444)',borderRadius:'50%',width:'2.5rem',height:'2.5rem',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.1rem',flexShrink:0}}>★</div>
+            <article className="glass-panel stat-card fade-in-up">
+              <div className="stat-icon" style={{background:'linear-gradient(135deg,#22d3ee,#3b82f6)',borderRadius:'50%',width:'2.5rem',height:'2.5rem',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.1rem',flexShrink:0}}>Z</div>
               <div style={{flex:1,minWidth:0}}>
-                <p className="stat-title">{copy.rankTitle}</p>
-                <h3 className="stat-value" style={{fontSize:'1.1rem'}}>{rankData.rank.displayName}</h3>
-                <p style={{fontSize:'0.78rem',opacity:0.6}}>{rankData.pts} {copy.rankPoints}</p>
+                <p className="stat-title">{copy.restDay}</p>
               </div>
               <button className="action-btn-outline" type="button" onClick={toggleRestDay} style={{alignSelf:'center',whiteSpace:'nowrap',flexShrink:0}}>
                 {restDays.includes(new Date().toISOString().slice(0,10)) ? copy.restDayDone : copy.restDay}

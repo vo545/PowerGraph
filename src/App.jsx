@@ -456,6 +456,7 @@ const ui = {
     adminLoginEvent: 'Prijava',
     adminSignupEvent: 'Registracija',
     adminNoLogins: 'Še ni zabeleženih prijav.',
+    loading: 'Nalagam...',
     rankTitle: 'Moj rang',
     rankPoints: 'točk',
     rankNext: 'Do naslednjega ranga',
@@ -530,7 +531,7 @@ const ui = {
     cleared: 'Data deleted.',
     advisorTitle: 'Daily workout suggestion',
     advisorText: 'The suggestion is based on what you trained recently and which area has been neglected the most.',
-    focus: 'Today focus',
+    focus: "Today's focus",
     why: 'Why this suggestion',
     suggested: 'Suggested exercises',
     lastWorked: 'Last trained',
@@ -661,6 +662,7 @@ const ui = {
     adminLoginEvent: 'Login',
     adminSignupEvent: 'Signup',
     adminNoLogins: 'No logins recorded yet.',
+    loading: 'Loading...',
     rankTitle: 'My rank',
     rankPoints: 'points',
     rankNext: 'To next rank',
@@ -1125,6 +1127,8 @@ export default function App() {
     setSettings(loadSettings(currentUser));
     setCalHistory(loadCalHistory(currentUser));
     setBodyWeightEntries(loadBodyWeight(currentUser));
+    setRestDays(loadRestDays(currentUser));
+    setCheatDays(loadCheatDays(currentUser));
     setSelectedExercise('Bench Press');
     setActiveSection('dashboard');
     // Monthly recap check
@@ -1246,6 +1250,8 @@ export default function App() {
     setAuthForm({ email: '', password: '', confirmPassword: '' });
     setShowRecap(false);
     setRecapData(null);
+    setRestDays([]);
+    setCheatDays([]);
   }
 
   function changeSet(index, value) { setFormData((c) => ({ ...c, setDetails: c.setDetails.map((item, i) => (i === index ? value : item)) })); }
@@ -1287,7 +1293,7 @@ export default function App() {
     reader.onload = () => { try { const parsed = JSON.parse(String(reader.result)); const imported = Array.isArray(parsed) ? parsed : parsed.workouts; if (!Array.isArray(imported)) throw new Error('invalid'); setWorkouts(imported.map(normalizeWorkout)); if (Array.isArray(parsed.calorieEntries)) setCalorieEntries(parsed.calorieEntries); if (parsed.settings) setSettings(sanitizeSettings(parsed.settings)); if (Array.isArray(parsed.calHistory)) setCalHistory(parsed.calHistory); if (Array.isArray(parsed.bodyWeightEntries)) setBodyWeightEntries(parsed.bodyWeightEntries); setToast(copy.importDone); } catch { setToast(copy.importFail); } finally { event.target.value = ''; } };
     reader.readAsText(file);
   }
-  function clearData() { if (!window.confirm(copy.clearConfirm)) return; setWorkouts([]); setCalorieEntries([]); setCalHistory([]); setBodyWeightEntries([]); setToast(copy.cleared); }
+  function clearData() { if (!window.confirm(copy.clearConfirm)) return; setWorkouts([]); setCalorieEntries([]); setCalHistory([]); setBodyWeightEntries([]); setRestDays([]); setCheatDays([]); localStorage.removeItem(getRestKey(currentUser)); localStorage.removeItem(getCheatKey(currentUser)); setToast(copy.cleared); }
   function deleteWorkout(id) { setWorkouts((current) => current.filter((item) => item.id !== id)); if (editingWorkoutId === id) setEditingWorkoutId(null); }
   function startEditWorkout(workout) { setEditingWorkoutId(workout.id); setFormData({ date: workout.date, exercise: workout.exercise, weight: String(workout.weight), setDetails: workout.setDetails.map(String) }); setActiveSection('dashboard'); }
   function saveWorkoutEdit() {
@@ -1749,7 +1755,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
               <section className="glass-panel history-section fade-in-up">
                 <div className="panel-header"><h3>{copy.adminLoginHistory}</h3><span className="history-count">{adminLogs === null ? '…' : loginLogs.length}</span></div>
                 <div className="history-list">
-                  {adminLogs === null && <div className="empty-state"><p>Nalagam...</p></div>}
+                  {adminLogs === null && <div className="empty-state"><p>{copy.loading}</p></div>}
                   {adminLogs !== null && recentLogins.length === 0 && <div className="empty-state"><p>{copy.adminNoLogins}</p></div>}
                   {recentLogins.map((entry, i) => (
                     <article className="history-item" key={i}>

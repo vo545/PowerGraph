@@ -469,6 +469,10 @@ const ui = {
     restDayDone: '✓ Dan za počitek',
     restDayLast: 'Zadnji počitek',
     restDayNever: 'Še nikoli',
+    addComment: 'Dodaj opombo',
+    editComment: 'Uredi opombo',
+    commentPlaceholder: 'Npr. danes sem bil utrujen, nova teža...',
+    saveComment: 'Shrani',
     cheatDay: 'Goljufiv dan',
     cheatDayDone: '✓ Goljufiv dan',
     recapRank: 'Tvoj rang',
@@ -681,6 +685,10 @@ const ui = {
     restDayDone: '✓ Rest day',
     restDayLast: 'Last rest',
     restDayNever: 'Never',
+    addComment: 'Add note',
+    editComment: 'Edit note',
+    commentPlaceholder: 'e.g. felt tired today, new weight...',
+    saveComment: 'Save',
     cheatDay: 'Cheat day',
     cheatDayDone: '✓ Cheat day',
     recapRank: 'Your rank',
@@ -1043,6 +1051,8 @@ export default function App() {
   const [showRecap, setShowRecap] = useState(false);
   const [recapData, setRecapData] = useState(null);
   const [adminLogs, setAdminLogs] = useState(null);
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [commentText, setCommentText] = useState('');
   const [restDays, setRestDays] = useState(() => loadRestDays(localStorage.getItem(SESSION_KEY) || ''));
   const [cheatDays, setCheatDays] = useState(() => loadCheatDays(localStorage.getItem(SESSION_KEY) || ''));
 
@@ -1308,6 +1318,8 @@ export default function App() {
   }
   function clearData() { if (!window.confirm(copy.clearConfirm)) return; setWorkouts([]); setCalorieEntries([]); setCalHistory([]); setBodyWeightEntries([]); setRestDays([]); setCheatDays([]); localStorage.removeItem(getRestKey(currentUser)); localStorage.removeItem(getCheatKey(currentUser)); setToast(copy.cleared); }
   function deleteWorkout(id) { setWorkouts((current) => current.filter((item) => item.id !== id)); if (editingWorkoutId === id) setEditingWorkoutId(null); }
+  function saveComment(id) { setWorkouts(cur => cur.map(w => w.id === id ? { ...w, comment: commentText.trim() } : w)); setEditingCommentId(null); setCommentText(''); }
+  function startEditComment(w) { setEditingCommentId(w.id); setCommentText(w.comment || ''); }
   function startEditWorkout(workout) { setEditingWorkoutId(workout.id); setFormData({ date: workout.date, exercise: workout.exercise, weight: String(workout.weight), setDetails: workout.setDetails.map(String) }); setActiveSection('dashboard'); }
   function saveWorkoutEdit() {
     const cleanSets = formData.setDetails.map((v) => Number(v) || 0).filter((v) => v > 0);
@@ -1556,7 +1568,34 @@ Be concise. Use average homemade/generic values, not brand values.`;
           </section>
         </>}
 
-        {activeSection === 'history' && <section className="glass-panel history-section fade-in-up"><div className="panel-header"><h3>{copy.recent}</h3><span className="history-count">{sortedWorkouts.length}</span></div><div className="history-list">{sortedWorkouts.length ? sortedWorkouts.map((w) => <article className="history-item" key={w.id}><div><h3>{getExerciseName(w.exercise, settings.language)}{personalRecords[w.exercise] === w.weight ? <span className="pr-badge">{copy.prBadge}</span> : null}</h3><p>{formatDateValue(w.date, settings.dateFormat)}</p></div><div className="history-metrics"><span>{formatWeight(w.weight, settings.units)}</span><span>{getSetCount(w)} {copy.sets.toLowerCase()}</span><span>{formatSetDetails(w)}</span></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={() => startEditWorkout(w)}>{copy.edit}</button><button className="action-btn-outline danger-button" type="button" onClick={() => deleteWorkout(w.id)}>{copy.delete}</button></div></article>) : <div className="empty-state"><h4>{copy.recent}</h4><p>{copy.noHistory}</p></div>}</div></section>}
+        {activeSection === 'history' && (
+          <section className="glass-panel history-section fade-in-up">
+            <div className="panel-header"><h3>{copy.recent}</h3><span className="history-count">{sortedWorkouts.length}</span></div>
+            <div className="history-list">
+              {sortedWorkouts.length ? sortedWorkouts.map((w) => (
+                <article className="history-item" key={w.id} style={{flexWrap:'wrap'}}>
+                  <div><h3>{getExerciseName(w.exercise, settings.language)}{personalRecords[w.exercise] === w.weight ? <span className="pr-badge">{copy.prBadge}</span> : null}</h3><p>{formatDateValue(w.date, settings.dateFormat)}</p></div>
+                  <div className="history-metrics"><span>{formatWeight(w.weight, settings.units)}</span><span>{getSetCount(w)} {copy.sets.toLowerCase()}</span><span>{formatSetDetails(w)}</span></div>
+                  <div className="settings-button-row">
+                    <button className="action-btn-outline" type="button" onClick={() => startEditWorkout(w)}>{copy.edit}</button>
+                    <button className="action-btn-outline danger-button" type="button" onClick={() => deleteWorkout(w.id)}>{copy.delete}</button>
+                    <button className="action-btn-outline" type="button" onClick={() => startEditComment(w)} style={{fontSize:'0.8rem'}}>✎</button>
+                  </div>
+                  {editingCommentId === w.id && (
+                    <div style={{width:'100%',display:'flex',gap:'0.5rem',paddingTop:'0.5rem'}}>
+                      <input className="premium-input" style={{flex:1,fontSize:'0.85rem',padding:'0.35rem 0.6rem'}} value={commentText} onChange={e => setCommentText(e.target.value)} placeholder={copy.commentPlaceholder} autoFocus />
+                      <button className="action-btn-primary" type="button" onClick={() => saveComment(w.id)} style={{fontSize:'0.8rem',padding:'0.35rem 0.75rem'}}>{copy.saveComment}</button>
+                      <button className="action-btn-outline" type="button" onClick={() => setEditingCommentId(null)} style={{fontSize:'0.8rem',padding:'0.35rem 0.75rem'}}>{copy.cancel}</button>
+                    </div>
+                  )}
+                  {w.comment && editingCommentId !== w.id && (
+                    <p style={{width:'100%',fontSize:'0.82rem',opacity:0.65,margin:'0.4rem 0 0',fontStyle:'italic'}}>"{w.comment}"</p>
+                  )}
+                </article>
+              )) : <div className="empty-state"><h4>{copy.recent}</h4><p>{copy.noHistory}</p></div>}
+            </div>
+          </section>
+        )}
 
         {activeSection === 'exercises' && <section className="glass-panel exercise-section fade-in-up"><div className="panel-header"><h3>{copy.exercises}</h3></div>{Object.entries(sections).map(([section, names]) => <div className="exercise-section-block" key={section}><div className="exercise-section-header"><h4>{sectionNames[section]}</h4><span className="exercise-badge">{names.length}</span></div><div className="exercise-grid">{names.map((name) => { const meta = getExerciseInfo(name); return <article className="exercise-card" key={name}><div className="exercise-top"><div><p className="exercise-category">{sectionNames[section]}</p><h4>{getExerciseName(name, settings.language)}</h4></div><span className="exercise-badge">{localize(meta.primary, settings.language)}</span></div><div className="exercise-copy"><p><strong>{copy.target}:</strong> {localize(meta.targets, settings.language)}</p><p><strong>{copy.primary}:</strong> {localize(meta.primary, settings.language)}</p><p><strong>{copy.equipment}:</strong> {localize(meta.equipment, settings.language)}</p><p><strong>{copy.howTo}:</strong> {localize(meta.howTo, settings.language)}</p><p><strong>{copy.cues}:</strong> {localize(meta.cues, settings.language)}</p></div></article>; })}</div></div>)}</section>}
 

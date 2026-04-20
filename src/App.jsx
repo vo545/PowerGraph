@@ -13,6 +13,7 @@ const THEME_KEY = 'powergraph_theme';
 const SETTINGS_KEY_PREFIX = 'powergraph_settings_';
 const USERS_KEY = 'powergraph_users';
 const SESSION_KEY = 'powergraph_session';
+const ADMIN_EMAIL = 'vid.oreskovic@gmail.com';
 
 const LOCAL_FOODS = {
   // --- Meso / Meat ---
@@ -431,6 +432,17 @@ const ui = {
     recapMotivation: 'BRAVO! Odlično si delal ta mesec!',
     recapPRDetail: 'Podrl si rekord za',
     recapOn: 'za vajo',
+    admin: 'Admin panel',
+    adminUsers: 'Registrirani uporabniki',
+    adminTotalUsers: 'Skupaj uporabnikov',
+    adminTotalWorkouts: 'Skupaj treningov',
+    adminRegistered: 'Registriran',
+    adminWorkouts: 'Treningi',
+    adminMeals: 'Obroki',
+    adminBodyWeight: 'Meritve teže',
+    adminLastWorkout: 'Zadnji trening',
+    adminNever: 'Nikoli',
+    adminNoUsers: 'Ni registriranih uporabnikov.',
   },
   en: {
     app: 'PowerGraph',
@@ -611,6 +623,17 @@ const ui = {
     recapMotivation: 'BRAVO! You did great this month!',
     recapPRDetail: 'You broke your record on',
     recapOn: 'on exercise',
+    admin: 'Admin panel',
+    adminUsers: 'Registered users',
+    adminTotalUsers: 'Total users',
+    adminTotalWorkouts: 'Total workouts',
+    adminRegistered: 'Registered',
+    adminWorkouts: 'Workouts',
+    adminMeals: 'Meals',
+    adminBodyWeight: 'Weight entries',
+    adminLastWorkout: 'Last workout',
+    adminNever: 'Never',
+    adminNoUsers: 'No registered users.',
   },
 };
 
@@ -885,10 +908,11 @@ export default function App() {
     history: settings.language === 'sl' ? 'Preglej pretekle vnose in hitro preveri svoje zadnje treninge.' : 'Review past entries and quickly check your latest sessions.',
     exercises: settings.language === 'sl' ? 'Knjižnica vaj z opisi izvedbe, targeti in osnovnimi cue-ji.' : 'Exercise library with execution notes, targets, and key cues.',
     advisor: settings.language === 'sl' ? 'Pameten dnevni predlog na podlagi tvojih preteklih treningov.' : 'A smart daily suggestion based on your recent training history.',
-    calories: settings.language === 'sl' ? 'Belezi obroke, kalorije in osnovne makrote po dnevih.' : 'Track meals, calories, and basic macros by day.',
-    ocenjevalec: settings.language === 'sl' ? 'Vpisi jed in grame ter izvedi iskanje kalorij.' : 'Enter a food and grams to look up its calorie count.',
+    calories: settings.language === 'sl' ? 'Beleži obroke, kalorije in osnovne makrote po dnevih.' : 'Track meals, calories, and basic macros by day.',
+    ocenjevalec: settings.language === 'sl' ? 'Vpiši jed in grame ter izvedi iskanje kalorij.' : 'Enter a food and grams to look up its calorie count.',
     bodyweight: settings.language === 'sl' ? 'Sledi telesni teži in izračunaj dnevne kalorijske potrebe.' : 'Track your body weight and calculate your daily calorie needs.',
     settings: settings.language === 'sl' ? 'Uredi lokalne nastavitve, backup in prikaz podatkov.' : 'Adjust local preferences, backups, and data display.',
+    admin: settings.language === 'sl' ? 'Pregled vseh registriranih uporabnikov in njihovih podatkov.' : 'Overview of all registered users and their data.',
   };
   const exerciseOptions = useMemo(() => [...new Set([...Object.values(sections).flat(), ...workouts.map((w) => w.exercise)])].sort(), [workouts]);
   const selectedWorkouts = useMemo(() => workouts.filter((w) => w.exercise === selectedExercise).sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id), [selectedExercise, workouts]);
@@ -1226,7 +1250,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
   function toggleTimer() { if (timerSeconds <= 0) { setTimerSeconds(timerPreset); setTimerActive(true); } else { setTimerActive((a) => !a); } }
   function resetTimer() { setTimerActive(false); setTimerSeconds(timerPreset); }
 
-  const nav = [['dashboard', copy.dashboard], ['history', copy.history], ['exercises', copy.exercises], ['advisor', copy.advisor], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['bodyweight', copy.bodyweight], ['settings', copy.settings]];
+  const nav = [['dashboard', copy.dashboard], ['history', copy.history], ['exercises', copy.exercises], ['advisor', copy.advisor], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['bodyweight', copy.bodyweight], ['settings', copy.settings], ...(currentUser === ADMIN_EMAIL ? [['admin', copy.admin]] : [])];
 
   if (!currentUser) {
     return (
@@ -1511,6 +1535,49 @@ Be concise. Use average homemade/generic values, not brand values.`;
             </section>
           </div>
         </>}
+
+        {activeSection === 'admin' && currentUser === ADMIN_EMAIL && (() => {
+          const allUsers = loadUsers();
+          const userStats = allUsers.map((u) => {
+            const wList = loadWorkouts(u.email);
+            const cList = loadCalories(u.email);
+            const bwList = loadBodyWeight(u.email);
+            const lastW = wList.length ? [...wList].sort((a, b) => new Date(b.date) - new Date(a.date))[0].date : null;
+            return { email: u.email, createdAt: u.createdAt, workouts: wList.length, meals: cList.length, bw: bwList.length, lastWorkout: lastW };
+          });
+          const totalWorkouts = userStats.reduce((s, u) => s + u.workouts, 0);
+          return (
+            <>
+              <div className="dashboard-grid">
+                <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">U</div><div><p className="stat-title">{copy.adminTotalUsers}</p><h3 className="stat-value">{allUsers.length}</h3></div></article>
+                <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">T</div><div><p className="stat-title">{copy.adminTotalWorkouts}</p><h3 className="stat-value">{totalWorkouts}</h3></div></article>
+              </div>
+              <section className="glass-panel history-section fade-in-up">
+                <div className="panel-header"><h3>{copy.adminUsers}</h3><span className="history-count">{allUsers.length}</span></div>
+                <div className="history-list">
+                  {userStats.length === 0 && <div className="empty-state"><p>{copy.adminNoUsers}</p></div>}
+                  {userStats.map((u) => (
+                    <article className="history-item" key={u.email} style={{flexDirection:'column',alignItems:'flex-start',gap:'0.5rem'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'0.75rem',width:'100%'}}>
+                        <div className="stat-icon blue-glow" style={{width:'2rem',height:'2rem',fontSize:'0.85rem',flexShrink:0}}>{u.email[0].toUpperCase()}</div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <h3 style={{fontSize:'0.95rem',wordBreak:'break-all'}}>{u.email}</h3>
+                          <p style={{fontSize:'0.78rem',opacity:0.6}}>{copy.adminRegistered}: {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</p>
+                        </div>
+                      </div>
+                      <div className="stats-list" style={{width:'100%',marginTop:'0.25rem'}}>
+                        <div className="stats-row"><span>{copy.adminWorkouts}</span><strong>{u.workouts}</strong></div>
+                        <div className="stats-row"><span>{copy.adminMeals}</span><strong>{u.meals}</strong></div>
+                        <div className="stats-row"><span>{copy.adminBodyWeight}</span><strong>{u.bw}</strong></div>
+                        <div className="stats-row"><span>{copy.adminLastWorkout}</span><strong>{u.lastWorkout ? formatDateValue(u.lastWorkout, settings.dateFormat) : copy.adminNever}</strong></div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            </>
+          );
+        })()}
 
         {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
       </main>

@@ -35,6 +35,8 @@ jobs:
         run: npm run build
         env:
           VITE_GEMINI_KEY: ${{ secrets.VITE_GEMINI_KEY }}
+          VITE_GITHUB_TOKEN: ${{ secrets.VITE_GITHUB_TOKEN }}
+          VITE_GIST_ID: ${{ secrets.VITE_GIST_ID }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

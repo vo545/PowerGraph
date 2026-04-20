@@ -15,6 +15,8 @@ const USERS_KEY = 'powergraph_users';
 const SESSION_KEY = 'powergraph_session';
 const ADMIN_EMAIL = 'vid.oreskovic@gmail.com';
 const LOGINS_KEY = 'powergraph_logins';
+const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
+const GIST_ID = import.meta.env.VITE_GIST_ID || '';
 
 const LOCAL_FOODS = {
   // --- Meso / Meat ---
@@ -818,6 +820,35 @@ function recordLogin(email, type) {
   } catch {}
 }
 
+async function fetchLoginLogs() {
+  if (!GITHUB_TOKEN || !GIST_ID) {
+    try { return JSON.parse(localStorage.getItem(LOGINS_KEY) || '[]'); } catch { return []; }
+  }
+  try {
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json' }
+    });
+    const data = await res.json();
+    const content = data.files?.['logs.json']?.content || '[]';
+    return JSON.parse(content);
+  } catch { return []; }
+}
+
+async function pushLoginLog(email, type) {
+  const entry = { email, type, ts: new Date().toISOString() };
+  if (!GITHUB_TOKEN || !GIST_ID) { recordLogin(email, type); return; }
+  try {
+    const logs = await fetchLoginLogs();
+    logs.push(entry);
+    const trimmed = logs.slice(-500);
+    await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { 'logs.json': { content: JSON.stringify(trimmed) } } })
+    });
+  } catch { recordLogin(email, type); }
+}
+
 async function hashPassword(value) {
   const hashBuffer = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   return Array.from(new Uint8Array(hashBuffer)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -917,6 +948,7 @@ export default function App() {
   const [timerPreset, setTimerPreset] = useState(90);
   const [showRecap, setShowRecap] = useState(false);
   const [recapData, setRecapData] = useState(null);
+  const [adminLogs, setAdminLogs] = useState(null);
 
   const copy = ui[settings.language];
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -1053,6 +1085,11 @@ export default function App() {
   }, [timerActive, timerSeconds]);
   useEffect(() => { previousExerciseRef.current = selectedExercise; previousCountRef.current = selectedWorkouts.length; }, [selectedExercise, selectedWorkouts.length]);
   useEffect(() => { if (!toast) return undefined; const id = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(id); }, [toast]);
+  useEffect(() => {
+    if (activeSection !== 'admin' || currentUser !== ADMIN_EMAIL) return;
+    setAdminLogs(null);
+    fetchLoginLogs().then(setAdminLogs);
+  }, [activeSection, currentUser]);
 
   async function handleAuthSubmit(event) {
     event.preventDefault();
@@ -1088,7 +1125,7 @@ export default function App() {
         localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
         localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify([]));
         localStorage.setItem(getSettingsStorageKey(email), JSON.stringify(defaultSettings));
-        recordLogin(email, 'signup');
+        await pushLoginLog(email, 'signup');
         setCurrentUser(email);
       } else {
         if (!existing) {
@@ -1099,7 +1136,7 @@ export default function App() {
           setAuthError(copy.authWrongPassword);
           return;
         }
-        recordLogin(email, 'login');
+        await pushLoginLog(email, 'login');
         setCurrentUser(email);
       }
       setAuthForm({ email: '', password: '', confirmPassword: '' });
@@ -1565,8 +1602,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
             return { email: u.email, createdAt: u.createdAt, workouts: wList.length, meals: cList.length, bw: bwList.length, lastWorkout: lastW };
           });
           const totalWorkouts = userStats.reduce((s, u) => s + u.workouts, 0);
-          let loginLogs = [];
-          try { loginLogs = JSON.parse(localStorage.getItem(LOGINS_KEY) || '[]'); } catch {}
+          const loginLogs = adminLogs || [];
           const recentLogins = [...loginLogs].reverse().slice(0, 100);
           return (
             <>
@@ -1598,9 +1634,10 @@ Be concise. Use average homemade/generic values, not brand values.`;
                 </div>
               </section>
               <section className="glass-panel history-section fade-in-up">
-                <div className="panel-header"><h3>{copy.adminLoginHistory}</h3><span className="history-count">{loginLogs.length}</span></div>
+                <div className="panel-header"><h3>{copy.adminLoginHistory}</h3><span className="history-count">{adminLogs === null ? '…' : loginLogs.length}</span></div>
                 <div className="history-list">
-                  {recentLogins.length === 0 && <div className="empty-state"><p>{copy.adminNoLogins}</p></div>}
+                  {adminLogs === null && <div className="empty-state"><p>Nalagam...</p></div>}
+                  {adminLogs !== null && recentLogins.length === 0 && <div className="empty-state"><p>{copy.adminNoLogins}</p></div>}
                   {recentLogins.map((entry, i) => (
                     <article className="history-item" key={i}>
                       <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>

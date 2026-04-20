@@ -9,6 +9,8 @@ const CALORIES_KEY_PREFIX = 'powergraph_calories_';
 const CAL_HISTORY_KEY_PREFIX = 'powergraph_calhistory_';
 const BODYWEIGHT_KEY_PREFIX = 'powergraph_bodyweight_';
 const RECAP_KEY_PREFIX = 'powergraph_recap_';
+const REST_KEY_PREFIX = 'powergraph_rest_';
+const CHEAT_KEY_PREFIX = 'powergraph_cheat_';
 const THEME_KEY = 'powergraph_theme';
 const SETTINGS_KEY_PREFIX = 'powergraph_settings_';
 const USERS_KEY = 'powergraph_users';
@@ -238,6 +240,10 @@ function normalizeFoodQuery(s) {
 function getCalHistoryKey(email) { return `${CAL_HISTORY_KEY_PREFIX}${email}`; }
 function getBodyWeightKey(email) { return `${BODYWEIGHT_KEY_PREFIX}${email}`; }
 function getRecapKey(email) { return `${RECAP_KEY_PREFIX}${email}`; }
+function getRestKey(email) { return `${REST_KEY_PREFIX}${(email || '').split('@')[0]}`; }
+function getCheatKey(email) { return `${CHEAT_KEY_PREFIX}${(email || '').split('@')[0]}`; }
+function loadRestDays(email) { if (!email) return []; try { return JSON.parse(localStorage.getItem(getRestKey(email)) || '[]'); } catch { return []; } }
+function loadCheatDays(email) { if (!email) return []; try { return JSON.parse(localStorage.getItem(getCheatKey(email)) || '[]'); } catch { return []; } }
 function loadBodyWeight(email) {
   if (!email) return [];
   try {
@@ -450,6 +456,16 @@ const ui = {
     adminLoginEvent: 'Prijava',
     adminSignupEvent: 'Registracija',
     adminNoLogins: 'Še ni zabeleženih prijav.',
+    rankTitle: 'Moj rang',
+    rankPoints: 'točk',
+    rankNext: 'Do naslednjega ranga',
+    rankMax: 'Dosegel si najvišji rang!',
+    restDay: 'Počitkov dan',
+    restDayDone: '✓ Počitkov dan',
+    cheatDay: 'Goljufiv dan',
+    cheatDayDone: '✓ Goljufiv dan',
+    recapRank: 'Tvoj rang',
+    recapPoints: 'Skupaj točk',
   },
   en: {
     app: 'PowerGraph',
@@ -645,6 +661,16 @@ const ui = {
     adminLoginEvent: 'Login',
     adminSignupEvent: 'Signup',
     adminNoLogins: 'No logins recorded yet.',
+    rankTitle: 'My rank',
+    rankPoints: 'points',
+    rankNext: 'To next rank',
+    rankMax: 'You reached the highest rank!',
+    restDay: 'Rest day',
+    restDayDone: '✓ Rest day',
+    cheatDay: 'Cheat day',
+    cheatDayDone: '✓ Cheat day',
+    recapRank: 'Your rank',
+    recapPoints: 'Total points',
   },
 };
 
@@ -820,6 +846,60 @@ function recordLogin(email, type) {
   } catch {}
 }
 
+const RANKS = [
+  { name: 'Začetnik', nameEn: 'Beginner', min: 0 },
+  { name: 'Rekreativec', nameEn: 'Recreational', min: 300 },
+  { name: 'Borec', nameEn: 'Fighter', min: 700 },
+  { name: 'Aktivni', nameEn: 'Active', min: 1500 },
+  { name: 'Napredni', nameEn: 'Advanced', min: 3000 },
+  { name: 'Veteran', nameEn: 'Veteran', min: 5500 },
+  { name: 'Elite', nameEn: 'Elite', min: 9000 },
+  { name: 'Legenda', nameEn: 'Legend', min: 15000 },
+];
+
+function getRank(points, lang) {
+  let rank = RANKS[0];
+  for (let i = RANKS.length - 1; i >= 0; i--) {
+    if (points >= RANKS[i].min) { rank = RANKS[i]; break; }
+  }
+  return { ...rank, displayName: lang === 'en' ? rank.nameEn : rank.name };
+}
+
+function calculatePoints(workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calorieGoal) {
+  let pts = 0;
+  pts += workouts.length * 5;
+  const exMax = {};
+  [...workouts].sort((a, b) => a.date.localeCompare(b.date)).forEach(w => {
+    if (exMax[w.exercise] !== undefined && w.weight > exMax[w.exercise]) pts += 15;
+    if (exMax[w.exercise] === undefined || w.weight > exMax[w.exercise]) exMax[w.exercise] = w.weight;
+  });
+  pts += restDays.length * 3;
+  pts += bodyWeightEntries.length * 1;
+  const calByDate = {};
+  calorieEntries.forEach(e => { if (!calByDate[e.date]) calByDate[e.date] = 0; calByDate[e.date] += Number(e.calories) || 0; });
+  const cheatSet = new Set(cheatDays);
+  Object.entries(calByDate).forEach(([date, total]) => {
+    if (cheatSet.has(date)) { pts += 2; }
+    else { pts += 2; if (Math.abs(total - calorieGoal) <= 200) pts += 8; else if (total > calorieGoal + 200) pts -= 3; }
+  });
+  const workoutDates = new Set(workouts.map(w => w.date));
+  const restSet = new Set(restDays);
+  const allDates = [...workoutDates, ...restSet];
+  if (allDates.length > 0) {
+    const firstDate = allDates.reduce((a, b) => a < b ? a : b);
+    const today = new Date().toISOString().slice(0, 10);
+    let d = new Date(firstDate);
+    const todayD = new Date(today);
+    let cons = 0;
+    while (d <= todayD) {
+      const ds = d.toISOString().slice(0, 10);
+      if (workoutDates.has(ds) || restSet.has(ds)) { cons = 0; } else { cons++; if (cons > 2) pts -= 4; }
+      d.setDate(d.getDate() + 1);
+    }
+  }
+  return Math.max(0, pts);
+}
+
 async function fetchLoginLogs() {
   if (!GITHUB_TOKEN || !GIST_ID) {
     try { return JSON.parse(localStorage.getItem(LOGINS_KEY) || '[]'); } catch { return []; }
@@ -949,6 +1029,8 @@ export default function App() {
   const [showRecap, setShowRecap] = useState(false);
   const [recapData, setRecapData] = useState(null);
   const [adminLogs, setAdminLogs] = useState(null);
+  const [restDays, setRestDays] = useState(() => loadRestDays(localStorage.getItem(SESSION_KEY) || ''));
+  const [cheatDays, setCheatDays] = useState(() => loadCheatDays(localStorage.getItem(SESSION_KEY) || ''));
 
   const copy = ui[settings.language];
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -1010,6 +1092,13 @@ export default function App() {
       exercises: sections[chosen.section].map((name) => ({ name, last: latestExerciseDate[name] ?? '' })).sort((a, b) => (a.last || '').localeCompare(b.last || '')).slice(0, 5),
     };
   }, [copy.planCardio, copy.planStrength, copy.reasonBalance, copy.reasonCold, copy.reasonEmpty, workouts]);
+
+  const rankData = useMemo(() => {
+    const pts = calculatePoints(workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, settings.calorieGoal);
+    const rank = getRank(pts, settings.language);
+    const nextRank = RANKS.find(r => r.min > pts);
+    return { pts, rank, nextRank };
+  }, [workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, settings.calorieGoal, settings.language]);
 
   const chartData = useMemo(() => ({ labels: selectedWorkouts.map((w, i) => `${formatDateValue(w.date, settings.dateFormat)} #${i + 1}`), datasets: [{ data: selectedWorkouts.map((w) => convertWeight(w.weight, settings.units)), borderColor: '#60a5fa', backgroundColor: 'rgba(59,130,246,0.18)', fill: true, tension: 0.3, borderWidth: 3, pointRadius: 4 }] }), [selectedWorkouts, settings.dateFormat, settings.units]);
   const chartOptions = useMemo(() => {
@@ -1306,6 +1395,19 @@ Be concise. Use average homemade/generic values, not brand values.`;
   function toggleTimer() { if (timerSeconds <= 0) { setTimerSeconds(timerPreset); setTimerActive(true); } else { setTimerActive((a) => !a); } }
   function resetTimer() { setTimerActive(false); setTimerSeconds(timerPreset); }
 
+  function toggleRestDay() {
+    const today = new Date().toISOString().slice(0, 10);
+    const updated = restDays.includes(today) ? restDays.filter(d => d !== today) : [...restDays, today];
+    setRestDays(updated);
+    localStorage.setItem(getRestKey(currentUser), JSON.stringify(updated));
+  }
+
+  function toggleCheatDay(date) {
+    const updated = cheatDays.includes(date) ? cheatDays.filter(d => d !== date) : [...cheatDays, date];
+    setCheatDays(updated);
+    localStorage.setItem(getCheatKey(currentUser), JSON.stringify(updated));
+  }
+
   const nav = [['dashboard', copy.dashboard], ['history', copy.history], ['exercises', copy.exercises], ['advisor', copy.advisor], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['bodyweight', copy.bodyweight], ['settings', copy.settings], ...(currentUser === ADMIN_EMAIL ? [['admin', copy.admin]] : [])];
 
   if (!currentUser) {
@@ -1368,6 +1470,17 @@ Be concise. Use average homemade/generic values, not brand values.`;
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">#</div><div><p className="stat-title">{copy.workouts}</p><h3 className="stat-value">{overall.workouts}</h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">S</div><div><p className="stat-title">{copy.totalSets}</p><h3 className="stat-value">{overall.sets}</h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow">V</div><div><p className="stat-title">{copy.totalVolume}</p><h3 className="stat-value">{formatVolume(overall.volumeKg, settings.units)}</h3></div></article>
+            <article className="glass-panel stat-card fade-in-up" style={{gridColumn:'span 1'}}>
+              <div className="stat-icon" style={{background:'linear-gradient(135deg,#f59e0b,#ef4444)',borderRadius:'50%',width:'2.5rem',height:'2.5rem',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.1rem',flexShrink:0}}>★</div>
+              <div style={{flex:1,minWidth:0}}>
+                <p className="stat-title">{copy.rankTitle}</p>
+                <h3 className="stat-value" style={{fontSize:'1.1rem'}}>{rankData.rank.displayName}</h3>
+                <p style={{fontSize:'0.78rem',opacity:0.6}}>{rankData.pts} {copy.rankPoints}{rankData.nextRank ? ` · ${copy.rankNext}: ${rankData.nextRank.min - rankData.pts}` : ` · ${copy.rankMax}`}</p>
+              </div>
+              <button className="action-btn-outline" type="button" onClick={toggleRestDay} style={{alignSelf:'center',whiteSpace:'nowrap',flexShrink:0}}>
+                {restDays.includes(new Date().toISOString().slice(0,10)) ? copy.restDayDone : copy.restDay}
+              </button>
+            </article>
 
             <section className="glass-panel chart-panel fade-in-up">
               <div className="panel-header"><h3>{copy.chart}</h3><select className="premium-select" value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)}>{exerciseOptions.map((name) => <option key={name} value={name}>{getExerciseName(name, settings.language)}</option>)}</select></div>
@@ -1440,7 +1553,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow">R</div><div><p className="stat-title">{copy.caloriesRemaining}</p><h3 className="stat-value">{Math.round(settings.calorieGoal - selectedDayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
 
             <section className="glass-panel chart-panel fade-in-up">
-              <div className="panel-header"><h3>{copy.caloriesProgress}</h3><div className="settings-button-row"><button className={`action-btn-outline ${settings.calorieTrackerMode === 'simple' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'simple' }))}>{copy.simpleTracker}</button><button className={`action-btn-outline ${settings.calorieTrackerMode === 'advanced' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'advanced' }))}>{copy.advancedTracker}</button><input type="date" value={calorieForm.date} onChange={(e) => setCalorieForm((c) => ({ ...c, date: e.target.value }))} /></div></div>
+              <div className="panel-header"><h3>{copy.caloriesProgress}</h3><div className="settings-button-row"><button className={`action-btn-outline ${settings.calorieTrackerMode === 'simple' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'simple' }))}>{copy.simpleTracker}</button><button className={`action-btn-outline ${settings.calorieTrackerMode === 'advanced' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'advanced' }))}>{copy.advancedTracker}</button><input type="date" value={calorieForm.date} onChange={(e) => setCalorieForm((c) => ({ ...c, date: e.target.value }))} /><button className={`action-btn-outline ${cheatDays.includes(calorieForm.date) ? 'active-filter' : ''}`} type="button" onClick={() => toggleCheatDay(calorieForm.date)}>{cheatDays.includes(calorieForm.date) ? copy.cheatDayDone : copy.cheatDay}</button></div></div>
               <div className="calorie-progress-card">
                 <div className="progress-rail"><div className="progress-fill" style={{ width: `${Math.min((selectedDayTotals.calories / Math.max(settings.calorieGoal, 1)) * 100, 100)}%` }} /></div>
                 {settings.calorieTrackerMode === 'advanced' ? <div className="stats-list mt-1">
@@ -1670,6 +1783,8 @@ Be concise. Use average homemade/generic values, not brand values.`;
             <div className="stats-list" style={{marginBottom:'1rem'}}>
               <div className="stats-row"><span>{copy.recapWorkouts}</span><strong style={{fontSize:'1.2rem'}}>{recapData.workoutCount}</strong></div>
               <div className="stats-row"><span>{copy.recapPRs}</span><strong style={{fontSize:'1.2rem'}}>{recapData.broken.length}</strong></div>
+              <div className="stats-row"><span>{copy.recapRank}</span><strong style={{fontSize:'1.2rem'}}>{rankData.rank.displayName}</strong></div>
+              <div className="stats-row"><span>{copy.recapPoints}</span><strong style={{fontSize:'1.2rem'}}>{rankData.pts}</strong></div>
             </div>
             {recapData.broken.length > 0 ? (
               <div className="pr-list">

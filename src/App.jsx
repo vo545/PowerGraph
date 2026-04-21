@@ -17,6 +17,7 @@ const USERS_KEY = 'powergraph_users';
 const SESSION_KEY = 'powergraph_session';
 const ADMIN_EMAIL = 'vid.oreskovic@gmail.com';
 const LOGINS_KEY = 'powergraph_logins';
+const ADMIN_NOTICE_KEY_PREFIX = 'powergraph_adminnotice_';
 const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
 const GIST_ID = import.meta.env.VITE_GIST_ID || '';
 
@@ -461,10 +462,20 @@ const ui = {
     adminRankUp: '▲ Rang gor',
     adminDemote: '▼ Rang dol',
     adminBonusPts: 'Bonus točke',
+    adminBonusAdd: 'Dodaj',
+    adminBonusDone: 'Točke dodane',
     adminRankUpDone: 'Rang povišan',
     adminDemoteDone: 'Rang znižan',
     adminMaxRank: 'Že na max rangu',
     adminMinRank: 'Že na min rangu',
+    adminNotice: 'Obvestilo uporabniku',
+    adminNoticePlaceholder: 'Sporočilo ob naslednji prijavi...',
+    adminNoticeSend: 'Pošlji',
+    adminNoticeClear: 'Počisti',
+    adminNoticeDone: 'Obvestilo shranjeno',
+    adminNoticeClearDone: 'Obvestilo odstranjeno',
+    adminInactive: 'Neaktivni (>30 dni)',
+    adminInactiveDays: 'dni brez treninga',
     loading: 'Nalagam...',
     rankings: 'Lestvica rangov',
     rankTitle: 'Moj rang',
@@ -686,10 +697,20 @@ const ui = {
     adminRankUp: '▲ Rank up',
     adminDemote: '▼ Demote',
     adminBonusPts: 'Bonus pts',
+    adminBonusAdd: 'Add',
+    adminBonusDone: 'Points added',
     adminRankUpDone: 'Rank increased',
     adminDemoteDone: 'Rank decreased',
     adminMaxRank: 'Already at max rank',
     adminMinRank: 'Already at min rank',
+    adminNotice: 'Notice to user',
+    adminNoticePlaceholder: 'Message shown at next login...',
+    adminNoticeSend: 'Send',
+    adminNoticeClear: 'Clear',
+    adminNoticeDone: 'Notice saved',
+    adminNoticeClearDone: 'Notice cleared',
+    adminInactive: 'Inactive (>30 days)',
+    adminInactiveDays: 'days without workout',
     loading: 'Loading...',
     rankings: 'Rankings',
     rankTitle: 'My rank',
@@ -879,6 +900,9 @@ function loadUsers() {
 }
 
 function getAdminBonusKey(email) { return `powergraph_adminbonus_${email}`; }
+function getAdminNoticeKey(email) { return `${ADMIN_NOTICE_KEY_PREFIX}${email}`; }
+function loadAdminNotice(email) { return localStorage.getItem(getAdminNoticeKey(email)) || ''; }
+function saveAdminNotice(email, msg) { if (msg) localStorage.setItem(getAdminNoticeKey(email), msg); else localStorage.removeItem(getAdminNoticeKey(email)); }
 function loadAdminBonus(email) { if (!email) return 0; try { return Number(localStorage.getItem(getAdminBonusKey(email)) || 0); } catch { return 0; } }
 function saveAdminBonus(email, pts) { localStorage.setItem(getAdminBonusKey(email), String(pts)); }
 
@@ -1074,6 +1098,8 @@ export default function App() {
   const [recapData, setRecapData] = useState(null);
   const [adminLogs, setAdminLogs] = useState(null);
   const [adminBonus, setAdminBonus] = useState(() => loadAdminBonus(localStorage.getItem(SESSION_KEY) || ''));
+  const [adminBonusInputs, setAdminBonusInputs] = useState({});
+  const [adminNoticeInputs, setAdminNoticeInputs] = useState({});
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [commentText, setCommentText] = useState('');
   const [restDays, setRestDays] = useState(() => loadRestDays(localStorage.getItem(SESSION_KEY) || ''));
@@ -1198,6 +1224,9 @@ export default function App() {
       }
       localStorage.setItem(getRecapKey(currentUser), currentMonthKey);
     }
+    // Admin notice check
+    const notice = loadAdminNotice(currentUser);
+    if (notice) { setToast(notice); saveAdminNotice(currentUser, ''); }
   }, [currentUser]);
   useEffect(() => {
     if (!currentUser) return;
@@ -1362,6 +1391,27 @@ export default function App() {
     setShowRecap(true);
   }
 
+  function adminAddBonus(email) {
+    const pts = Number(adminBonusInputs[email] || 0);
+    if (!pts) return;
+    const current = loadAdminBonus(email);
+    const newBonus = current + pts;
+    saveAdminBonus(email, newBonus);
+    if (email === currentUser) setAdminBonus(newBonus);
+    setAdminBonusInputs(prev => ({ ...prev, [email]: '' }));
+    setToast(`${copy.adminBonusDone}: +${pts} → ${email}`);
+  }
+  function adminSendNotice(email) {
+    const msg = (adminNoticeInputs[email] || '').trim();
+    if (!msg) return;
+    saveAdminNotice(email, msg);
+    setAdminNoticeInputs(prev => ({ ...prev, [email]: '' }));
+    setToast(`${copy.adminNoticeDone}: ${email}`);
+  }
+  function adminClearNotice(email) {
+    saveAdminNotice(email, '');
+    setToast(`${copy.adminNoticeClearDone}: ${email}`);
+  }
   function adminChangeRank(email, direction) {
     const wList = loadWorkouts(email);
     const cList = loadCalories(email);
@@ -1901,9 +1951,12 @@ Be concise. Use average homemade/generic values, not brand values.`;
             const totalPts = basePts + bonus;
             const userRank = getRank(totalPts, settings.language);
             const lastW = wList.length ? [...wList].sort((a, b) => new Date(b.date) - new Date(a.date))[0].date : null;
-            return { email: u.email, createdAt: u.createdAt, workouts: wList.length, meals: cList.length, bw: bwList.length, lastWorkout: lastW, rank: userRank, pts: totalPts, bonus };
+            const daysSinceLast = lastW ? Math.floor((Date.now() - new Date(lastW)) / 86400000) : null;
+            const hasNotice = !!loadAdminNotice(u.email);
+            return { email: u.email, createdAt: u.createdAt, workouts: wList.length, meals: cList.length, bw: bwList.length, lastWorkout: lastW, daysSinceLast, rank: userRank, pts: totalPts, bonus, hasNotice };
           });
           const totalWorkouts = userStats.reduce((s, u) => s + u.workouts, 0);
+          const inactiveCount = userStats.filter(u => u.daysSinceLast !== null && u.daysSinceLast > 30).length;
           const loginLogs = adminLogs || [];
           const recentLogins = [...loginLogs].reverse().slice(0, 100);
           return (
@@ -1917,6 +1970,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
               <div className="dashboard-grid">
                 <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">U</div><div><p className="stat-title">{copy.adminTotalUsers}</p><h3 className="stat-value">{allUsers.length}</h3></div></article>
                 <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">T</div><div><p className="stat-title">{copy.adminTotalWorkouts}</p><h3 className="stat-value">{totalWorkouts}</h3></div></article>
+                {inactiveCount > 0 && <article className="glass-panel stat-card fade-in-up"><div className="stat-icon" style={{background:'rgba(239,68,68,0.2)',color:'#f87171'}}>!</div><div><p className="stat-title">{copy.adminInactive}</p><h3 className="stat-value" style={{color:'#f87171'}}>{inactiveCount}</h3></div></article>}
               </div>
               <section className="glass-panel history-section fade-in-up">
                 <div className="panel-header"><h3>{copy.adminUsers}</h3><span className="history-count">{allUsers.length}</span></div>
@@ -1930,18 +1984,29 @@ Be concise. Use average homemade/generic values, not brand values.`;
                           <h3 style={{fontSize:'0.95rem',wordBreak:'break-all'}}>{u.email}</h3>
                           <p style={{fontSize:'0.78rem',opacity:0.6}}>{copy.adminRegistered}: {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</p>
                         </div>
+                        {u.daysSinceLast !== null && u.daysSinceLast > 30 && <span style={{fontSize:'0.7rem',padding:'0.15rem 0.5rem',borderRadius:'999px',background:'rgba(239,68,68,0.18)',color:'#f87171',flexShrink:0}}>{u.daysSinceLast}d</span>}
+                        {u.hasNotice && <span style={{fontSize:'0.7rem',padding:'0.15rem 0.5rem',borderRadius:'999px',background:'rgba(251,191,36,0.18)',color:'#fbbf24',flexShrink:0}}>✉</span>}
                       </div>
                       <div className="stats-list" style={{width:'100%',marginTop:'0.25rem'}}>
                         <div className="stats-row"><span>{copy.adminWorkouts}</span><strong>{u.workouts}</strong></div>
                         <div className="stats-row"><span>{copy.adminMeals}</span><strong>{u.meals}</strong></div>
                         <div className="stats-row"><span>{copy.adminBodyWeight}</span><strong>{u.bw}</strong></div>
-                        <div className="stats-row"><span>{copy.adminLastWorkout}</span><strong>{u.lastWorkout ? formatDateValue(u.lastWorkout, settings.dateFormat) : copy.adminNever}</strong></div>
+                        <div className="stats-row"><span>{copy.adminLastWorkout}</span><strong>{u.lastWorkout ? formatDateValue(u.lastWorkout, settings.dateFormat) : copy.adminNever}{u.daysSinceLast !== null && u.daysSinceLast > 30 ? <span style={{marginLeft:'0.4rem',color:'#f87171',fontSize:'0.8rem'}}>({u.daysSinceLast} {copy.adminInactiveDays})</span> : null}</strong></div>
                         <div className="stats-row"><span>{copy.rankCurrentLabel}</span><strong>{u.rank.displayName} ({u.pts} {copy.rankPoints})</strong></div>
                       </div>
                       <div style={{display:'flex',flexWrap:'wrap',gap:'0.5rem',marginTop:'0.5rem'}}>
                         <button className="action-btn-outline" style={{fontSize:'0.8rem',padding:'0.3rem 0.75rem'}} type="button" onClick={() => adminChangeRank(u.email, 'up')}>{copy.adminRankUp}</button>
                         <button className="action-btn-outline" style={{fontSize:'0.8rem',padding:'0.3rem 0.75rem'}} type="button" onClick={() => adminChangeRank(u.email, 'down')}>{copy.adminDemote}</button>
                         <button className="action-btn-outline" style={{fontSize:'0.8rem',padding:'0.3rem 0.75rem'}} type="button" onClick={() => adminShowRecap(u.email)}>{copy.adminShowRecap}</button>
+                      </div>
+                      <div style={{display:'flex',gap:'0.4rem',width:'100%',marginTop:'0.25rem'}}>
+                        <input type="number" placeholder={copy.adminBonusPts} value={adminBonusInputs[u.email] || ''} onChange={e => setAdminBonusInputs(prev => ({...prev, [u.email]: e.target.value}))} style={{flex:1,fontSize:'0.8rem',padding:'0.3rem 0.6rem',background:'var(--input-bg)',border:'1px solid var(--border)',borderRadius:'var(--radius-sm)',color:'inherit'}} />
+                        <button className="action-btn-outline" style={{fontSize:'0.8rem',padding:'0.3rem 0.75rem'}} type="button" onClick={() => adminAddBonus(u.email)}>{copy.adminBonusAdd}</button>
+                      </div>
+                      <div style={{display:'flex',gap:'0.4rem',width:'100%',marginTop:'0.25rem'}}>
+                        <input type="text" placeholder={copy.adminNoticePlaceholder} value={adminNoticeInputs[u.email] || ''} onChange={e => setAdminNoticeInputs(prev => ({...prev, [u.email]: e.target.value}))} style={{flex:1,fontSize:'0.8rem',padding:'0.3rem 0.6rem',background:'var(--input-bg)',border:'1px solid var(--border)',borderRadius:'var(--radius-sm)',color:'inherit'}} />
+                        <button className="action-btn-outline" style={{fontSize:'0.8rem',padding:'0.3rem 0.75rem'}} type="button" onClick={() => adminSendNotice(u.email)}>{copy.adminNoticeSend}</button>
+                        {u.hasNotice && <button className="action-btn-outline" style={{fontSize:'0.8rem',padding:'0.3rem 0.75rem'}} type="button" onClick={() => adminClearNotice(u.email)}>{copy.adminNoticeClear}</button>}
                       </div>
                     </article>
                   ))}

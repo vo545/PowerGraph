@@ -1346,17 +1346,19 @@ export default function App() {
   function saveComment(id) { setWorkouts(cur => cur.map(w => w.id === id ? { ...w, comment: commentText.trim() } : w)); setEditingCommentId(null); setCommentText(''); }
   function startEditComment(w) { setEditingCommentId(w.id); setCommentText(w.comment || ''); }
 
-  function adminShowRecap() {
+  function adminShowRecap(email) {
+    const target = email || currentUser;
     const now = new Date();
     const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const prevKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-    const allW = loadWorkouts(currentUser);
+    const allW = loadWorkouts(target);
     const prevMonthWorkouts = allW.filter(w => w.date.startsWith(prevKey));
     const prevMonthStart = `${prevKey}-01`;
     const beforePRs = allW.filter(w => w.date < prevMonthStart).reduce((m, w) => { if (!m[w.exercise] || w.weight > m[w.exercise]) m[w.exercise] = w.weight; return m; }, {});
     const monthPRs = prevMonthWorkouts.reduce((m, w) => { if (!m[w.exercise] || w.weight > m[w.exercise]) m[w.exercise] = w.weight; return m; }, {});
     const broken = Object.entries(monthPRs).filter(([ex, w]) => !beforePRs[ex] || w > beforePRs[ex]).map(([ex, w]) => ({ exercise: ex, weight: w, prev: beforePRs[ex] || 0 }));
-    setRecapData({ month: prevKey, workoutCount: prevMonthWorkouts.length || allW.length, broken });
+    const tPts = (loadAdminBonus(target) + calculatePoints(allW, loadCalories(target), loadBodyWeight(target), loadRestDays(target), loadCheatDays(target), loadSettings(target).calorieGoal));
+    setRecapData({ month: prevKey, workoutCount: prevMonthWorkouts.length || allW.length, broken, overridePts: tPts, overrideRank: getRank(tPts, settings.language), forEmail: target });
     setShowRecap(true);
   }
 
@@ -1934,6 +1936,12 @@ Be concise. Use average homemade/generic values, not brand values.`;
                         <div className="stats-row"><span>{copy.adminMeals}</span><strong>{u.meals}</strong></div>
                         <div className="stats-row"><span>{copy.adminBodyWeight}</span><strong>{u.bw}</strong></div>
                         <div className="stats-row"><span>{copy.adminLastWorkout}</span><strong>{u.lastWorkout ? formatDateValue(u.lastWorkout, settings.dateFormat) : copy.adminNever}</strong></div>
+                        <div className="stats-row"><span>{copy.rankCurrentLabel}</span><strong>{u.rank.displayName} ({u.pts} {copy.rankPoints})</strong></div>
+                      </div>
+                      <div style={{display:'flex',flexWrap:'wrap',gap:'0.5rem',marginTop:'0.5rem'}}>
+                        <button className="action-btn-outline" style={{fontSize:'0.8rem',padding:'0.3rem 0.75rem'}} type="button" onClick={() => adminChangeRank(u.email, 'up')}>{copy.adminRankUp}</button>
+                        <button className="action-btn-outline" style={{fontSize:'0.8rem',padding:'0.3rem 0.75rem'}} type="button" onClick={() => adminChangeRank(u.email, 'down')}>{copy.adminDemote}</button>
+                        <button className="action-btn-outline" style={{fontSize:'0.8rem',padding:'0.3rem 0.75rem'}} type="button" onClick={() => adminShowRecap(u.email)}>{copy.adminShowRecap}</button>
                       </div>
                     </article>
                   ))}
@@ -1973,11 +1981,12 @@ Be concise. Use average homemade/generic values, not brand values.`;
               <p className="settings-copy">{recapData.month}</p>
             </div>
             <p className="recap-motivation">{copy.recapMotivation}</p>
+            {recapData.forEmail && recapData.forEmail !== currentUser && <p style={{textAlign:'center',fontSize:'0.82rem',opacity:.6,marginBottom:'0.5rem'}}>{recapData.forEmail}</p>}
             <div className="stats-list" style={{marginBottom:'1rem'}}>
               <div className="stats-row"><span>{copy.recapWorkouts}</span><strong style={{fontSize:'1.2rem'}}>{recapData.workoutCount}</strong></div>
               <div className="stats-row"><span>{copy.recapPRs}</span><strong style={{fontSize:'1.2rem'}}>{recapData.broken.length}</strong></div>
-              <div className="stats-row"><span>{copy.recapRank}</span><strong style={{fontSize:'1.2rem'}}>{rankData.rank.displayName}</strong></div>
-              <div className="stats-row"><span>{copy.recapPoints}</span><strong style={{fontSize:'1.2rem'}}>{rankData.pts}</strong></div>
+              <div className="stats-row"><span>{copy.recapRank}</span><strong style={{fontSize:'1.2rem'}}>{(recapData.overrideRank || rankData.rank).displayName}</strong></div>
+              <div className="stats-row"><span>{copy.recapPoints}</span><strong style={{fontSize:'1.2rem'}}>{recapData.overridePts ?? rankData.pts}</strong></div>
             </div>
             {recapData.broken.length > 0 ? (
               <div className="pr-list">

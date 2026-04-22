@@ -1035,7 +1035,7 @@ p {
   .nav-menu {
     flex-direction: row;
     overflow-x: auto;
-    gap: 2px;
+    gap: 0;
     flex: 1;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -1049,12 +1049,13 @@ p {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    padding: 6px 10px;
+    gap: 0;
+    padding: 0 8px;
     font-size: 10px;
     white-space: nowrap;
     min-height: 52px;
-    min-width: 52px;
+    min-width: 40px;
+    flex: 1;
     border-left: none;
     border-bottom: 2px solid transparent;
     border-radius: 0;
@@ -1062,25 +1063,25 @@ p {
   }
 
   .nav-icon {
-    font-size: 18px;
+    font-size: 20px;
     width: auto;
     opacity: 0.65;
   }
 
   .nav-label {
-    font-size: 10px;
-    font-weight: 600;
+    display: none;
   }
 
   .nav-btn.active {
-    background: rgba(59, 130, 246, 0.12);
+    background: rgba(59, 130, 246, 0.14);
     color: var(--primary-glow);
     border-left: none;
-    border-bottom: 2px solid var(--primary-glow);
+    border-bottom: 3px solid var(--primary-glow);
   }
 
   .nav-btn.active .nav-icon {
     opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(59,130,246,0.7));
   }
 
   /* Sidebar footer hidden on mobile */

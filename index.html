@@ -8,9 +8,21 @@
       content="PowerGraph je browser-only fitness aplikacija zgrajena z Reactom in Vite."
     />
     <title>PowerGraph</title>
+    <link rel="manifest" href="/PowerGraph/manifest.json" />
+    <link rel="icon" href="/PowerGraph/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/PowerGraph/icon.svg" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="PowerGraph" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/PowerGraph/sw.js');
+      }
+    </script>
   </body>
 </html>

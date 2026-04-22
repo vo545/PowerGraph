@@ -1,0 +1,19 @@
+{
+  "name": "PowerGraph",
+  "short_name": "PowerGraph",
+  "description": "Fitness tracker – treningi, kalorije, rang",
+  "start_url": "/PowerGraph/",
+  "scope": "/PowerGraph/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/PowerGraph/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

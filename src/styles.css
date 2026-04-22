@@ -1013,7 +1013,7 @@ p {
   /* Layout */
   .app-container {
     flex-direction: column;
-    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(62px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Bottom navigation bar */
@@ -1024,12 +1024,15 @@ p {
     right: 0;
     width: 100%;
     margin: 0;
-    padding: 6px 4px calc(10px + env(safe-area-inset-bottom, 0px));
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    padding: 4px 0 env(safe-area-inset-bottom, 0px);
+    border-radius: 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
     z-index: 100;
     display: flex;
     flex-direction: row;
     border-bottom: none;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 
   .brand {

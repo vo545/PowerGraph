@@ -197,8 +197,12 @@ p {
   transition: opacity 0.25s ease;
 }
 
-.nav-label {
+.nav-label-full {
   flex: 1;
+}
+
+.nav-label-short {
+  display: none;
 }
 
 .nav-btn:hover {
@@ -1049,12 +1053,11 @@ p {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0;
-    padding: 0 8px;
-    font-size: 10px;
+    gap: 3px;
+    padding: 6px 4px 4px;
     white-space: nowrap;
-    min-height: 52px;
-    min-width: 40px;
+    height: 58px;
+    min-width: 50px;
     flex: 1;
     border-left: none;
     border-bottom: 2px solid transparent;
@@ -1063,13 +1066,23 @@ p {
   }
 
   .nav-icon {
-    font-size: 20px;
+    font-size: 19px;
     width: auto;
     opacity: 0.65;
+    line-height: 1;
   }
 
-  .nav-label {
+  .nav-label-full {
     display: none;
+  }
+
+  .nav-label-short {
+    display: block;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    opacity: 0.75;
+    line-height: 1;
   }
 
   .nav-btn.active {
@@ -1082,6 +1095,10 @@ p {
   .nav-btn.active .nav-icon {
     opacity: 1;
     filter: drop-shadow(0 0 6px rgba(59,130,246,0.7));
+  }
+
+  .nav-btn.active .nav-label-short {
+    opacity: 1;
   }
 
   /* Sidebar footer hidden on mobile */

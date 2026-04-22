@@ -1620,9 +1620,9 @@ Be concise. Use average homemade/generic values, not brand values.`;
 
         {activeSection === 'dashboard' && <>
           <div className="dashboard-grid">
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">#</div><div><p className="stat-title">{copy.workouts}</p><h3 className="stat-value">{overall.workouts}</h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">S</div><div><p className="stat-title">{copy.totalSets}</p><h3 className="stat-value">{overall.sets}</h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow">V</div><div><p className="stat-title">{copy.totalVolume}</p><h3 className="stat-value">{formatVolume(overall.volumeKg, settings.units)}</h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">💪</div><div><p className="stat-title">{copy.workouts}</p><h3 className="stat-value">{overall.workouts}</h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">≡</div><div><p className="stat-title">{copy.totalSets}</p><h3 className="stat-value">{overall.sets}</h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow">▲</div><div><p className="stat-title">{copy.totalVolume}</p><h3 className="stat-value">{formatVolume(overall.volumeKg, settings.units)}</h3></div></article>
             <section className="glass-panel chart-panel fade-in-up">
               <div className="panel-header"><h3>{copy.chart}</h3><select className="premium-select" value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)}>{exerciseOptions.map((name) => <option key={name} value={name}>{getExerciseName(name, settings.language)}</option>)}</select></div>
               <div className="chart-container">{selectedWorkouts.length ? <Line data={chartData} options={chartOptions} /> : <div className="empty-state"><h4>{copy.chart}</h4><p>{copy.noChart}</p></div>}</div>
@@ -1744,9 +1744,9 @@ Be concise. Use average homemade/generic values, not brand values.`;
 
         {activeSection === 'calories' && <>
           <div className="dashboard-grid">
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">C</div><div><p className="stat-title">{copy.caloriesConsumed}</p><h3 className="stat-value">{Math.round(selectedDayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">G</div><div><p className="stat-title">{copy.calorieGoal}</p><h3 className="stat-value">{Math.round(settings.calorieGoal)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow">R</div><div><p className="stat-title">{copy.caloriesRemaining}</p><h3 className="stat-value">{Math.round(settings.calorieGoal - selectedDayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">🍽</div><div><p className="stat-title">{copy.caloriesConsumed}</p><h3 className="stat-value">{Math.round(selectedDayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">🎯</div><div><p className="stat-title">{copy.calorieGoal}</p><h3 className="stat-value">{Math.round(settings.calorieGoal)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow">⚡</div><div><p className="stat-title">{copy.caloriesRemaining}</p><h3 className="stat-value">{Math.round(settings.calorieGoal - selectedDayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
 
             <section className="glass-panel chart-panel fade-in-up">
               <div className="panel-header"><h3>{copy.caloriesProgress}</h3><div className="settings-button-row"><button className={`action-btn-outline ${settings.calorieTrackerMode === 'simple' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'simple' }))}>{copy.simpleTracker}</button><button className={`action-btn-outline ${settings.calorieTrackerMode === 'advanced' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'advanced' }))}>{copy.advancedTracker}</button><input type="date" value={calorieForm.date} onChange={(e) => setCalorieForm((c) => ({ ...c, date: e.target.value }))} /><button className={`action-btn-outline ${cheatDays.includes(calorieForm.date) ? 'active-filter' : ''}`} type="button" onClick={() => toggleCheatDay(calorieForm.date)}>{cheatDays.includes(calorieForm.date) ? copy.cheatDayDone : copy.cheatDay}</button></div></div>
@@ -1813,7 +1813,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
               <div style={{marginTop:'1.5rem'}}>
                 <div className="dashboard-grid">
                   <article className="glass-panel stat-card fade-in-up">
-                    <div className="stat-icon blue-glow">K</div>
+                    <div className="stat-icon blue-glow">📊</div>
                     <div>
                       <p className="stat-title">{calResult.name}</p>
                       <h3 className="stat-value">{calResult.kcalPer100} <span style={{fontSize:'0.9rem',opacity:.7}}>{copy.calEstPer100}</span></h3>
@@ -1886,7 +1886,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
               </div>
             </section>
 
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon orange-glow">~</div><div><p className="stat-title">{copy.streak}</p><h3 className="stat-value">{calculateStreak(workouts)}</h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon orange-glow">🔥</div><div><p className="stat-title">{copy.streak}</p><h3 className="stat-value">{calculateStreak(workouts)}</h3></div></article>
 
             <section className="glass-panel history-section fade-in-up" style={{gridColumn:'span 2'}}>
               <div className="panel-header"><h3>{copy.rankAllRanks}</h3></div>

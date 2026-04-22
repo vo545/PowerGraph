@@ -12,7 +12,12 @@
       "Bash(node -e \"require\\('crypto'\\).randomBytes\\(32\\).toString\\('hex'\\)\")",
       "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('hex'\\)\\)\")",
       "Bash(timeout 5 node server.js)",
-      "Bash(timeout 4 node --no-warnings server.js)"
+      "Bash(timeout 4 node --no-warnings server.js)",
+      "Bash(cat c:/Users/Blaz/repos/PowerGraph/.github/workflows/*.yml)",
+      "Bash(node -e \"const { DatabaseSync } = require\\('node:sqlite'\\); const db = new DatabaseSync\\(':memory:'\\); console.log\\('sqlite ok'\\)\")",
+      "Bash(node --no-warnings server.js)",
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"email\\\\\":\\\\\"test@test.com\\\\\",\\\\\"password\\\\\":\\\\\"test123\\\\\"}\")",
+      "Bash(kill %1)"
     ]
   }
 }

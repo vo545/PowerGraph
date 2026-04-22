@@ -324,6 +324,49 @@ app.post('/api/gemini', requireAuth, async (req, res) => {
   }
 });
 
+// ── Ratings ────────────────────────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS ratings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    stars INTEGER NOT NULL,
+    comment TEXT NOT NULL,
+    private_comment TEXT DEFAULT '',
+    date TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+
+app.get('/api/ratings', requireAuth, (req, res) => {
+  if (req.user.email.toLowerCase() === (ADMIN_EMAIL || '').toLowerCase()) {
+    res.json(db.prepare('SELECT id, email, stars, comment, private_comment as privateComment, date FROM ratings ORDER BY id DESC').all());
+  } else {
+    res.json(db.prepare('SELECT id, email, stars, comment, date FROM ratings WHERE email=? ORDER BY id DESC').all(req.user.email));
+  }
+});
+
+app.post('/api/ratings', requireAuth, (req, res) => {
+  const { stars, comment, privateComment, date } = req.body ?? {};
+  if (!comment || !stars) return res.status(400).json({ error: 'Missing fields' });
+  const result = db.prepare('INSERT INTO ratings (email, stars, comment, private_comment, date) VALUES (?, ?, ?, ?, ?)').run(req.user.email, Number(stars), comment, privateComment || '', date || new Date().toISOString().slice(0, 10));
+  res.status(201).json({ id: result.lastInsertRowid });
+});
+
+// ── Bulk sync ──────────────────────────────────────────────────────────────
+app.get('/api/sync', requireAuth, (req, res) => {
+  const uid = req.user.userId;
+  const workouts = db.prepare('SELECT id, date, exercise, sets, weight, set_details, notes FROM workouts WHERE user_id = ? ORDER BY date DESC, id DESC').all(uid)
+    .map(w => ({ id: w.id, date: w.date, exercise: w.exercise, weight: w.weight, setDetails: JSON.parse(w.set_details || '[]'), comment: w.notes || '' }));
+  const calories = db.prepare('SELECT id, date, meal_type, name, calories, protein, carbs, fat FROM calorie_entries WHERE user_id = ? ORDER BY date DESC, id DESC').all(uid)
+    .map(e => ({ id: e.id, date: e.date, mealType: e.meal_type, name: e.name, calories: e.calories, protein: e.protein, carbs: e.carbs, fat: e.fat }));
+  const bodyWeight = db.prepare('SELECT id, date, weight FROM body_weight WHERE user_id = ? ORDER BY date ASC').all(uid);
+  const restDays = db.prepare('SELECT date FROM rest_days WHERE user_id = ?').all(uid).map(r => r.date);
+  const cheatDays = db.prepare('SELECT date FROM cheat_days WHERE user_id = ?').all(uid).map(r => r.date);
+  const calHistory = db.prepare('SELECT id, date, name, grams, kcal_per_100, total FROM cal_history WHERE user_id = ? ORDER BY id DESC').all(uid)
+    .map(h => ({ id: h.id, date: h.date, name: h.name, grams: h.grams, kcalPer100: h.kcal_per_100, total: h.total }));
+  res.json({ workouts, calories, bodyWeight, restDays, cheatDays, calHistory });
+});
+
 // ── Admin endpointi ────────────────────────────────────────────────────────
 app.get('/api/admin/users', requireAuth, requireAdmin, (req, res) => {
   const users = db.prepare('SELECT id, email, created_at FROM users ORDER BY created_at DESC').all();

@@ -22,7 +22,8 @@
       "WebSearch",
       "Bash(magick --version)",
       "Bash(node scripts/gen-icons.mjs)",
-      "Bash(node scripts/gen-feature.mjs)"
+      "Bash(node scripts/gen-feature.mjs)",
+      "Bash(xargs head *)"
     ]
   }
 }

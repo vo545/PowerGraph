@@ -318,6 +318,11 @@ const ui = {
     clearConfirm: 'Ali res \u017eeli\u0161 izbrisati vse lokalne podatke? Tega ni mogo\u010de razveljaviti.',
     backupTitle: 'Opomnik za backup',
     backupText: 'Naredi nov izvoz, da ne izgubi\u0161 lokalnih podatkov.',
+    installApp: 'Namesti aplikacijo',
+    installAppDesc: 'Dodaj PowerGraph na za\u010detni zaslon ali namizje.',
+    installBtn: 'Namesti',
+    installIos: 'Pritisni Deli (\u25a1\u2191) \u2192 \u201eDodaj na za\u010detni zaslon\u201c',
+    installDone: 'Aplikacija je \u017ee name\u0161\u010dena.',
     backupDone: 'Backup ustvarjen.',
     importDone: 'Podatki uvo\u017eeni.',
     importFail: 'Uvoz ni uspel.',
@@ -545,6 +550,11 @@ const ui = {
     clearConfirm: 'Do you really want to delete all local data? This cannot be undone.',
     backupTitle: 'Backup reminder',
     backupText: 'Create a fresh export so you do not lose local data.',
+    installApp: 'Install app',
+    installAppDesc: 'Add PowerGraph to your home screen or desktop.',
+    installBtn: 'Install',
+    installIos: 'Tap Share (\u25a1\u2191) \u2192 \u201cAdd to Home Screen\u201d',
+    installDone: 'App is already installed.',
     backupDone: 'Backup created.',
     importDone: 'Data imported.',
     importFail: 'Import failed.',
@@ -1076,6 +1086,9 @@ export default function App() {
   const [timerPreset, setTimerPreset] = useState(90);
   const [showRecap, setShowRecap] = useState(false);
   const [recapData, setRecapData] = useState(null);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
   const [adminLogs, setAdminLogs] = useState(null);
   const [adminBonus, setAdminBonus] = useState(() => loadAdminBonus(localStorage.getItem(SESSION_KEY) || ''));
   const [editingCommentId, setEditingCommentId] = useState(null);
@@ -1178,6 +1191,12 @@ export default function App() {
       scales: { x: { grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8' } }, y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8' } } },
     };
   }, [copy.repsPerSet, copy.sets, copy.weight, selectedExercise, selectedWorkouts, settings.units]);
+
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem(THEME_KEY, theme); }, [theme]);
   useEffect(() => {
@@ -1359,6 +1378,13 @@ export default function App() {
   function deleteWorkout(id) { setWorkouts((current) => current.filter((item) => item.id !== id)); if (editingWorkoutId === id) setEditingWorkoutId(null); }
   function saveComment(id) { setWorkouts(cur => cur.map(w => w.id === id ? { ...w, comment: commentText.trim() } : w)); setEditingCommentId(null); setCommentText(''); }
   function startEditComment(w) { setEditingCommentId(w.id); setCommentText(w.comment || ''); }
+
+  async function triggerInstall() {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+    setInstallPrompt(null);
+  }
 
   function adminShowRecap() {
     const now = new Date();
@@ -1997,7 +2023,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
           );
         })()}
 
-        {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
+        {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.installApp}</span><p className="settings-copy">{copy.installAppDesc}</p></div><div>{isInStandaloneMode ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installDone}</span> : isIos ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installIos}</span> : <button className="action-btn-outline" type="button" onClick={triggerInstall} disabled={!installPrompt}>{copy.installBtn}</button>}</div></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
       </main>
       {toast ? <div className="toast-container"><div className="toast">{toast}</div></div> : null}
       {showRecap && recapData && (

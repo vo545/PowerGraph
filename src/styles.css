@@ -124,10 +124,12 @@ p {
   transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
 }
 
-.glass-panel:hover {
-  background: var(--bg-glass-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
+@media (hover: hover) {
+  .glass-panel:hover {
+    background: var(--bg-glass-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
+  }
 }
 
 [data-theme='light'] .glass-panel:hover {
@@ -978,7 +980,7 @@ p {
   /* Layout */
   .app-container {
     flex-direction: column;
-    padding-bottom: 68px;
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Bottom navigation bar */
@@ -989,11 +991,12 @@ p {
     right: 0;
     width: 100%;
     margin: 0;
-    padding: 6px 4px 10px;
+    padding: 6px 4px calc(10px + env(safe-area-inset-bottom, 0px));
     border-radius: var(--radius-md) var(--radius-md) 0 0;
     z-index: 100;
     display: flex;
     flex-direction: row;
+    border-bottom: none;
   }
 
   .brand {
@@ -1020,6 +1023,7 @@ p {
     min-height: 44px;
     border-left: none;
     border-bottom: 3px solid transparent;
+    border-radius: 0;
   }
 
   .nav-btn.active {
@@ -1029,10 +1033,15 @@ p {
     border-bottom: 3px solid var(--primary-glow);
   }
 
+  /* Sidebar footer hidden on mobile */
+  .sidebar-footer {
+    display: none;
+  }
+
   /* Main content */
   .main-content {
     padding: 12px 12px 20px;
-    gap: 16px;
+    gap: 14px;
   }
 
   /* Topbar */
@@ -1052,9 +1061,10 @@ p {
     display: none;
   }
 
-  /* Stat cards — 2 per row */
+  /* Stat cards — 2 per row, horizontal layout */
   .dashboard-grid {
     grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 
   .chart-panel,
@@ -1065,12 +1075,23 @@ p {
   .stat-card {
     padding: 14px 12px;
     gap: 10px;
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .stat-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+    flex-shrink: 0;
   }
 
   .stat-value {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
+  }
+
+  .stat-title {
+    font-size: 11px;
   }
 
   /* Panel header — wrap instead of column */
@@ -1079,29 +1100,91 @@ p {
     flex-wrap: wrap;
     gap: 8px;
     align-items: center;
+    margin-bottom: 16px;
   }
 
-  /* History, forms etc. */
-  .history-item,
+  .panel-header h3 {
+    font-size: 17px;
+  }
+
+  /* Panels tighter on mobile */
+  .glass-panel.action-panel,
+  .glass-panel.history-section,
+  .glass-panel.stats-section,
+  .glass-panel.exercise-section,
+  .glass-panel.settings-section,
+  .glass-panel.chart-panel {
+    padding: 16px 14px;
+  }
+
+  /* History items — keep row layout, wrap buttons below */
+  .history-item {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .history-metrics {
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  /* Forms */
   .form-row,
   .backup-banner,
   .settings-actions,
   .exercise-top,
   .exercise-stats-top,
-  .stats-row,
   .exercise-section-header {
     flex-direction: column;
     align-items: stretch;
   }
 
+  .stats-row {
+    flex-direction: row;
+    align-items: center;
+  }
+
   .set-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 80px 1fr 42px;
+  }
+
+  /* Prevent iOS font zoom on input focus */
+  .input-group input,
+  .premium-select,
+  .panel-header input {
+    font-size: 16px;
   }
 
   /* Touch-friendly buttons */
   .action-btn-primary,
   .action-btn-outline {
-    min-height: 44px;
+    min-height: 46px;
+    font-size: 15px;
+  }
+
+  /* Chart shorter on mobile */
+  .chart-container {
+    min-height: 220px;
+  }
+
+  /* Heatmap cells slightly bigger */
+  .heatmap-cell {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* Toast above bottom nav */
+  .toast-container {
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    right: 16px;
+    left: 16px;
+  }
+
+  .toast {
+    padding: 14px 18px;
+    font-size: 14px;
+    border-radius: var(--radius-md);
   }
 
   /* Timer font */

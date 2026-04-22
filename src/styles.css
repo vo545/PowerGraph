@@ -322,6 +322,38 @@ p {
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
 }
 
+.orange-glow {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+  box-shadow: 0 0 20px rgba(251, 146, 60, 0.2);
+}
+
+.heatmap-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 0.75rem;
+}
+
+.heatmap-cell {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.1);
+  transition: background 0.2s;
+  cursor: default;
+}
+
+.heatmap-cell.active {
+  background: var(--primary-glow);
+  opacity: 0.85;
+}
+
+.heatmap-cell.today {
+  outline: 2px solid var(--primary-glow);
+  outline-offset: 1px;
+}
+
 .stat-title {
   font-size: 14px;
   color: var(--text-secondary);
@@ -1076,64 +1108,6 @@ p {
   .timer-clock {
     font-size: 2.8rem !important;
   }
-}
-
-/* ── Heatmap ─────────────────────────────────────────── */
-.heatmap-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  padding: 0.75rem 0 0.25rem;
-}
-
-.heatmap-cell {
-  width: 13px;
-  height: 13px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.06);
-  flex-shrink: 0;
-  cursor: default;
-}
-
-.heatmap-cell.active {
-  background: var(--secondary-glow);
-  box-shadow: 0 0 5px rgba(16, 185, 129, 0.45);
-}
-
-.heatmap-cell.today {
-  outline: 1.5px solid var(--primary-glow);
-  outline-offset: 1px;
-}
-
-[data-theme='light'] .heatmap-cell {
-  background: rgba(0, 0, 0, 0.08);
-}
-
-/* ── Muscle balance bars ─────────────────────────────── */
-.muscle-bar-row {
-  display: grid;
-  grid-template-columns: 130px 1fr 2rem;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.muscle-bar-track {
-  height: 7px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-}
-
-.muscle-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  background: linear-gradient(90deg, var(--primary-glow), var(--accent));
-  transition: width 0.6s ease;
-}
-
-[data-theme='light'] .muscle-bar-track {
-  background: rgba(0, 0, 0, 0.08);
 }
 
 /* PR badge */

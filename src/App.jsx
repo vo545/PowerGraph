@@ -16,25 +16,9 @@ const SETTINGS_KEY_PREFIX = 'powergraph_settings_';
 const USERS_KEY = 'powergraph_users';
 const SESSION_KEY = 'powergraph_session';
 const ADMIN_EMAIL = 'vid.oreskovic@gmail.com';
-const ADMIN_NOTICE_KEY_PREFIX = 'powergraph_adminnotice_';
-const TOKEN_KEY = 'powergraph_token';
-
-async function api(path, method = 'GET', body = null) {
-  const token = localStorage.getItem(TOKEN_KEY);
-  const res = await fetch(path, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    ...(body != null ? { body: JSON.stringify(body) } : {}),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-    throw new Error(err.error || `HTTP ${res.status}`);
-  }
-  return res.json();
-}
+const LOGINS_KEY = 'powergraph_logins';
+const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
+const GIST_ID = import.meta.env.VITE_GIST_ID || '';
 
 const LOCAL_FOODS = {
   // --- Meso / Meat ---
@@ -477,20 +461,10 @@ const ui = {
     adminRankUp: '▲ Rang gor',
     adminDemote: '▼ Rang dol',
     adminBonusPts: 'Bonus točke',
-    adminBonusAdd: 'Dodaj',
-    adminBonusDone: 'Točke dodane',
     adminRankUpDone: 'Rang povišan',
     adminDemoteDone: 'Rang znižan',
     adminMaxRank: 'Že na max rangu',
     adminMinRank: 'Že na min rangu',
-    adminNotice: 'Obvestilo uporabniku',
-    adminNoticePlaceholder: 'Sporočilo ob naslednji prijavi...',
-    adminNoticeSend: 'Pošlji',
-    adminNoticeClear: 'Počisti',
-    adminNoticeDone: 'Obvestilo shranjeno',
-    adminNoticeClearDone: 'Obvestilo odstranjeno',
-    adminInactive: 'Neaktivni (>30 dni)',
-    adminInactiveDays: 'dni brez treninga',
     loading: 'Nalagam...',
     rankings: 'Lestvica rangov',
     rankTitle: 'Moj rang',
@@ -512,9 +486,8 @@ const ui = {
     cheatDayDone: '✓ Goljufiv dan',
     recapRank: 'Tvoj rang',
     recapPoints: 'Skupaj točk',
-    heatmapTitle: 'Aktivnost treningov',
-    rm1Label: 'Ocena 1RM',
-    muscleBalance: 'Ravnovesje mišičnih skupin',
+    repeatWorkout: 'Ponovi',
+    heatmapTitle: 'Aktivnost (16 tednov)',
   },
   en: {
     app: 'PowerGraph',
@@ -715,20 +688,10 @@ const ui = {
     adminRankUp: '▲ Rank up',
     adminDemote: '▼ Demote',
     adminBonusPts: 'Bonus pts',
-    adminBonusAdd: 'Add',
-    adminBonusDone: 'Points added',
     adminRankUpDone: 'Rank increased',
     adminDemoteDone: 'Rank decreased',
     adminMaxRank: 'Already at max rank',
     adminMinRank: 'Already at min rank',
-    adminNotice: 'Notice to user',
-    adminNoticePlaceholder: 'Message shown at next login...',
-    adminNoticeSend: 'Send',
-    adminNoticeClear: 'Clear',
-    adminNoticeDone: 'Notice saved',
-    adminNoticeClearDone: 'Notice cleared',
-    adminInactive: 'Inactive (>30 days)',
-    adminInactiveDays: 'days without workout',
     loading: 'Loading...',
     rankings: 'Rankings',
     rankTitle: 'My rank',
@@ -750,9 +713,8 @@ const ui = {
     cheatDayDone: '✓ Cheat day',
     recapRank: 'Your rank',
     recapPoints: 'Total points',
-    heatmapTitle: 'Training activity',
-    rm1Label: 'Est. 1RM',
-    muscleBalance: 'Muscle group balance',
+    repeatWorkout: 'Repeat',
+    heatmapTitle: 'Activity (16 weeks)',
   },
 };
 
@@ -905,14 +867,32 @@ function sanitizeSettings(input) {
   return safe;
 }
 
+function sanitizeUser(input) {
+  if (!input || typeof input !== 'object') return null;
+  if (typeof input.email !== 'string' || typeof input.passwordHash !== 'string') return null;
+  return { email: input.email.trim().toLowerCase(), passwordHash: input.passwordHash, createdAt: typeof input.createdAt === 'string' ? input.createdAt : new Date().toISOString() };
+}
+
+function loadUsers() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.map(sanitizeUser).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
 
 function getAdminBonusKey(email) { return `powergraph_adminbonus_${email}`; }
-function getAdminNoticeKey(email) { return `${ADMIN_NOTICE_KEY_PREFIX}${email}`; }
-function loadAdminNotice(email) { return localStorage.getItem(getAdminNoticeKey(email)) || ''; }
-function saveAdminNotice(email, msg) { if (msg) localStorage.setItem(getAdminNoticeKey(email), msg); else localStorage.removeItem(getAdminNoticeKey(email)); }
 function loadAdminBonus(email) { if (!email) return 0; try { return Number(localStorage.getItem(getAdminBonusKey(email)) || 0); } catch { return 0; } }
 function saveAdminBonus(email, pts) { localStorage.setItem(getAdminBonusKey(email), String(pts)); }
 
+function recordLogin(email, type) {
+  try {
+    const logs = JSON.parse(localStorage.getItem(LOGINS_KEY) || '[]');
+    logs.push({ email, type, ts: new Date().toISOString() });
+    localStorage.setItem(LOGINS_KEY, JSON.stringify(logs.slice(-500)));
+  } catch {}
+}
 
 const RANKS = [
   { name: 'Začetnik', nameEn: 'Beginner', min: 0 },
@@ -968,6 +948,39 @@ function calculatePoints(workouts, calorieEntries, bodyWeightEntries, restDays, 
   return Math.max(0, pts);
 }
 
+async function fetchLoginLogs() {
+  if (!GITHUB_TOKEN || !GIST_ID) {
+    try { return JSON.parse(localStorage.getItem(LOGINS_KEY) || '[]'); } catch { return []; }
+  }
+  try {
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json' }
+    });
+    const data = await res.json();
+    const content = data.files?.['logs.json']?.content || '[]';
+    return JSON.parse(content);
+  } catch { return []; }
+}
+
+async function pushLoginLog(email, type) {
+  const entry = { email, type, ts: new Date().toISOString() };
+  if (!GITHUB_TOKEN || !GIST_ID) { recordLogin(email, type); return; }
+  try {
+    const logs = await fetchLoginLogs();
+    logs.push(entry);
+    const trimmed = logs.slice(-500);
+    await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { 'logs.json': { content: JSON.stringify(trimmed) } } })
+    });
+  } catch { recordLogin(email, type); }
+}
+
+async function hashPassword(value) {
+  const hashBuffer = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(hashBuffer)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 
 function formatDateValue(dateString, format) {
   const [y, m, d] = dateString.split('-');
@@ -1033,8 +1046,8 @@ export default function App() {
   const previousExerciseRef = useRef('Bench Press');
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) ?? 'dark');
   const [currentUser, setCurrentUser] = useState(() => localStorage.getItem(SESSION_KEY) || '');
-  const [workouts, setWorkouts] = useState([]);
-  const [calorieEntries, setCalorieEntries] = useState([]);
+  const [workouts, setWorkouts] = useState(() => loadWorkouts(localStorage.getItem(SESSION_KEY) || ''));
+  const [calorieEntries, setCalorieEntries] = useState(() => loadCalories(localStorage.getItem(SESSION_KEY) || ''));
   const [settings, setSettings] = useState(() => loadSettings(localStorage.getItem(SESSION_KEY) || ''));
   const [activeSection, setActiveSection] = useState('dashboard');
   const [selectedExercise, setSelectedExercise] = useState('Bench Press');
@@ -1053,8 +1066,8 @@ export default function App() {
   const [calResult, setCalResult] = useState(null);
   const [calLoading, setCalLoading] = useState(false);
   const [calError, setCalError] = useState('');
-  const [calHistory, setCalHistory] = useState([]);
-  const [bodyWeightEntries, setBodyWeightEntries] = useState([]);
+  const [calHistory, setCalHistory] = useState(() => loadCalHistory(localStorage.getItem(SESSION_KEY) || ''));
+  const [bodyWeightEntries, setBodyWeightEntries] = useState(() => loadBodyWeight(localStorage.getItem(SESSION_KEY) || ''));
   const [bwForm, setBwForm] = useState({ date: new Date().toISOString().slice(0, 10), weight: '' });
   const [tdeeForm, setTdeeForm] = useState({ currentWeight: '', goalWeight: '', weeks: '12', activityLevel: 'moderate' });
   const [tdeeResult, setTdeeResult] = useState(null);
@@ -1065,13 +1078,10 @@ export default function App() {
   const [recapData, setRecapData] = useState(null);
   const [adminLogs, setAdminLogs] = useState(null);
   const [adminBonus, setAdminBonus] = useState(() => loadAdminBonus(localStorage.getItem(SESSION_KEY) || ''));
-  const [adminBonusInputs, setAdminBonusInputs] = useState({});
-  const [adminNoticeInputs, setAdminNoticeInputs] = useState({});
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [commentText, setCommentText] = useState('');
-  const [restDays, setRestDays] = useState([]);
-  const [cheatDays, setCheatDays] = useState([]);
-  const [adminUsers, setAdminUsers] = useState(null);
+  const [restDays, setRestDays] = useState(() => loadRestDays(localStorage.getItem(SESSION_KEY) || ''));
+  const [cheatDays, setCheatDays] = useState(() => loadCheatDays(localStorage.getItem(SESSION_KEY) || ''));
 
   const copy = ui[settings.language];
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -1112,6 +1122,16 @@ export default function App() {
   const personalRecords = useMemo(() => workouts.reduce((map, w) => { if (!map[w.exercise] || w.weight > map[w.exercise]) map[w.exercise] = w.weight; return map; }, {}), [workouts]);
   const bwSorted = useMemo(() => [...bodyWeightEntries].sort((a, b) => new Date(a.date) - new Date(b.date)).slice(-30), [bodyWeightEntries]);
   const bodyWeightChartData = useMemo(() => ({ labels: bwSorted.map((e) => formatDateValue(e.date, settings.dateFormat)), datasets: [{ data: bwSorted.map((e) => e.weight), borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.18)', fill: true, tension: 0.3, borderWidth: 3, pointRadius: 4 }] }), [bwSorted, settings.dateFormat]);
+  const heatmapDays = useMemo(() => {
+    const workoutDates = new Set(workouts.map(w => w.date));
+    const days = [];
+    for (let i = 111; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      days.push({ key, active: workoutDates.has(key), today: i === 0 });
+    }
+    return days;
+  }, [workouts]);
 
   const advisor = useMemo(() => {
     const latestSectionDate = {};
@@ -1143,38 +1163,6 @@ export default function App() {
     return { pts, rank, nextRank };
   }, [workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, settings.calorieGoal, settings.language, adminBonus]);
 
-  const heatmapDays = useMemo(() => {
-    const workoutDates = new Set(workouts.map(w => w.date));
-    const days = [];
-    for (let i = 111; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      days.push({ key, active: workoutDates.has(key), today: i === 0 });
-    }
-    return days;
-  }, [workouts]);
-
-  const rm1Estimates = useMemo(() => {
-    const map = {};
-    workouts.forEach(w => {
-      const maxReps = Math.max(...w.setDetails.map(Number).filter(r => r > 0));
-      if (!maxReps || maxReps <= 0) return;
-      const est = w.weight * (1 + maxReps / 30);
-      if (!map[w.exercise] || est > map[w.exercise]) map[w.exercise] = est;
-    });
-    return map;
-  }, [workouts]);
-
-  const muscleGroupStats = useMemo(() => {
-    const counts = {};
-    analyticsWorkouts.forEach(w => {
-      const sec = findSection(w.exercise);
-      counts[sec] = (counts[sec] || 0) + 1;
-    });
-    const maxCount = Math.max(...Object.values(counts), 1);
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([sec, count]) => ({ sec, count, pct: Math.round((count / maxCount) * 100) }));
-  }, [analyticsWorkouts]);
-
   const chartData = useMemo(() => ({ labels: selectedWorkouts.map((w, i) => `${formatDateValue(w.date, settings.dateFormat)} #${i + 1}`), datasets: [{ data: selectedWorkouts.map((w) => Math.round(convertWeight(getVolume(w), settings.units))), borderColor: '#60a5fa', backgroundColor: 'rgba(59,130,246,0.18)', fill: true, tension: 0.3, borderWidth: 3, pointRadius: 4 }] }), [selectedWorkouts, settings.dateFormat, settings.units]);
   const chartOptions = useMemo(() => {
     const prev = previousCountRef.current;
@@ -1195,46 +1183,56 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     localStorage.setItem(SESSION_KEY, currentUser);
+    setWorkouts(loadWorkouts(currentUser));
+    setCalorieEntries(loadCalories(currentUser));
     setSettings(loadSettings(currentUser));
+    setCalHistory(loadCalHistory(currentUser));
+    setBodyWeightEntries(loadBodyWeight(currentUser));
+    setRestDays(loadRestDays(currentUser));
+    setCheatDays(loadCheatDays(currentUser));
     setAdminBonus(loadAdminBonus(currentUser));
     setSelectedExercise('Bench Press');
     setActiveSection('dashboard');
-    // Naloži vse podatke iz API
-    api('/api/workouts').then(data => {
-      const allW = data.map(normalizeWorkout);
-      setWorkouts(allW);
-      // Mesečni recap
-      const now = new Date();
-      const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      const lastSeen = localStorage.getItem(getRecapKey(currentUser)) || '';
-      if (lastSeen !== currentMonthKey) {
-        const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const prevKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-        const prevMonthWorkouts = allW.filter((w) => w.date.startsWith(prevKey));
-        if (prevMonthWorkouts.length) {
-          const prevMonthStart = `${prevKey}-01`;
-          const beforePRs = allW.filter((w) => w.date < prevMonthStart).reduce((m, w) => { if (!m[w.exercise] || w.weight > m[w.exercise]) m[w.exercise] = w.weight; return m; }, {});
-          const monthPRs = prevMonthWorkouts.reduce((m, w) => { if (!m[w.exercise] || w.weight > m[w.exercise]) m[w.exercise] = w.weight; return m; }, {});
-          const broken = Object.entries(monthPRs).filter(([ex, w]) => !beforePRs[ex] || w > beforePRs[ex]).map(([ex, w]) => ({ exercise: ex, weight: w, prev: beforePRs[ex] || 0 }));
-          setRecapData({ month: prevKey, workoutCount: prevMonthWorkouts.length, broken });
-          setShowRecap(true);
-        }
-        localStorage.setItem(getRecapKey(currentUser), currentMonthKey);
+    // Monthly recap check
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const lastSeen = localStorage.getItem(getRecapKey(currentUser)) || '';
+    if (lastSeen !== currentMonthKey) {
+      const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+      const allW = loadWorkouts(currentUser);
+      const prevMonthWorkouts = allW.filter((w) => w.date.startsWith(prevKey));
+      if (prevMonthWorkouts.length) {
+        const prevMonthStart = `${prevKey}-01`;
+        const beforePRs = allW.filter((w) => w.date < prevMonthStart).reduce((m, w) => { if (!m[w.exercise] || w.weight > m[w.exercise]) m[w.exercise] = w.weight; return m; }, {});
+        const monthPRs = prevMonthWorkouts.reduce((m, w) => { if (!m[w.exercise] || w.weight > m[w.exercise]) m[w.exercise] = w.weight; return m; }, {});
+        const broken = Object.entries(monthPRs).filter(([ex, w]) => !beforePRs[ex] || w > beforePRs[ex]).map(([ex, w]) => ({ exercise: ex, weight: w, prev: beforePRs[ex] || 0 }));
+        setRecapData({ month: prevKey, workoutCount: prevMonthWorkouts.length, broken });
+        setShowRecap(true);
       }
-    }).catch(() => {});
-    api('/api/calories').then(data => setCalorieEntries(data.map(e => ({ ...e, mealType: e.mealType || 'breakfast' })))).catch(() => {});
-    api('/api/cal-history').then(setCalHistory).catch(() => {});
-    api('/api/body-weight').then(setBodyWeightEntries).catch(() => {});
-    api('/api/rest-days').then(setRestDays).catch(() => {});
-    api('/api/cheat-days').then(setCheatDays).catch(() => {});
-    // Admin obvestilo
-    const notice = loadAdminNotice(currentUser);
-    if (notice) { setToast(notice); saveAdminNotice(currentUser, ''); }
+      localStorage.setItem(getRecapKey(currentUser), currentMonthKey);
+    }
   }, [currentUser]);
+  useEffect(() => {
+    if (!currentUser) return;
+    localStorage.setItem(getWorkoutStorageKey(currentUser), JSON.stringify(workouts));
+  }, [currentUser, workouts]);
+  useEffect(() => {
+    if (!currentUser) return;
+    localStorage.setItem(getCaloriesStorageKey(currentUser), JSON.stringify(calorieEntries));
+  }, [calorieEntries, currentUser]);
   useEffect(() => {
     if (!currentUser) return;
     localStorage.setItem(getSettingsStorageKey(currentUser), JSON.stringify(settings));
   }, [currentUser, settings]);
+  useEffect(() => {
+    if (!currentUser) return;
+    localStorage.setItem(getCalHistoryKey(currentUser), JSON.stringify(calHistory));
+  }, [calHistory, currentUser]);
+  useEffect(() => {
+    if (!currentUser) return;
+    localStorage.setItem(getBodyWeightKey(currentUser), JSON.stringify(bodyWeightEntries));
+  }, [bodyWeightEntries, currentUser]);
   useEffect(() => {
     if (!timerActive || timerSeconds <= 0) return undefined;
     const id = window.setTimeout(() => setTimerSeconds((s) => s - 1), 1000);
@@ -1245,9 +1243,7 @@ export default function App() {
   useEffect(() => {
     if (activeSection !== 'admin' || currentUser !== ADMIN_EMAIL) return;
     setAdminLogs(null);
-    setAdminUsers(null);
-    api('/api/admin/logs').then(setAdminLogs).catch(() => setAdminLogs([]));
-    api('/api/admin/users').then(setAdminUsers).catch(() => setAdminUsers([]));
+    fetchLoginLogs().then(setAdminLogs);
   }, [activeSection, currentUser]);
 
   async function handleAuthSubmit(event) {
@@ -1256,23 +1252,49 @@ export default function App() {
     const password = authForm.password;
     setAuthError('');
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setAuthError(copy.authInvalidEmail); return; }
-    if (password.length < 6) { setAuthError(copy.authShortPassword); return; }
-    if (authMode === 'signup' && password !== authForm.confirmPassword) { setAuthError(copy.authPasswordsNoMatch); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setAuthError(copy.authInvalidEmail);
+      return;
+    }
+    if (password.length < 6) {
+      setAuthError(copy.authShortPassword);
+      return;
+    }
+    if (authMode === 'signup' && password !== authForm.confirmPassword) {
+      setAuthError(copy.authPasswordsNoMatch);
+      return;
+    }
 
     setAuthLoading(true);
     try {
-      const endpoint = authMode === 'signup' ? '/api/auth/register' : '/api/auth/login';
-      const data = await api(endpoint, 'POST', { email, password });
-      localStorage.setItem(TOKEN_KEY, data.token);
-      setCurrentUser(data.email);
+      const users = loadUsers();
+      const existing = users.find((user) => user.email === email);
+      const passwordHash = await hashPassword(password);
+
+      if (authMode === 'signup') {
+        if (existing) {
+          setAuthError(copy.authExists);
+          return;
+        }
+        const nextUsers = [...users, { email, passwordHash, createdAt: new Date().toISOString() }];
+        localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
+        localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify([]));
+        localStorage.setItem(getSettingsStorageKey(email), JSON.stringify(defaultSettings));
+        await pushLoginLog(email, 'signup');
+        setCurrentUser(email);
+      } else {
+        if (!existing) {
+          setAuthError(copy.authNotFound);
+          return;
+        }
+        if (existing.passwordHash !== passwordHash) {
+          setAuthError(copy.authWrongPassword);
+          return;
+        }
+        await pushLoginLog(email, 'login');
+        setCurrentUser(email);
+      }
       setAuthForm({ email: '', password: '', confirmPassword: '' });
-    } catch (err) {
-      const msg = err.message;
-      if (msg === 'User already exists') setAuthError(copy.authExists);
-      else if (msg === 'User not found') setAuthError(copy.authNotFound);
-      else if (msg === 'Wrong password') setAuthError(copy.authWrongPassword);
-      else setAuthError(msg || copy.authWrongPassword);
     } finally {
       setAuthLoading(false);
     }
@@ -1280,7 +1302,6 @@ export default function App() {
 
   function logout() {
     localStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(TOKEN_KEY);
     setCurrentUser('');
     setWorkouts([]);
     setCalorieEntries([]);
@@ -1302,24 +1323,19 @@ export default function App() {
     event.preventDefault();
     const cleanSets = formData.setDetails.map((v) => Number(v) || 0).filter((v) => v > 0);
     if (!formData.exercise || !formData.date || !formData.weight || !cleanSets.length) return;
-    const tempId = Date.now();
-    const next = normalizeWorkout({ id: tempId, date: formData.date, exercise: formData.exercise, weight: Number(formData.weight), setDetails: cleanSets });
+    const next = normalizeWorkout({ id: Date.now(), date: formData.date, exercise: formData.exercise, weight: Number(formData.weight), setDetails: cleanSets });
     setWorkouts((c) => [...c, next]);
     setSelectedExercise(next.exercise);
     setFormData((c) => ({ ...c, weight: '', setDetails: [''] }));
     setToast(copy.saved);
-    api('/api/workouts', 'POST', { date: next.date, exercise: next.exercise, sets: cleanSets.length, weight: next.weight, setDetails: cleanSets, notes: next.notes || '' })
-      .then(({ id }) => setWorkouts((c) => c.map(w => w.id === tempId ? { ...w, id } : w)))
-      .catch(() => {});
   }
   function exportData() { downloadFile(`powergraph-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ workouts, calorieEntries, settings, calHistory, bodyWeightEntries }, null, 2), 'application/json'); setSettings((c) => ({ ...c, lastBackupAt: new Date().toISOString() })); setToast(copy.backupDone); }
   function saveMeal(event) {
     event.preventDefault();
     if (!calorieForm.name || !calorieForm.calories || !calorieForm.date) return;
     const isAdvancedCalories = settings.calorieTrackerMode === 'advanced';
-    const tempId = Date.now();
     const entry = {
-      id: tempId,
+      id: Date.now(),
       date: calorieForm.date,
       mealType: calorieForm.mealType,
       name: calorieForm.name.trim(),
@@ -1331,9 +1347,6 @@ export default function App() {
     setCalorieEntries((current) => [...current, entry]);
     setCalorieForm((current) => ({ ...current, name: '', calories: '', protein: '', carbs: '', fat: '' }));
     setToast(copy.mealSaved);
-    api('/api/calories', 'POST', { date: entry.date, mealType: entry.mealType, name: entry.name, calories: entry.calories, protein: entry.protein, carbs: entry.carbs, fat: entry.fat })
-      .then(({ id }) => setCalorieEntries((c) => c.map(e => e.id === tempId ? { ...e, id } : e)))
-      .catch(() => {});
   }
   function importData(event) {
     const [file] = event.target.files ?? [];
@@ -1343,47 +1356,24 @@ export default function App() {
     reader.readAsText(file);
   }
   function clearData() { if (!window.confirm(copy.clearConfirm)) return; setWorkouts([]); setCalorieEntries([]); setCalHistory([]); setBodyWeightEntries([]); setRestDays([]); setCheatDays([]); localStorage.removeItem(getRestKey(currentUser)); localStorage.removeItem(getCheatKey(currentUser)); setToast(copy.cleared); }
-  function deleteWorkout(id) { setWorkouts((current) => current.filter((item) => item.id !== id)); if (editingWorkoutId === id) setEditingWorkoutId(null); api(`/api/workouts/${id}`, 'DELETE').catch(() => {}); }
+  function deleteWorkout(id) { setWorkouts((current) => current.filter((item) => item.id !== id)); if (editingWorkoutId === id) setEditingWorkoutId(null); }
   function saveComment(id) { setWorkouts(cur => cur.map(w => w.id === id ? { ...w, comment: commentText.trim() } : w)); setEditingCommentId(null); setCommentText(''); }
   function startEditComment(w) { setEditingCommentId(w.id); setCommentText(w.comment || ''); }
 
-  function adminShowRecap(email) {
-    const target = email || currentUser;
+  function adminShowRecap() {
     const now = new Date();
     const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const prevKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-    const allW = loadWorkouts(target);
+    const allW = loadWorkouts(currentUser);
     const prevMonthWorkouts = allW.filter(w => w.date.startsWith(prevKey));
     const prevMonthStart = `${prevKey}-01`;
     const beforePRs = allW.filter(w => w.date < prevMonthStart).reduce((m, w) => { if (!m[w.exercise] || w.weight > m[w.exercise]) m[w.exercise] = w.weight; return m; }, {});
     const monthPRs = prevMonthWorkouts.reduce((m, w) => { if (!m[w.exercise] || w.weight > m[w.exercise]) m[w.exercise] = w.weight; return m; }, {});
     const broken = Object.entries(monthPRs).filter(([ex, w]) => !beforePRs[ex] || w > beforePRs[ex]).map(([ex, w]) => ({ exercise: ex, weight: w, prev: beforePRs[ex] || 0 }));
-    const tPts = (loadAdminBonus(target) + calculatePoints(allW, loadCalories(target), loadBodyWeight(target), loadRestDays(target), loadCheatDays(target), loadSettings(target).calorieGoal));
-    setRecapData({ month: prevKey, workoutCount: prevMonthWorkouts.length || allW.length, broken, overridePts: tPts, overrideRank: getRank(tPts, settings.language), forEmail: target });
+    setRecapData({ month: prevKey, workoutCount: prevMonthWorkouts.length || allW.length, broken });
     setShowRecap(true);
   }
 
-  function adminAddBonus(email) {
-    const pts = Number(adminBonusInputs[email] || 0);
-    if (!pts) return;
-    const current = loadAdminBonus(email);
-    const newBonus = current + pts;
-    saveAdminBonus(email, newBonus);
-    if (email === currentUser) setAdminBonus(newBonus);
-    setAdminBonusInputs(prev => ({ ...prev, [email]: '' }));
-    setToast(`${copy.adminBonusDone}: +${pts} → ${email}`);
-  }
-  function adminSendNotice(email) {
-    const msg = (adminNoticeInputs[email] || '').trim();
-    if (!msg) return;
-    saveAdminNotice(email, msg);
-    setAdminNoticeInputs(prev => ({ ...prev, [email]: '' }));
-    setToast(`${copy.adminNoticeDone}: ${email}`);
-  }
-  function adminClearNotice(email) {
-    saveAdminNotice(email, '');
-    setToast(`${copy.adminNoticeClearDone}: ${email}`);
-  }
   function adminChangeRank(email, direction) {
     const wList = loadWorkouts(email);
     const cList = loadCalories(email);
@@ -1417,17 +1407,14 @@ export default function App() {
     const cleanSets = formData.setDetails.map((v) => Number(v) || 0).filter((v) => v > 0);
     if (!editingWorkoutId || !formData.exercise || !formData.date || !formData.weight || !cleanSets.length) return;
     setWorkouts((current) => current.map((item) => (item.id === editingWorkoutId ? { ...item, date: formData.date, exercise: formData.exercise, weight: Number(formData.weight), setDetails: cleanSets } : item)));
-    api(`/api/workouts/${editingWorkoutId}`, 'PUT', { date: formData.date, exercise: formData.exercise, sets: cleanSets.length, weight: Number(formData.weight), setDetails: cleanSets }).catch(() => {});
     setEditingWorkoutId(null);
   }
   function cancelWorkoutEdit() { setEditingWorkoutId(null); setFormData({ date: new Date().toISOString().slice(0, 10), exercise: 'Bench Press', weight: '', setDetails: ['12', '10', '8'] }); }
-  function deleteMeal(id) { setCalorieEntries((current) => current.filter((item) => item.id !== id)); if (editingMealId === id) setEditingMealId(null); api(`/api/calories/${id}`, 'DELETE').catch(() => {}); }
+  function deleteMeal(id) { setCalorieEntries((current) => current.filter((item) => item.id !== id)); if (editingMealId === id) setEditingMealId(null); }
   function startEditMeal(entry) { setEditingMealId(entry.id); setCalorieForm({ date: entry.date, mealType: entry.mealType, name: entry.name, calories: String(entry.calories), protein: String(entry.protein), carbs: String(entry.carbs), fat: String(entry.fat) }); setActiveSection('calories'); }
   function saveMealEdit() {
     if (!editingMealId || !calorieForm.name || !calorieForm.calories || !calorieForm.date) return;
-    const updated = { date: calorieForm.date, mealType: calorieForm.mealType, name: calorieForm.name.trim(), calories: Number(calorieForm.calories) || 0, protein: Number(calorieForm.protein) || 0, carbs: Number(calorieForm.carbs) || 0, fat: Number(calorieForm.fat) || 0 };
-    setCalorieEntries((current) => current.map((item) => (item.id === editingMealId ? { ...item, ...updated } : item)));
-    api(`/api/calories/${editingMealId}`, 'PUT', updated).catch(() => {});
+    setCalorieEntries((current) => current.map((item) => (item.id === editingMealId ? { ...item, date: calorieForm.date, mealType: calorieForm.mealType, name: calorieForm.name.trim(), calories: Number(calorieForm.calories) || 0, protein: Number(calorieForm.protein) || 0, carbs: Number(calorieForm.carbs) || 0, fat: Number(calorieForm.fat) || 0 } : item)));
     setEditingMealId(null);
     setCalorieForm({ date: new Date().toISOString().slice(0, 10), mealType: 'breakfast', name: '', calories: '', protein: '', carbs: '', fat: '' });
   }
@@ -1440,48 +1427,50 @@ export default function App() {
     setCalError('');
     setCalResult(null);
 
+    const effectiveKey = import.meta.env.VITE_GEMINI_KEY || '';
     const normalized = normalizeFoodQuery(calQuery);
     const local = LOCAL_FOODS[normalized];
 
-    // 1. Gemini AI estimate (via backend proxy — API ključ je varen na strežniku)
-    try {
-      const prompt = `You are a nutritionist. The user ate: "${calQuery.trim()}", ${calGrams}g.
+    // 1. Gemini AI estimate (if key available)
+    if (effectiveKey) {
+      try {
+        const prompt = `You are a nutritionist. The user ate: "${calQuery.trim()}", ${calGrams}g.
 Give a realistic average calorie estimate for this food (not a branded product).
 Briefly state what ingredients/preparation you assumed (1 sentence).
 Then on a new line write exactly: KCAL_PER_100G: <number>
 Then on a new line write exactly: TOTAL_KCAL: <number>
 Be concise. Use average homemade/generic values, not brand values.`;
-      const data = await api('/api/gemini', 'POST', { prompt });
-      const text = data.text || '';
-      const per100Match = text.match(/KCAL_PER_100G:\s*(\d+)/i);
-      const totalMatch = text.match(/TOTAL_KCAL:\s*(\d+)/i);
-      if (per100Match && totalMatch) {
-        const kcalPer100 = Number(per100Match[1]);
-        const total = Number(totalMatch[1]);
-        const aiText = text.replace(/KCAL_PER_100G:\s*\d+/i, '').replace(/TOTAL_KCAL:\s*\d+/i, '').trim();
-        const result = { name: calQuery.trim(), kcalPer100, total, aiText };
-        const histEntry = { id: Date.now(), name: calQuery.trim(), grams: Number(calGrams), kcalPer100, total, date: new Date().toISOString().slice(0, 10) };
-        setCalResult(result);
-        setCalHistory(prev => [histEntry, ...prev]);
-        api('/api/cal-history', 'POST', { date: histEntry.date, name: histEntry.name, grams: histEntry.grams, kcalPer100: histEntry.kcalPer100, total: histEntry.total })
-          .then(({ id }) => setCalHistory(prev => prev.map(e => e.id === histEntry.id ? { ...e, id } : e)))
-          .catch(() => {});
-        setToast(copy.calEstSaved);
-        setCalLoading(false);
-        return;
-      }
-    } catch { /* fall through to local lookup */ }
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${effectiveKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const per100Match = text.match(/KCAL_PER_100G:\s*(\d+)/i);
+          const totalMatch = text.match(/TOTAL_KCAL:\s*(\d+)/i);
+          if (per100Match && totalMatch) {
+            const kcalPer100 = Number(per100Match[1]);
+            const total = Number(totalMatch[1]);
+            const aiText = text.replace(/KCAL_PER_100G:\s*\d+/i, '').replace(/TOTAL_KCAL:\s*\d+/i, '').trim();
+            const result = { name: calQuery.trim(), kcalPer100, total, aiText };
+            setCalResult(result);
+            setCalHistory(prev => [{ id: Date.now(), name: calQuery.trim(), grams: Number(calGrams), kcalPer100, total, date: new Date().toISOString().slice(0, 10) }, ...prev]);
+            setToast(copy.calEstSaved);
+            setCalLoading(false);
+            return;
+          }
+        }
+      } catch { /* fall through to local lookup */ }
+    }
 
-    // 2. Fallback: lokalna baza
+    // 2. Fallback: local database
     if (local) {
       const total = Math.round((local.kcal * Number(calGrams)) / 100);
       const result = { name: local.name, kcalPer100: local.kcal, total, aiText: null };
-      const histEntry = { id: Date.now(), name: local.name, grams: Number(calGrams), kcalPer100: local.kcal, total, date: new Date().toISOString().slice(0, 10) };
       setCalResult(result);
-      setCalHistory(prev => [histEntry, ...prev]);
-      api('/api/cal-history', 'POST', { date: histEntry.date, name: histEntry.name, grams: histEntry.grams, kcalPer100: histEntry.kcalPer100, total: histEntry.total })
-        .then(({ id }) => setCalHistory(prev => prev.map(e => e.id === histEntry.id ? { ...e, id } : e)))
-        .catch(() => {});
+      setCalHistory(prev => [{ id: Date.now(), name: local.name, grams: Number(calGrams), kcalPer100: local.kcal, total, date: new Date().toISOString().slice(0, 10) }, ...prev]);
       setToast(copy.calEstSaved);
       setCalLoading(false);
       return;
@@ -1491,20 +1480,16 @@ Be concise. Use average homemade/generic values, not brand values.`;
     setCalError('noResult');
     setCalLoading(false);
   }
-  function deleteCalHistoryEntry(id) { setCalHistory(prev => prev.filter(e => e.id !== id)); api('/api/cal-history', 'DELETE').catch(() => {}); }
+  function deleteCalHistoryEntry(id) { setCalHistory(prev => prev.filter(e => e.id !== id)); }
 
   function saveBodyWeight(event) {
     event.preventDefault();
     if (!bwForm.weight || !bwForm.date) return;
-    const tempId = Date.now();
-    const entry = { id: tempId, date: bwForm.date, weight: Number(bwForm.weight) };
-    setBodyWeightEntries((c) => [...c, entry].sort((a, b) => new Date(a.date) - new Date(b.date)));
+    const entry = { id: Date.now(), date: bwForm.date, weight: Number(bwForm.weight) };
+    setBodyWeightEntries((c) => [...c, entry].sort((a, b) => new Date(b.date) - new Date(a.date)));
     setBwForm((c) => ({ ...c, weight: '' }));
-    api('/api/body-weight', 'POST', { date: entry.date, weight: entry.weight })
-      .then(({ id }) => setBodyWeightEntries((c) => c.map(e => e.id === tempId ? { ...e, id } : e)))
-      .catch(() => {});
   }
-  function deleteBodyWeightEntry(id) { setBodyWeightEntries((c) => c.filter((e) => e.id !== id)); api(`/api/body-weight/${id}`, 'DELETE').catch(() => {}); }
+  function deleteBodyWeightEntry(id) { setBodyWeightEntries((c) => c.filter((e) => e.id !== id)); }
   function calculateTDEE(event) {
     event.preventDefault();
     const cw = Number(tdeeForm.currentWeight);
@@ -1525,23 +1510,20 @@ Be concise. Use average homemade/generic values, not brand values.`;
 
   function toggleRestDay() {
     const today = new Date().toISOString().slice(0, 10);
-    if (restDays.includes(today)) {
-      setRestDays(d => d.filter(x => x !== today));
-      api(`/api/rest-days/${today}`, 'DELETE').catch(() => {});
-    } else {
-      setRestDays(d => [...d, today]);
-      api('/api/rest-days', 'POST', { date: today }).catch(() => {});
-    }
+    const updated = restDays.includes(today) ? restDays.filter(d => d !== today) : [...restDays, today];
+    setRestDays(updated);
+    localStorage.setItem(getRestKey(currentUser), JSON.stringify(updated));
   }
 
   function toggleCheatDay(date) {
-    if (cheatDays.includes(date)) {
-      setCheatDays(d => d.filter(x => x !== date));
-      api(`/api/cheat-days/${date}`, 'DELETE').catch(() => {});
-    } else {
-      setCheatDays(d => [...d, date]);
-      api('/api/cheat-days', 'POST', { date }).catch(() => {});
-    }
+    const updated = cheatDays.includes(date) ? cheatDays.filter(d => d !== date) : [...cheatDays, date];
+    setCheatDays(updated);
+    localStorage.setItem(getCheatKey(currentUser), JSON.stringify(updated));
+  }
+
+  function repeatWorkout(w) {
+    setFormData(c => ({ ...c, exercise: w.exercise, weight: w.weight, setDetails: w.setDetails.map(String) }));
+    setActiveSection('dashboard');
   }
 
   const nav = [['dashboard', copy.dashboard], ['history', copy.history], ['exercises', copy.exercises], ['advisor', copy.advisor], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['rankings', copy.rankings], ['bodyweight', copy.bodyweight], ['settings', copy.settings], ...(currentUser === ADMIN_EMAIL ? [['admin', copy.admin]] : [])];
@@ -1606,6 +1588,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">#</div><div><p className="stat-title">{copy.workouts}</p><h3 className="stat-value">{overall.workouts}</h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">S</div><div><p className="stat-title">{copy.totalSets}</p><h3 className="stat-value">{overall.sets}</h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow">V</div><div><p className="stat-title">{copy.totalVolume}</p><h3 className="stat-value">{formatVolume(overall.volumeKg, settings.units)}</h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon orange-glow">~</div><div><p className="stat-title">{copy.streak}</p><h3 className="stat-value">{calculateStreak(workouts)}</h3></div></article>
             <section className="glass-panel chart-panel fade-in-up">
               <div className="panel-header"><h3>{copy.chart}</h3><select className="premium-select" value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)}>{exerciseOptions.map((name) => <option key={name} value={name}>{getExerciseName(name, settings.language)}</option>)}</select></div>
               <div className="chart-container">{selectedWorkouts.length ? <Line data={chartData} options={chartOptions} /> : <div className="empty-state"><h4>{copy.chart}</h4><p>{copy.noChart}</p></div>}</div>
@@ -1629,15 +1612,6 @@ Be concise. Use average homemade/generic values, not brand values.`;
               </form>
             </section>
           </div>
-
-          <section className="glass-panel action-panel fade-in-up">
-            <div className="panel-header"><h3>{copy.heatmapTitle}</h3><span style={{fontSize:'0.78rem',opacity:0.5}}>{heatmapDays.filter(d => d.active).length} / 112</span></div>
-            <div className="heatmap-grid">
-              {heatmapDays.map(d => (
-                <div key={d.key} className={`heatmap-cell${d.active ? ' active' : ''}${d.today ? ' today' : ''}`} title={d.key} />
-              ))}
-            </div>
-          </section>
 
           <div className="dashboard-grid">
             <section className="glass-panel action-panel fade-in-up">
@@ -1678,19 +1652,16 @@ Be concise. Use average homemade/generic values, not brand values.`;
               <div className="stats-block"><div className="stats-list"><div className="stats-row"><span>{copy.totalReps}</span><strong>{overall.reps}</strong></div><div className="stats-row"><span>{copy.bestWeight}</span><strong>{formatWeight(overall.bestKg, settings.units)}</strong></div><div className="stats-row"><span>{copy.streak}</span><strong>{calculateStreak(workouts)}</strong></div></div></div>
               <div className="stats-block"><div className="stats-list"><div className="stats-row"><span>{copy.analytics}</span><strong>{analyticsRange === 'week' ? copy.weekly : copy.monthly}</strong></div><div className="stats-row"><span>{copy.trainingLoad}</span><strong>{formatVolume(analyticsTraining.volumeKg, settings.units)}</strong></div><div className="stats-row"><span>{copy.workouts}</span><strong>{analyticsTraining.workouts}</strong></div><div className="stats-row"><span>{copy.totalSets}</span><strong>{analyticsTraining.sets}</strong></div></div></div>
             </div>
-            {muscleGroupStats.length > 0 && (
-              <div className="stats-block" style={{marginBottom:'1rem'}}>
-                <p className="stats-block-title">{copy.muscleBalance}</p>
-                {muscleGroupStats.map(({ sec, count, pct }) => (
-                  <div className="muscle-bar-row" key={sec}>
-                    <span style={{fontSize:'0.8rem',color:'var(--text-secondary)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{sectionNames[sec] || sec}</span>
-                    <div className="muscle-bar-track"><div className="muscle-bar-fill" style={{width:`${pct}%`}} /></div>
-                    <span style={{fontSize:'0.78rem',color:'var(--text-secondary)',textAlign:'right'}}>{count}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="exercise-stats-grid">{perExercise.map((item) => <article className="exercise-stats-card" key={item.name}><div className="exercise-stats-top"><h4>{getExerciseName(item.name, settings.language)}</h4><span className="exercise-badge">{sectionNames[findSection(item.name)]}</span></div><div className="exercise-stats-body"><p><strong>{copy.workouts}:</strong> {item.workouts}</p><p><strong>{copy.totalSets}:</strong> {item.sets}</p><p><strong>{copy.totalReps}:</strong> {item.reps}</p><p><strong>{copy.bestWeight}:</strong> {formatWeight(item.bestKg, settings.units)}</p>{rm1Estimates[item.name] ? <p><strong>{copy.rm1Label}:</strong> {formatWeight(Math.round(rm1Estimates[item.name]), settings.units)}</p> : null}</div></article>)}</div>
+            <div className="exercise-stats-grid">{perExercise.map((item) => <article className="exercise-stats-card" key={item.name}><div className="exercise-stats-top"><h4>{getExerciseName(item.name, settings.language)}</h4><span className="exercise-badge">{sectionNames[findSection(item.name)]}</span></div><div className="exercise-stats-body"><p><strong>{copy.workouts}:</strong> {item.workouts}</p><p><strong>{copy.totalSets}:</strong> {item.sets}</p><p><strong>{copy.totalReps}:</strong> {item.reps}</p><p><strong>{copy.bestWeight}:</strong> {formatWeight(item.bestKg, settings.units)}</p></div></article>)}</div>
+          </section>
+
+          <section className="glass-panel fade-in-up" style={{padding:'1.25rem 1.5rem'}}>
+            <div className="panel-header"><h3>{copy.heatmapTitle}</h3><span className="history-count">{workouts.length}</span></div>
+            <div className="heatmap-grid">
+              {heatmapDays.map(d => (
+                <div key={d.key} title={d.key} className={`heatmap-cell${d.active ? ' active' : ''}${d.today ? ' today' : ''}`} />
+              ))}
+            </div>
           </section>
         </>}
 
@@ -1703,6 +1674,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
                   <div><h3>{getExerciseName(w.exercise, settings.language)}{personalRecords[w.exercise] === w.weight ? <span className="pr-badge">{copy.prBadge}</span> : null}</h3><p>{formatDateValue(w.date, settings.dateFormat)}</p></div>
                   <div className="history-metrics"><span>{formatWeight(w.weight, settings.units)}</span><span>{getSetCount(w)} {copy.sets.toLowerCase()}</span><span>{formatSetDetails(w)}</span></div>
                   <div className="settings-button-row">
+                    <button className="action-btn-outline" type="button" onClick={() => repeatWorkout(w)}>{copy.repeatWorkout}</button>
                     <button className="action-btn-outline" type="button" onClick={() => startEditWorkout(w)}>{copy.edit}</button>
                     <button className="action-btn-outline danger-button" type="button" onClick={() => deleteWorkout(w.id)}>{copy.delete}</button>
                     <button className="action-btn-outline" type="button" onClick={() => startEditComment(w)} style={{fontSize:'0.8rem'}}>✎</button>
@@ -1944,9 +1916,22 @@ Be concise. Use average homemade/generic values, not brand values.`;
         </>}
 
         {activeSection === 'admin' && currentUser === ADMIN_EMAIL && (() => {
-          const userStats = adminUsers || [];
-          const totalWorkouts = userStats.reduce((s, u) => s + (u.workouts || 0), 0);
-          const inactiveCount = userStats.filter(u => u.daysSinceLast !== null && u.daysSinceLast > 30).length;
+          const allUsers = loadUsers();
+          const userStats = allUsers.map((u) => {
+            const wList = loadWorkouts(u.email);
+            const cList = loadCalories(u.email);
+            const bwList = loadBodyWeight(u.email);
+            const rDays = loadRestDays(u.email);
+            const cDays = loadCheatDays(u.email);
+            const sett = loadSettings(u.email);
+            const bonus = loadAdminBonus(u.email);
+            const basePts = calculatePoints(wList, cList, bwList, rDays, cDays, sett.calorieGoal);
+            const totalPts = basePts + bonus;
+            const userRank = getRank(totalPts, settings.language);
+            const lastW = wList.length ? [...wList].sort((a, b) => new Date(b.date) - new Date(a.date))[0].date : null;
+            return { email: u.email, createdAt: u.createdAt, workouts: wList.length, meals: cList.length, bw: bwList.length, lastWorkout: lastW, rank: userRank, pts: totalPts, bonus };
+          });
+          const totalWorkouts = userStats.reduce((s, u) => s + u.workouts, 0);
           const loginLogs = adminLogs || [];
           const recentLogins = [...loginLogs].reverse().slice(0, 100);
           return (
@@ -1958,42 +1943,27 @@ Be concise. Use average homemade/generic values, not brand values.`;
                 </div>
               </section>
               <div className="dashboard-grid">
-                <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">U</div><div><p className="stat-title">{copy.adminTotalUsers}</p><h3 className="stat-value">{adminUsers === null ? '…' : userStats.length}</h3></div></article>
+                <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">U</div><div><p className="stat-title">{copy.adminTotalUsers}</p><h3 className="stat-value">{allUsers.length}</h3></div></article>
                 <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">T</div><div><p className="stat-title">{copy.adminTotalWorkouts}</p><h3 className="stat-value">{totalWorkouts}</h3></div></article>
-                {inactiveCount > 0 && <article className="glass-panel stat-card fade-in-up"><div className="stat-icon" style={{background:'rgba(239,68,68,0.2)',color:'#f87171'}}>!</div><div><p className="stat-title">{copy.adminInactive}</p><h3 className="stat-value" style={{color:'#f87171'}}>{inactiveCount}</h3></div></article>}
               </div>
               <section className="glass-panel history-section fade-in-up">
-                <div className="panel-header"><h3>{copy.adminUsers}</h3><span className="history-count">{adminUsers === null ? '…' : userStats.length}</span></div>
+                <div className="panel-header"><h3>{copy.adminUsers}</h3><span className="history-count">{allUsers.length}</span></div>
                 <div className="history-list">
-                  {adminUsers === null && <div className="empty-state"><p>{copy.loading}</p></div>}
-                  {adminUsers !== null && userStats.length === 0 && <div className="empty-state"><p>{copy.adminNoUsers}</p></div>}
+                  {userStats.length === 0 && <div className="empty-state"><p>{copy.adminNoUsers}</p></div>}
                   {userStats.map((u) => (
                     <article className="history-item" key={u.email} style={{flexDirection:'column',alignItems:'flex-start',gap:'0.5rem'}}>
                       <div style={{display:'flex',alignItems:'center',gap:'0.75rem',width:'100%'}}>
                         <div className="stat-icon blue-glow" style={{width:'2rem',height:'2rem',fontSize:'0.85rem',flexShrink:0}}>{u.email[0].toUpperCase()}</div>
                         <div style={{flex:1,minWidth:0}}>
                           <h3 style={{fontSize:'0.95rem',wordBreak:'break-all'}}>{u.email}</h3>
-                          <p style={{fontSize:'0.78rem',opacity:0.6}}>{copy.adminRegistered}: {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</p>
+                          <p style={{fontSize:'0.78rem',opacity:0.6}}>{copy.adminRegistered}: {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</p>
                         </div>
-                        {u.daysSinceLast !== null && u.daysSinceLast > 30 && <span style={{fontSize:'0.7rem',padding:'0.15rem 0.5rem',borderRadius:'999px',background:'rgba(239,68,68,0.18)',color:'#f87171',flexShrink:0}}>{u.daysSinceLast}d</span>}
                       </div>
                       <div className="stats-list" style={{width:'100%',marginTop:'0.25rem'}}>
                         <div className="stats-row"><span>{copy.adminWorkouts}</span><strong>{u.workouts}</strong></div>
                         <div className="stats-row"><span>{copy.adminMeals}</span><strong>{u.meals}</strong></div>
-                        <div className="stats-row"><span>{copy.adminLastWorkout}</span><strong>{u.lastWorkout ? formatDateValue(u.lastWorkout, settings.dateFormat) : copy.adminNever}{u.daysSinceLast !== null && u.daysSinceLast > 30 ? <span style={{marginLeft:'0.4rem',color:'#f87171',fontSize:'0.8rem'}}>({u.daysSinceLast} {copy.adminInactiveDays})</span> : null}</strong></div>
-                      </div>
-                      <div style={{display:'flex',flexWrap:'wrap',gap:'0.5rem',marginTop:'0.5rem'}}>
-                        <button className="action-btn-outline" style={{fontSize:'0.8rem',padding:'0.3rem 0.75rem'}} type="button" onClick={() => adminChangeRank(u.email, 'up')}>{copy.adminRankUp}</button>
-                        <button className="action-btn-outline" style={{fontSize:'0.8rem',padding:'0.3rem 0.75rem'}} type="button" onClick={() => adminChangeRank(u.email, 'down')}>{copy.adminDemote}</button>
-                        <button className="action-btn-outline" style={{fontSize:'0.8rem',padding:'0.3rem 0.75rem'}} type="button" onClick={() => adminShowRecap(u.email)}>{copy.adminShowRecap}</button>
-                      </div>
-                      <div style={{display:'flex',gap:'0.4rem',width:'100%',marginTop:'0.25rem'}}>
-                        <input type="number" placeholder={copy.adminBonusPts} value={adminBonusInputs[u.email] || ''} onChange={e => setAdminBonusInputs(prev => ({...prev, [u.email]: e.target.value}))} style={{flex:1,fontSize:'0.8rem',padding:'0.3rem 0.6rem',background:'var(--input-bg)',border:'1px solid var(--border)',borderRadius:'var(--radius-sm)',color:'inherit'}} />
-                        <button className="action-btn-outline" style={{fontSize:'0.8rem',padding:'0.3rem 0.75rem'}} type="button" onClick={() => adminAddBonus(u.email)}>{copy.adminBonusAdd}</button>
-                      </div>
-                      <div style={{display:'flex',gap:'0.4rem',width:'100%',marginTop:'0.25rem'}}>
-                        <input type="text" placeholder={copy.adminNoticePlaceholder} value={adminNoticeInputs[u.email] || ''} onChange={e => setAdminNoticeInputs(prev => ({...prev, [u.email]: e.target.value}))} style={{flex:1,fontSize:'0.8rem',padding:'0.3rem 0.6rem',background:'var(--input-bg)',border:'1px solid var(--border)',borderRadius:'var(--radius-sm)',color:'inherit'}} />
-                        <button className="action-btn-outline" style={{fontSize:'0.8rem',padding:'0.3rem 0.75rem'}} type="button" onClick={() => adminSendNotice(u.email)}>{copy.adminNoticeSend}</button>
+                        <div className="stats-row"><span>{copy.adminBodyWeight}</span><strong>{u.bw}</strong></div>
+                        <div className="stats-row"><span>{copy.adminLastWorkout}</span><strong>{u.lastWorkout ? formatDateValue(u.lastWorkout, settings.dateFormat) : copy.adminNever}</strong></div>
                       </div>
                     </article>
                   ))}
@@ -2033,12 +2003,11 @@ Be concise. Use average homemade/generic values, not brand values.`;
               <p className="settings-copy">{recapData.month}</p>
             </div>
             <p className="recap-motivation">{copy.recapMotivation}</p>
-            {recapData.forEmail && recapData.forEmail !== currentUser && <p style={{textAlign:'center',fontSize:'0.82rem',opacity:.6,marginBottom:'0.5rem'}}>{recapData.forEmail}</p>}
             <div className="stats-list" style={{marginBottom:'1rem'}}>
               <div className="stats-row"><span>{copy.recapWorkouts}</span><strong style={{fontSize:'1.2rem'}}>{recapData.workoutCount}</strong></div>
               <div className="stats-row"><span>{copy.recapPRs}</span><strong style={{fontSize:'1.2rem'}}>{recapData.broken.length}</strong></div>
-              <div className="stats-row"><span>{copy.recapRank}</span><strong style={{fontSize:'1.2rem'}}>{(recapData.overrideRank || rankData.rank).displayName}</strong></div>
-              <div className="stats-row"><span>{copy.recapPoints}</span><strong style={{fontSize:'1.2rem'}}>{recapData.overridePts ?? rankData.pts}</strong></div>
+              <div className="stats-row"><span>{copy.recapRank}</span><strong style={{fontSize:'1.2rem'}}>{rankData.rank.displayName}</strong></div>
+              <div className="stats-row"><span>{copy.recapPoints}</span><strong style={{fontSize:'1.2rem'}}>{rankData.pts}</strong></div>
             </div>
             {recapData.broken.length > 0 ? (
               <div className="pr-list">

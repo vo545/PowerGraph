@@ -1093,6 +1093,7 @@ export default function App() {
   const [adminBonus, setAdminBonus] = useState(() => loadAdminBonus(localStorage.getItem(SESSION_KEY) || ''));
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [commentText, setCommentText] = useState('');
+  const [historySearch, setHistorySearch] = useState('');
   const [restDays, setRestDays] = useState(() => loadRestDays(localStorage.getItem(SESSION_KEY) || ''));
   const [cheatDays, setCheatDays] = useState(() => loadCheatDays(localStorage.getItem(SESSION_KEY) || ''));
 
@@ -1145,6 +1146,11 @@ export default function App() {
     }
     return days;
   }, [workouts]);
+
+  const lastUsedWeight = useMemo(() => {
+    const matches = workouts.filter(w => w.exercise === formData.exercise).sort((a, b) => b.date.localeCompare(a.date));
+    return matches.length ? matches[0].weight : null;
+  }, [workouts, formData.exercise]);
 
   const advisor = useMemo(() => {
     const latestSectionDate = {};
@@ -1552,6 +1558,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
     setActiveSection('dashboard');
   }
 
+  const NAV_ICONS = { dashboard: '◼', history: '≡', exercises: '⊕', advisor: '✦', calories: '◉', ocenjevalec: '⊙', rankings: '★', bodyweight: '↕', settings: '⚙', admin: '◆' };
   const nav = [['dashboard', copy.dashboard], ['history', copy.history], ['exercises', copy.exercises], ['advisor', copy.advisor], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['rankings', copy.rankings], ['bodyweight', copy.bodyweight], ['settings', copy.settings], ...(currentUser === ADMIN_EMAIL ? [['admin', copy.admin]] : [])];
 
   if (!currentUser) {
@@ -1585,7 +1592,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
     <div className="app-container">
       <aside className="glass-panel sidebar">
         <div className="brand"><div className="logo-icon">P</div><h2>{copy.app}</h2></div>
-        <nav className="nav-menu">{nav.map(([id, label]) => <button key={id} className={`nav-btn ${activeSection === id ? 'active' : ''}`} type="button" onClick={() => setActiveSection(id)}>{label}</button>)}</nav>
+        <nav className="nav-menu">{nav.map(([id, label]) => <button key={id} className={`nav-btn ${activeSection === id ? 'active' : ''}`} type="button" onClick={() => setActiveSection(id)}><span className="nav-icon">{NAV_ICONS[id]}</span><span className="nav-label">{label}</span></button>)}</nav>
       </aside>
 
       <main className="main-content">
@@ -1602,8 +1609,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
         </header>
         <section className="glass-panel section-intro fade-in-up">
           <div>
-            <p className="exercise-category">{nav.find(([id]) => id === activeSection)?.[1]}</p>
-            <h3>{nav.find(([id]) => id === activeSection)?.[1]}</h3>
+            <p className="exercise-category"><span className="nav-icon" style={{marginRight:'0.4rem'}}>{NAV_ICONS[activeSection]}</span>{nav.find(([id]) => id === activeSection)?.[1]}</p>
             <p>{sectionDescriptions[activeSection]}</p>
           </div>
         </section>
@@ -1628,7 +1634,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
                   <p><strong>{sectionNames[findSection(formData.exercise)]}</strong></p>
                   <p>{localize(selectedFormExerciseInfo.targets, settings.language)}</p>
                 </div>
-                <div className="input-group"><label htmlFor="weight">{copy.weight}</label><input id="weight" type="number" step="0.5" min="0" value={formData.weight} onChange={(e) => setFormData((c) => ({ ...c, weight: e.target.value }))} placeholder={`0 ${settings.units}`} /></div>
+                <div className="input-group"><label htmlFor="weight">{copy.weight}</label><input id="weight" type="number" step="0.5" min="0" value={formData.weight} onChange={(e) => setFormData((c) => ({ ...c, weight: e.target.value }))} placeholder={`0 ${settings.units}`} />{lastUsedWeight !== null && !editingWorkoutId && <span className="weight-hint" onClick={() => setFormData(c => ({...c, weight: String(lastUsedWeight)}))}>{settings.language === 'sl' ? 'Zadnjič' : 'Last'}: {formatWeight(lastUsedWeight, settings.units)} ↑</span>}</div>
                 <div className="input-group set-builder"><label>{copy.repsPerSet}</label><div className="set-list">{formData.setDetails.map((value, index) => <div className="set-row" key={`set-${index + 1}`}><span className="set-label">{copy.sets} {index + 1}</span><input type="number" min="1" step="1" value={value} onChange={(e) => changeSet(index, e.target.value)} /><button className="mini-btn" type="button" onClick={() => removeSet(index)}>-</button></div>)}</div><button className="action-btn-outline add-set-btn" type="button" onClick={addSet}>{copy.addSet}</button></div>
                 <div className="settings-button-row">
                   <button className="action-btn-primary full-width" type="submit">{editingWorkoutId ? copy.saveChanges : copy.save}</button>
@@ -1692,11 +1698,20 @@ Be concise. Use average homemade/generic values, not brand values.`;
 
         {activeSection === 'history' && (
           <section className="glass-panel history-section fade-in-up">
-            <div className="panel-header"><h3>{copy.recent}</h3><span className="history-count">{sortedWorkouts.length}</span></div>
+            <div className="panel-header">
+              <h3>{copy.recent}</h3>
+              <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                <input className="history-search-input" type="search" placeholder={settings.language === 'sl' ? 'Išči vajo…' : 'Search exercise…'} value={historySearch} onChange={e => setHistorySearch(e.target.value)} />
+                <span className="history-count">{sortedWorkouts.filter(w => !historySearch || getExerciseName(w.exercise, settings.language).toLowerCase().includes(historySearch.toLowerCase())).length}</span>
+              </div>
+            </div>
             <div className="history-list">
-              {sortedWorkouts.length ? sortedWorkouts.map((w) => (
+              {sortedWorkouts.filter(w => !historySearch || getExerciseName(w.exercise, settings.language).toLowerCase().includes(historySearch.toLowerCase())).length ? sortedWorkouts.filter(w => !historySearch || getExerciseName(w.exercise, settings.language).toLowerCase().includes(historySearch.toLowerCase())).map((w) => (
                 <article className="history-item" key={w.id} style={{flexWrap:'wrap'}}>
-                  <div><h3>{getExerciseName(w.exercise, settings.language)}{personalRecords[w.exercise] === w.weight ? <span className="pr-badge">{copy.prBadge}</span> : null}</h3><p>{formatDateValue(w.date, settings.dateFormat)}</p></div>
+                  <div style={{display:'flex',alignItems:'center',gap:'0.75rem',flex:1,minWidth:0}}>
+                    <div className="history-avatar">{getExerciseName(w.exercise, settings.language)[0]}</div>
+                    <div><h3>{getExerciseName(w.exercise, settings.language)}{personalRecords[w.exercise] === w.weight ? <span className="pr-badge">{copy.prBadge}</span> : null}</h3><p>{formatDateValue(w.date, settings.dateFormat)}</p></div>
+                  </div>
                   <div className="history-metrics"><span>{formatWeight(w.weight, settings.units)}</span><span>{getSetCount(w)} {copy.sets.toLowerCase()}</span><span>{formatSetDetails(w)}</span></div>
                   <div className="settings-button-row">
                     <button className="action-btn-outline" type="button" onClick={() => repeatWorkout(w)}>{copy.repeatWorkout}</button>
@@ -1715,7 +1730,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
                     <p style={{width:'100%',fontSize:'0.82rem',opacity:0.65,margin:'0.4rem 0 0',fontStyle:'italic'}}>"{w.comment}"</p>
                   )}
                 </article>
-              )) : <div className="empty-state"><h4>{copy.recent}</h4><p>{copy.noHistory}</p></div>}
+              )) : <div className="empty-state"><p style={{fontSize:'2rem',marginBottom:'0.5rem'}}>≡</p><h4>{historySearch ? (settings.language === 'sl' ? 'Ni rezultatov' : 'No results') : copy.recent}</h4><p>{historySearch ? (settings.language === 'sl' ? 'Poskusi z drugim iskanjem.' : 'Try a different search.') : copy.noHistory}</p></div>}
             </div>
           </section>
         )}

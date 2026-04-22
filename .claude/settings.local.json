@@ -18,7 +18,11 @@
       "Bash(node --no-warnings server.js)",
       "Bash(curl -s -X POST http://localhost:3001/api/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"email\\\\\":\\\\\"test@test.com\\\\\",\\\\\"password\\\\\":\\\\\"test123\\\\\"}\")",
       "Bash(kill %1)",
-      "Bash(start https://vo545.github.io/PowerGraph)"
+      "Bash(start https://vo545.github.io/PowerGraph)",
+      "WebSearch",
+      "Bash(magick --version)",
+      "Bash(node scripts/gen-icons.mjs)",
+      "Bash(node scripts/gen-feature.mjs)"
     ]
   }
 }

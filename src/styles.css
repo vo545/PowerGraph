@@ -1053,8 +1053,8 @@ p {
 /* Floating feedback widget */
 .feedback-widget {
   position: fixed;
-  bottom: 68px;
-  right: 8px;
+  bottom: 72px;
+  right: 0px;
   z-index: 500;
   display: flex;
   flex-direction: column;
@@ -1154,8 +1154,8 @@ p {
 
 @media (max-width: 768px) {
   .feedback-widget {
-    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
-    right: 6px;
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+    right: 0px;
   }
 }
 

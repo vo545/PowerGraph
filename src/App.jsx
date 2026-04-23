@@ -556,6 +556,8 @@ const ui = {
     tdeeHeight: 'Višina (cm)',
     timerAlarmTitle: 'PowerGraph – Odmor končan!',
     timerAlarmBody: 'Počitek je potekel. Nadaljuj s treningom! 💪',
+    timerCustomLabel: 'Čas (sek)',
+    timerCustomGo: 'Nastavi',
     selectSection: 'Izberi skupino',
     selectExercise: 'Izberi vajo',
   },
@@ -816,6 +818,8 @@ const ui = {
     tdeeHeight: 'Height (cm)',
     timerAlarmTitle: 'PowerGraph – Rest Over!',
     timerAlarmBody: 'Rest time is up. Get back to training! 💪',
+    timerCustomLabel: 'Time (sec)',
+    timerCustomGo: 'Set',
     selectSection: 'Select group',
     selectExercise: 'Select exercise',
   },
@@ -1013,6 +1017,8 @@ function playTimerAlarm() {
     });
   } catch {}
 }
+
+const TIMER_WORKER_SRC = `var t=null;self.onmessage=function(e){if(e.data.type==='start'){clearInterval(t);var end=e.data.endAt;t=setInterval(function(){var r=Math.max(0,Math.round((end-Date.now())/1000));self.postMessage({remaining:r});if(r<=0)clearInterval(t);},200);}else if(e.data.type==='stop'){clearInterval(t);}};`;
 
 function requestNotificationPermission() {
   if ('Notification' in window && Notification.permission === 'default') {
@@ -1235,6 +1241,11 @@ export default function App() {
   const fileInputRef = useRef(null);
   const previousCountRef = useRef(0);
   const previousExerciseRef = useRef('Bench Press');
+  const timerWorkerRef = useRef(null);
+  const wakeLockRef = useRef(null);
+  const notifTimerRef = useRef(null);
+  const timerEndAtRef = useRef(null);
+  const timerAlarmFnRef = useRef(null);
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) ?? 'dark');
   const [currentUser, setCurrentUser] = useState(() => localStorage.getItem(SESSION_KEY) || '');
   const [workouts, setWorkouts] = useState(() => loadWorkouts(localStorage.getItem(SESSION_KEY) || ''));
@@ -1283,6 +1294,7 @@ export default function App() {
   const [ratings, setRatings] = useState(() => loadRatings());
   const [ratingForm, setRatingForm] = useState({ stars: 5, comment: '', privateComment: '' });
   const [timerDone, setTimerDone] = useState(false);
+  const [timerCustomInput, setTimerCustomInput] = useState('');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -1472,22 +1484,50 @@ export default function App() {
     localStorage.setItem(getBodyWeightKey(currentUser), JSON.stringify(bodyWeightEntries));
   }, [bodyWeightEntries, currentUser]);
   useEffect(() => {
-    if (!timerActive || timerSeconds <= 0) return undefined;
-    const id = window.setTimeout(() => {
-      setTimerSeconds((s) => {
-        if (s <= 1) {
-          setTimerActive(false);
-          setTimerDone(true);
-          playTimerAlarm();
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(copy.timerAlarmTitle, { body: copy.timerAlarmBody, icon: '/icon-192.png' });
-          }
-        }
-        return Math.max(0, s - 1);
-      });
-    }, 1000);
-    return () => window.clearTimeout(id);
-  }, [timerActive, timerSeconds, copy.timerAlarmTitle, copy.timerAlarmBody]);
+    timerAlarmFnRef.current = () => {
+      playTimerAlarm();
+      try { navigator.vibrate([400, 100, 400, 100, 600]); } catch {}
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try { new Notification(copy.timerAlarmTitle, { body: copy.timerAlarmBody, icon: '/icon-192.png' }); } catch {}
+      }
+    };
+  }, [copy.timerAlarmTitle, copy.timerAlarmBody]);
+  useEffect(() => {
+    const blob = new Blob([TIMER_WORKER_SRC], { type: 'application/javascript' });
+    const url = URL.createObjectURL(blob);
+    const worker = new Worker(url);
+    timerWorkerRef.current = worker;
+    worker.onmessage = (e) => {
+      const { remaining } = e.data;
+      setTimerSeconds(remaining);
+      if (remaining <= 0) {
+        setTimerActive(false);
+        setTimerDone(true);
+        timerAlarmFnRef.current?.();
+        wakeLockRef.current?.release().catch(() => {});
+        wakeLockRef.current = null;
+      }
+    };
+    return () => { worker.terminate(); URL.revokeObjectURL(url); };
+  }, []);
+  useEffect(() => {
+    function onVisibilityChange() {
+      if (!timerEndAtRef.current) return;
+      const remaining = Math.max(0, Math.round((timerEndAtRef.current - Date.now()) / 1000));
+      setTimerSeconds(remaining);
+      if (remaining <= 0) {
+        setTimerActive(false);
+        setTimerDone(true);
+        timerAlarmFnRef.current?.();
+        timerWorkerRef.current?.postMessage({ type: 'stop' });
+        wakeLockRef.current?.release().catch(() => {});
+        wakeLockRef.current = null;
+        timerEndAtRef.current = null;
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, []);
   useEffect(() => { previousExerciseRef.current = selectedExercise; previousCountRef.current = selectedWorkouts.length; }, [selectedExercise, selectedWorkouts.length]);
   useEffect(() => { if (!toast) return undefined; const id = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(id); }, [toast]);
   useEffect(() => {
@@ -1816,9 +1856,51 @@ Be concise. Use average homemade/generic values, not brand values.`;
     if (tdeeForm.age) setSettings(c => ({ ...c, gender: tdeeForm.gender, age: tdeeForm.age, height: tdeeForm.height }));
     setTdeeResult({ tdee, target, dailyAdjustment });
   }
-  function startTimer(preset) { requestNotificationPermission(); setTimerPreset(preset); setTimerSeconds(preset); setTimerActive(true); setTimerDone(false); }
-  function toggleTimer() { if (timerSeconds <= 0) { setTimerSeconds(timerPreset); setTimerActive(true); setTimerDone(false); } else { setTimerActive((a) => !a); } }
-  function resetTimer() { setTimerActive(false); setTimerSeconds(timerPreset); setTimerDone(false); }
+  function startTimer(seconds) {
+    requestNotificationPermission();
+    const s = Math.max(1, Math.round(seconds));
+    setTimerPreset(s); setTimerSeconds(s); setTimerActive(true); setTimerDone(false);
+    const endAt = Date.now() + s * 1000;
+    timerEndAtRef.current = endAt;
+    timerWorkerRef.current?.postMessage({ type: 'start', endAt });
+    if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(l => { wakeLockRef.current = l; }).catch(() => {});
+    if (notifTimerRef.current) clearTimeout(notifTimerRef.current);
+    if ('Notification' in window && Notification.permission === 'granted') notifTimerRef.current = setTimeout(() => timerAlarmFnRef.current?.(), s * 1000);
+  }
+  function toggleTimer() {
+    if (timerActive) {
+      timerWorkerRef.current?.postMessage({ type: 'stop' });
+      if (notifTimerRef.current) { clearTimeout(notifTimerRef.current); notifTimerRef.current = null; }
+      wakeLockRef.current?.release().catch(() => {}); wakeLockRef.current = null; timerEndAtRef.current = null;
+      setTimerActive(false);
+    } else {
+      const s = timerSeconds > 0 ? timerSeconds : timerPreset;
+      const endAt = Date.now() + s * 1000;
+      timerEndAtRef.current = endAt;
+      timerWorkerRef.current?.postMessage({ type: 'start', endAt });
+      if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(l => { wakeLockRef.current = l; }).catch(() => {});
+      if (notifTimerRef.current) clearTimeout(notifTimerRef.current);
+      if ('Notification' in window && Notification.permission === 'granted') notifTimerRef.current = setTimeout(() => timerAlarmFnRef.current?.(), s * 1000);
+      setTimerActive(true); setTimerDone(false);
+    }
+  }
+  function resetTimer() {
+    timerWorkerRef.current?.postMessage({ type: 'stop' });
+    if (notifTimerRef.current) { clearTimeout(notifTimerRef.current); notifTimerRef.current = null; }
+    wakeLockRef.current?.release().catch(() => {}); wakeLockRef.current = null; timerEndAtRef.current = null;
+    setTimerActive(false); setTimerSeconds(timerPreset); setTimerDone(false);
+  }
+  function adjustTimer(delta) {
+    const newS = Math.max(5, timerSeconds + delta);
+    setTimerSeconds(newS);
+    if (timerActive) {
+      const endAt = Date.now() + newS * 1000;
+      timerEndAtRef.current = endAt;
+      timerWorkerRef.current?.postMessage({ type: 'start', endAt });
+      if (notifTimerRef.current) clearTimeout(notifTimerRef.current);
+      if ('Notification' in window && Notification.permission === 'granted') notifTimerRef.current = setTimeout(() => timerAlarmFnRef.current?.(), newS * 1000);
+    }
+  }
 
   function toggleRestDay() {
     const today = new Date().toISOString().slice(0, 10);
@@ -1980,19 +2062,37 @@ Be concise. Use average homemade/generic values, not brand values.`;
                 ))}</div>
               ) : <div className="empty-state"><p>{copy.prNoData}</p></div>}
             </section>
-            <section className="glass-panel action-panel fade-in-up">
-              <div className="panel-header"><h3>{copy.timerTitle}</h3></div>
-              <div className="timer-display" style={{textAlign:'center',padding:'1rem 0'}}>
-                <div className="timer-clock" style={{fontSize:'3.5rem',fontWeight:700,letterSpacing:'0.05em',color: timerSeconds <= 5 && timerActive ? 'var(--error)' : 'var(--text-primary)'}}>{timerSeconds <= 0 ? copy.timerDone : `${Math.floor(timerSeconds/60).toString().padStart(2,'0')}:${(timerSeconds%60).toString().padStart(2,'0')}`}</div>
-                <div className="settings-button-row" style={{justifyContent:'center',gap:'0.5rem',marginTop:'1rem'}}>
-                  {[60, 90, 120, 180].map((s) => <button key={s} className={`action-btn-outline ${timerPreset === s && !timerActive ? 'active-filter' : ''}`} type="button" onClick={() => startTimer(s)}>{s < 60 ? `${s}s` : `${s/60}min`}</button>)}
-                </div>
-                <div className="settings-button-row" style={{justifyContent:'center',gap:'0.5rem',marginTop:'0.75rem'}}>
-                  <button className="action-btn-primary" type="button" onClick={toggleTimer}>{timerActive ? copy.timerPause : copy.timerStart}</button>
-                  <button className="action-btn-outline" type="button" onClick={resetTimer}>{copy.timerReset}</button>
-                </div>
-              </div>
-            </section>
+            {(() => {
+              const r = 54; const circ = 2 * Math.PI * r;
+              const pct = timerPreset > 0 ? timerSeconds / timerPreset : 0;
+              const dash = circ * (1 - Math.min(1, Math.max(0, pct)));
+              const urgent = timerSeconds <= 5 && timerActive && timerSeconds > 0;
+              return (
+                <section className="glass-panel action-panel fade-in-up">
+                  <div className="panel-header"><h3>{copy.timerTitle}</h3></div>
+                  <div className="timer-display" style={{textAlign:'center',padding:'1rem 0'}}>
+                    <svg width="140" height="140" viewBox="0 0 140 140" style={{display:'block',margin:'0 auto'}}>
+                      <circle cx="70" cy="70" r={r} fill="none" stroke="var(--glass-border)" strokeWidth="8"/>
+                      <circle cx="70" cy="70" r={r} fill="none" stroke={timerDone ? '#4caf50' : urgent ? 'var(--error)' : 'var(--accent)'} strokeWidth="8" strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={dash} transform="rotate(-90 70 70)" style={{transition:'stroke-dashoffset 0.2s linear,stroke 0.3s'}}/>
+                      <text x="70" y="74" textAnchor="middle" dominantBaseline="middle" fill={timerDone ? '#4caf50' : urgent ? 'var(--error)' : 'var(--text-primary)'} fontSize="26" fontWeight="700" style={{fontFamily:'inherit'}}>{timerSeconds <= 0 ? '✓' : `${Math.floor(timerSeconds/60).toString().padStart(2,'0')}:${(timerSeconds%60).toString().padStart(2,'0')}`}</text>
+                    </svg>
+                    <div className="settings-button-row" style={{justifyContent:'center',gap:'0.5rem',marginTop:'1rem'}}>
+                      {[60, 90, 120, 180].map((s) => <button key={s} className={`action-btn-outline${timerPreset === s && !timerActive ? ' active-filter' : ''}`} type="button" onClick={() => startTimer(s)}>{s < 60 ? `${s}s` : `${s/60}min`}</button>)}
+                    </div>
+                    <div className="settings-button-row" style={{justifyContent:'center',gap:'0.5rem',marginTop:'0.75rem'}}>
+                      <button className="action-btn-primary" type="button" onClick={toggleTimer}>{timerActive ? copy.timerPause : copy.timerStart}</button>
+                      <button className="action-btn-outline" type="button" onClick={resetTimer}>{copy.timerReset}</button>
+                      <button className="action-btn-outline" type="button" onClick={() => adjustTimer(-15)}>−15s</button>
+                      <button className="action-btn-outline" type="button" onClick={() => adjustTimer(15)}>+15s</button>
+                    </div>
+                    <div className="settings-button-row" style={{justifyContent:'center',gap:'0.5rem',marginTop:'0.75rem'}}>
+                      <input type="number" min="5" max="3600" className="premium-select" style={{width:'80px',textAlign:'center'}} placeholder={copy.timerCustomLabel} value={timerCustomInput} onChange={e => setTimerCustomInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { const s = Number(timerCustomInput); if (s >= 5) { startTimer(s); setTimerCustomInput(''); } } }}/>
+                      <button className="action-btn-outline" type="button" onClick={() => { const s = Number(timerCustomInput); if (s >= 5) { startTimer(s); setTimerCustomInput(''); } }}>{copy.timerCustomGo}</button>
+                    </div>
+                  </div>
+                </section>
+              );
+            })()}
             <section className="glass-panel action-panel fade-in-up">
               <div className="panel-header"><h3>{copy.restDay}</h3></div>
               <div style={{textAlign:'center',padding:'1rem 0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'1rem',flex:1}}>

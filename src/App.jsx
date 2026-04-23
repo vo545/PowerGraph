@@ -1221,6 +1221,8 @@ export default function App() {
   const [ratings, setRatings] = useState(() => loadRatings());
   const [ratingForm, setRatingForm] = useState({ stars: 5, comment: '', privateComment: '' });
   const [timerDone, setTimerDone] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackSent, setFeedbackSent] = useState(false);
 
   const copy = ui[settings.language];
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -1766,21 +1768,22 @@ Be concise. Use average homemade/generic values, not brand values.`;
   }
 
   function submitRating(e) {
-    e.preventDefault();
-    if (!ratingForm.comment.trim()) return;
+    if (e && e.preventDefault) e.preventDefault();
+    if (!ratingForm.stars && !ratingForm.comment.trim()) return;
     const entry = { id: Date.now(), email: currentUser, stars: ratingForm.stars, comment: ratingForm.comment.trim(), privateComment: ratingForm.privateComment.trim(), date: new Date().toISOString().slice(0, 10) };
     const updated = [entry, ...ratings];
     setRatings(updated);
     saveRatings(updated);
     setRatingForm({ stars: 5, comment: '', privateComment: '' });
-    setToast(copy.ratingDone);
+    setFeedbackSent(true);
+    setTimeout(() => { setFeedbackOpen(false); setFeedbackSent(false); }, 1800);
   }
 
-  const NAV_ICONS = { dashboard: '🏠', exercises: '💪', history: '📋', bodyweight: '⚖️', calories: '🥗', ocenjevalec: '🔍', rankings: '🏆', advisor: '💡', ratings: '🌟', settings: '⚙️', admin: '🛡️' };
+  const NAV_ICONS = { dashboard: '🏠', exercises: '💪', history: '📋', bodyweight: '⚖️', calories: '🥗', ocenjevalec: '🔍', rankings: '🏆', advisor: '💡', settings: '⚙️', admin: '🛡️' };
   const NAV_SHORT = settings.language === 'sl'
-    ? { dashboard: 'Domov', exercises: 'Vaje', history: 'Arhiv', bodyweight: 'Teža', calories: 'Obroki', ocenjevalec: 'Išči', rankings: 'Rang', advisor: 'Nasvet', ratings: 'Ocene', settings: 'Opcije', admin: 'Admin' }
-    : { dashboard: 'Home', exercises: 'Workout', history: 'Log', bodyweight: 'Weight', calories: 'Meals', ocenjevalec: 'Search', rankings: 'Rank', advisor: 'Tips', ratings: 'Rates', settings: 'Options', admin: 'Admin' };
-  const nav = [['dashboard', copy.dashboard], ['exercises', copy.exercises], ['history', copy.history], ['bodyweight', copy.bodyweight], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['rankings', copy.rankings], ['advisor', copy.advisor], ['ratings', copy.ratingsTitle], ['settings', copy.settings], ...(currentUser === ADMIN_EMAIL ? [['admin', copy.admin]] : [])];
+    ? { dashboard: 'Domov', exercises: 'Vaje', history: 'Arhiv', bodyweight: 'Teža', calories: 'Obroki', ocenjevalec: 'Išči', rankings: 'Rang', advisor: 'Nasvet', settings: 'Opcije', admin: 'Admin' }
+    : { dashboard: 'Home', exercises: 'Workout', history: 'Log', bodyweight: 'Weight', calories: 'Meals', ocenjevalec: 'Search', rankings: 'Rank', advisor: 'Tips', settings: 'Options', admin: 'Admin' };
+  const nav = [['dashboard', copy.dashboard], ['exercises', copy.exercises], ['history', copy.history], ['bodyweight', copy.bodyweight], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['rankings', copy.rankings], ['advisor', copy.advisor], ['settings', copy.settings], ...(currentUser === ADMIN_EMAIL ? [['admin', copy.admin]] : [])];
 
   if (!currentUser) {
     return (
@@ -2178,76 +2181,6 @@ Be concise. Use average homemade/generic values, not brand values.`;
           </div>
         )}
 
-        {activeSection === 'ratings' && (() => {
-          const myRatings = ratings.filter(r => r.email === currentUser);
-          const allRatingsForAdmin = currentUser === ADMIN_EMAIL ? ratings : [];
-          const avgStars = ratings.length ? (ratings.reduce((s, r) => s + r.stars, 0) / ratings.length).toFixed(1) : null;
-          return (
-            <>
-              <div className="dashboard-grid">
-                {avgStars && <article className="glass-panel stat-card fade-in-up"><div className="stat-icon" style={{fontSize:'1.8rem'}}>⭐</div><div><p className="stat-title">{copy.ratingStars}</p><h3 className="stat-value">{avgStars} / 5</h3></div></article>}
-                <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">💬</div><div><p className="stat-title">{copy.ratingYours}</p><h3 className="stat-value">{myRatings.length}</h3></div></article>
-              </div>
-              <section className="glass-panel action-panel fade-in-up">
-                <div className="panel-header"><h3>{copy.ratingsTitle}</h3></div>
-                <p className="settings-copy" style={{marginBottom:'1rem'}}>{copy.ratingsSubtitle}</p>
-                <form className="premium-form" onSubmit={submitRating}>
-                  <div className="input-group">
-                    <label>{copy.ratingStars}</label>
-                    <div style={{display:'flex',gap:'0.5rem',fontSize:'1.6rem',margin:'0.25rem 0'}}>
-                      {[1,2,3,4,5].map(n => (
-                        <span key={n} style={{cursor:'pointer',opacity: ratingForm.stars >= n ? 1 : 0.3}} onClick={() => setRatingForm(c => ({...c, stars: n}))}>⭐</span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="input-group">
-                    <label htmlFor="rating-comment">{copy.ratingComment}</label>
-                    <textarea id="rating-comment" className="premium-input" rows={3} value={ratingForm.comment} onChange={e => setRatingForm(c => ({...c, comment: e.target.value}))} placeholder={copy.ratingCommentPlaceholder} style={{resize:'vertical',fontFamily:'inherit'}} />
-                  </div>
-                  <div className="input-group">
-                    <label htmlFor="rating-private">{copy.ratingPrivate}</label>
-                    <textarea id="rating-private" className="premium-input" rows={2} value={ratingForm.privateComment} onChange={e => setRatingForm(c => ({...c, privateComment: e.target.value}))} placeholder={copy.ratingPrivatePlaceholder} style={{resize:'vertical',fontFamily:'inherit'}} />
-                  </div>
-                  <button className="action-btn-primary full-width" type="submit">{copy.ratingSubmit}</button>
-                </form>
-              </section>
-              <section className="glass-panel history-section fade-in-up">
-                <div className="panel-header"><h3>{copy.ratingYours}</h3><span className="history-count">{myRatings.length}</span></div>
-                <div className="history-list">
-                  {myRatings.length ? myRatings.slice().reverse().map(r => (
-                    <article className="history-item" key={r.id} style={{flexDirection:'column',alignItems:'flex-start',gap:'0.4rem'}}>
-                      <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-                        <span style={{fontSize:'1.1rem'}}>{[1,2,3,4,5].map(n => n <= r.stars ? '⭐' : '☆').join('')}</span>
-                        <span style={{fontSize:'0.78rem',opacity:0.5}}>{r.date}</span>
-                      </div>
-                      <p style={{margin:0,fontSize:'0.9rem'}}>{r.comment}</p>
-                      {r.privateComment && <p style={{margin:0,fontSize:'0.8rem',opacity:0.5,fontStyle:'italic'}}>🔒 {r.privateComment}</p>}
-                    </article>
-                  )) : <div className="empty-state"><p>{copy.ratingEmpty}</p></div>}
-                </div>
-              </section>
-              {currentUser === ADMIN_EMAIL && (
-                <section className="glass-panel history-section fade-in-up">
-                  <div className="panel-header"><h3>{copy.ratingAll}</h3><span className="history-count">{allRatingsForAdmin.length}</span></div>
-                  <div className="history-list">
-                    {allRatingsForAdmin.length ? allRatingsForAdmin.slice().reverse().map(r => (
-                      <article className="history-item" key={r.id} style={{flexDirection:'column',alignItems:'flex-start',gap:'0.4rem'}}>
-                        <div style={{display:'flex',alignItems:'center',gap:'0.75rem',width:'100%'}}>
-                          <span style={{fontSize:'1.1rem'}}>{[1,2,3,4,5].map(n => n <= r.stars ? '⭐' : '☆').join('')}</span>
-                          <strong style={{fontSize:'0.85rem'}}>{r.email}</strong>
-                          <span style={{fontSize:'0.75rem',opacity:0.5,marginLeft:'auto'}}>{r.date}</span>
-                        </div>
-                        <p style={{margin:0,fontSize:'0.9rem'}}>{r.comment}</p>
-                        {r.privateComment && <div style={{width:'100%',background:'rgba(245,158,11,0.1)',borderRadius:'0.5rem',padding:'0.4rem 0.6rem',marginTop:'0.25rem'}}><p style={{margin:0,fontSize:'0.8rem',color:'#f59e0b'}}>🔒 {r.privateComment}</p></div>}
-                      </article>
-                    )) : <div className="empty-state"><p>{copy.ratingEmpty}</p></div>}
-                  </div>
-                </section>
-              )}
-            </>
-          );
-        })()}
-
         {activeSection === 'bodyweight' && <>
           <div className="dashboard-grid">
             <section className="glass-panel chart-panel fade-in-up">
@@ -2381,6 +2314,31 @@ Be concise. Use average homemade/generic values, not brand values.`;
 
         {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.installApp}</span><p className="settings-copy">{copy.installAppDesc}</p></div><div>{isInStandaloneMode ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installDone}</span> : isIos ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installIos}</span> : <button className="action-btn-outline" type="button" onClick={triggerInstall} disabled={!installPrompt}>{copy.installBtn}</button>}</div></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
       </main>
+      {currentUser && (
+        <div className="feedback-widget">
+          {feedbackOpen && (
+            <div className="feedback-popup glass-panel">
+              {feedbackSent ? (
+                <p className="feedback-sent">{copy.ratingDone}</p>
+              ) : (<>
+                <div className="feedback-popup-header">
+                  <span>{copy.ratingsTitle}</span>
+                  <button className="feedback-close-btn" type="button" onClick={() => setFeedbackOpen(false)}>✕</button>
+                </div>
+                <div className="feedback-stars">
+                  {[1,2,3,4,5].map(n => (
+                    <button key={n} type="button" className={`feedback-star${ratingForm.stars >= n ? ' active' : ''}`} onClick={() => setRatingForm(c => ({...c, stars: n}))}>★</button>
+                  ))}
+                </div>
+                <textarea className="feedback-textarea" rows={3} placeholder={copy.ratingCommentPlaceholder} value={ratingForm.comment} onChange={e => setRatingForm(c => ({...c, comment: e.target.value}))} />
+                <textarea className="feedback-textarea" rows={2} placeholder={copy.ratingPrivatePlaceholder} value={ratingForm.privateComment} onChange={e => setRatingForm(c => ({...c, privateComment: e.target.value}))} />
+                <button className="action-btn-primary" type="button" onClick={submitRating}>{copy.ratingSubmit}</button>
+              </>)}
+            </div>
+          )}
+          <button className="feedback-fab" type="button" title={copy.ratingsTitle} onClick={() => setFeedbackOpen(v => !v)}>💬</button>
+        </div>
+      )}
       {toast ? <div className="toast-container"><div className="toast">{toast}</div></div> : null}
       {showRecap && recapData && (
         <div className="recap-overlay" onClick={() => setShowRecap(false)}>

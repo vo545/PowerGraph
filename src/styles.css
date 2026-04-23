@@ -1050,6 +1050,111 @@ p {
   display: none;
 }
 
+/* Floating feedback widget */
+.feedback-widget {
+  position: fixed;
+  bottom: 88px;
+  right: 18px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.feedback-fab {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(59,130,246,0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.feedback-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 22px rgba(59,130,246,0.5);
+}
+
+.feedback-popup {
+  width: 270px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  animation: fadeInUp 0.2s ease;
+}
+
+.feedback-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.feedback-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  padding: 2px 4px;
+  line-height: 1;
+}
+.feedback-close-btn:hover { color: var(--text-primary); }
+
+.feedback-stars {
+  display: flex;
+  gap: 4px;
+}
+.feedback-star {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: rgba(148,163,184,0.35);
+  padding: 0;
+  transition: color 0.1s, transform 0.1s;
+  line-height: 1;
+}
+.feedback-star.active { color: #f59e0b; }
+.feedback-star:hover { transform: scale(1.15); }
+
+.feedback-textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  padding: 0.5rem 0.7rem;
+  resize: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.feedback-textarea:focus { outline: none; border-color: rgba(96,165,250,0.4); }
+
+.feedback-sent {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #34d399;
+  padding: 0.5rem 0;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .feedback-widget {
+    bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+    right: 12px;
+  }
+}
+
 @media (max-width: 1024px) {
   .dashboard-grid {
     grid-template-columns: 1fr;

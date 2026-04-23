@@ -23,7 +23,9 @@
       "Bash(magick --version)",
       "Bash(node scripts/gen-icons.mjs)",
       "Bash(node scripts/gen-feature.mjs)",
-      "Bash(xargs head *)"
+      "Bash(xargs head *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git commit *)"
     ]
   }
 }

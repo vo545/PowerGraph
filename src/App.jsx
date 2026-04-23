@@ -1106,6 +1106,63 @@ async function pushLoginLog(email, type) {
   } catch { recordLogin(email, type); }
 }
 
+function gistFileName(email) { return `data_${email.replace(/[^a-z0-9]/gi, '_')}.json`; }
+
+async function gistPushData(email, payload) {
+  if (!GITHUB_TOKEN || !GIST_ID) return;
+  try {
+    await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { [gistFileName(email)]: { content: JSON.stringify(payload) } } })
+    });
+  } catch {}
+}
+
+async function gistPullData(email) {
+  if (!GITHUB_TOKEN || !GIST_ID) return null;
+  try {
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json' }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const content = data.files?.[gistFileName(email)]?.content;
+    return content ? JSON.parse(content) : null;
+  } catch { return null; }
+}
+
+function mergeById(local, remote) {
+  if (!Array.isArray(remote) || !remote.length) return local;
+  const ids = new Set(local.map(i => i.id));
+  return [...local, ...remote.filter(i => !ids.has(i.id))];
+}
+
+function mergeStrings(local, remote) {
+  if (!Array.isArray(remote) || !remote.length) return local;
+  return [...new Set([...local, ...remote])];
+}
+
+async function applyGistData(email, gistData) {
+  if (!gistData) return;
+  const lw = loadWorkouts(email);
+  const mw = mergeById(lw, (gistData.workouts || []).map(normalizeWorkout));
+  if (mw.length > lw.length) localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify(mw));
+  const lc = loadCalories(email);
+  const mc = mergeById(lc, gistData.calorieEntries || []);
+  if (mc.length > lc.length) localStorage.setItem(getCaloriesStorageKey(email), JSON.stringify(mc));
+  const lb = loadBodyWeight(email);
+  const mb = mergeById(lb, gistData.bodyWeightEntries || []);
+  if (mb.length > lb.length) localStorage.setItem(getBodyWeightKey(email), JSON.stringify(mb));
+  const lr = loadRestDays(email); const mr = mergeStrings(lr, gistData.restDays || []);
+  if (mr.length > lr.length) localStorage.setItem(getRestKey(email), JSON.stringify(mr));
+  const lch = loadCheatDays(email); const mch = mergeStrings(lch, gistData.cheatDays || []);
+  if (mch.length > lch.length) localStorage.setItem(getCheatKey(email), JSON.stringify(mch));
+  const lcalh = loadCalHistory(email);
+  const mcalh = mergeById(lcalh, gistData.calHistory || []);
+  if (mcalh.length > lcalh.length) localStorage.setItem(getCalHistoryKey(email), JSON.stringify(mcalh));
+}
+
 async function hashPassword(value) {
   const hashBuffer = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   return Array.from(new Uint8Array(hashBuffer)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -1223,6 +1280,7 @@ export default function App() {
   const [timerDone, setTimerDone] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const copy = ui[settings.language];
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -1433,6 +1491,17 @@ export default function App() {
     fetchLoginLogs().then(setAdminLogs);
   }, [activeSection, currentUser]);
 
+  useEffect(() => {
+    if (!GITHUB_TOKEN || !GIST_ID || !currentUser) return undefined;
+    setSyncing(true);
+    const id = setTimeout(async () => {
+      try {
+        await gistPushData(currentUser, { workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory });
+      } finally { setSyncing(false); }
+    }, 5000);
+    return () => { clearTimeout(id); setSyncing(false); };
+  }, [currentUser, workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory]);
+
   async function handleAuthSubmit(event) {
     event.preventDefault();
     const email = authForm.email.trim().toLowerCase();
@@ -1468,6 +1537,7 @@ export default function App() {
         localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify([]));
         localStorage.setItem(getSettingsStorageKey(email), JSON.stringify(defaultSettings));
         await pushLoginLog(email, 'signup');
+        await applyGistData(email, await gistPullData(email));
         backendLogin(email, password).then(token => {
           if (token) pullFromBackend(email).then(data => {
             if (data?.workouts?.length) localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify(data.workouts.map(normalizeWorkout)));
@@ -1488,6 +1558,7 @@ export default function App() {
           return;
         }
         await pushLoginLog(email, 'login');
+        await applyGistData(email, await gistPullData(email));
         backendLogin(email, password).then(token => {
           if (token) pullFromBackend(email).then(data => {
             if (data) {
@@ -1836,6 +1907,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
                 ⏱ {timerDone ? copy.timerDone : `${Math.floor(timerSeconds/60).toString().padStart(2,'0')}:${(timerSeconds%60).toString().padStart(2,'0')}`}
               </button>
             )}
+            {syncing && <span className="sync-indicator" title={settings.language === 'sl' ? 'Sinhroniziram...' : 'Syncing...'}>↻</span>}
             <span className="user-chip">{getUserBadge(currentUser)}</span>
             <button className="theme-toggle" type="button" onClick={() => setTheme((c) => (c === 'dark' ? 'light' : 'dark'))}>{theme === 'dark' ? 'L' : 'D'}</button>
             <button className="action-btn-outline" type="button" onClick={logout}>{copy.logout}</button>

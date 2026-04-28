@@ -295,7 +295,7 @@ function loadCalHistory(email) {
   } catch { return []; }
 }
 
-const defaultSettings = { units: 'kg', language: 'sl', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '' };
+const defaultSettings = { units: 'kg', language: 'sl', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
 const RATINGS_KEY = 'powergraph_ratings';
 const BANNED_KEY = 'powergraph_banned';
 const MODS_KEY = 'powergraph_mods';
@@ -357,6 +357,8 @@ const ui = {
     clearConfirm: 'Ali res \u017eeli\u0161 izbrisati vse lokalne podatke? Tega ni mogo\u010de razveljaviti.',
     backupTitle: 'Opomnik za backup',
     backupText: 'Naredi nov izvoz, da ne izgubi\u0161 lokalnih podatkov.',
+    showFeedbackBtn: 'Gumb za komentar',
+    showFeedbackBtnDesc: 'Prika\u017ei ali skrij gumb za povratne informacije.',
     installApp: 'Namesti aplikacijo',
     installAppDesc: 'Dodaj PowerGraph na za\u010detni zaslon ali namizje.',
     installBtn: 'Namesti',
@@ -408,7 +410,7 @@ const ui = {
     authWrongPassword: 'Napa\u010dno geslo.',
     authLocalOnly: 'Lokalni ra\u010duni so shranjeni samo v tem brskalniku.',
     caloriesTitle: 'Dnevni vnos kalorij',
-    caloriesSubtitle: 'Bele\u017ei obroke, dnevni cilj in osnovne makrote.',
+    caloriesSubtitle: 'Bele\u017ei obroke, dnevni cilj in osnovne makre.',
     addMeal: 'Dodaj obrok',
     mealName: 'Ime obroka',
     mealType: 'Obrok',
@@ -537,7 +539,7 @@ const ui = {
     weightDropDesc: 'Vnesi kg za vsak set posebej',
     searchExercise: 'Išči vajo…',
     noExerciseResults: 'Ni rezultatov za to iskanje.',
-    ratingsTitle: 'Ocene & Povratne informacije',
+    ratingsTitle: 'Ocene & povratne informacije',
     ratingsSubtitle: 'Oceni aplikacijo in napiši predlog za izboljšavo.',
     ratingStars: 'Ocena',
     ratingComment: 'Komentar / predlog',
@@ -546,7 +548,7 @@ const ui = {
     ratingPrivatePlaceholder: 'Direkten komentar adminu (vidi samo admin)…',
     ratingSubmit: 'Pošlji oceno',
     ratingDone: 'Ocena poslana. Hvala!',
-    ratingEmpty: 'Ni ocen še.',
+    ratingEmpty: 'Še ni ocen.',
     ratingYours: 'Tvoje ocene',
     ratingAll: 'Vse ocene',
     tdeeGender: 'Spol',
@@ -556,6 +558,8 @@ const ui = {
     tdeeHeight: 'Višina (cm)',
     timerAlarmTitle: 'PowerGraph – Odmor končan!',
     timerAlarmBody: 'Počitek je potekel. Nadaljuj s treningom! 💪',
+    timerCustomLabel: 'Čas (sek)',
+    timerCustomGo: 'Nastavi',
     selectSection: 'Izberi skupino',
     selectExercise: 'Izberi vajo',
     gymMode: 'Gym',
@@ -647,6 +651,8 @@ const ui = {
     clearConfirm: 'Do you really want to delete all local data? This cannot be undone.',
     backupTitle: 'Backup reminder',
     backupText: 'Create a fresh export so you do not lose local data.',
+    showFeedbackBtn: 'Comment button',
+    showFeedbackBtnDesc: 'Show or hide the feedback button.',
     installApp: 'Install app',
     installAppDesc: 'Add PowerGraph to your home screen or desktop.',
     installBtn: 'Install',
@@ -846,6 +852,8 @@ const ui = {
     tdeeHeight: 'Height (cm)',
     timerAlarmTitle: 'PowerGraph – Rest Over!',
     timerAlarmBody: 'Rest time is up. Get back to training! 💪',
+    timerCustomLabel: 'Time (sec)',
+    timerCustomGo: 'Set',
     selectSection: 'Select group',
     selectExercise: 'Select exercise',
     gymMode: 'Gym',
@@ -1099,6 +1107,7 @@ function sanitizeSettings(input) {
     if (input.gender === 'male' || input.gender === 'female') safe.gender = input.gender;
     if (typeof input.age === 'string' || typeof input.age === 'number') safe.age = String(input.age);
     if (typeof input.height === 'string' || typeof input.height === 'number') safe.height = String(input.height);
+    if (typeof input.showFeedbackBtn === 'boolean') safe.showFeedbackBtn = input.showFeedbackBtn;
   }
   return safe;
 }
@@ -1146,6 +1155,8 @@ function playTimerAlarm() {
     });
   } catch {}
 }
+
+const TIMER_WORKER_SRC = `var t=null;self.onmessage=function(e){if(e.data.type==='start'){clearInterval(t);var end=e.data.endAt;t=setInterval(function(){var r=Math.max(0,Math.round((end-Date.now())/1000));self.postMessage({remaining:r});if(r<=0)clearInterval(t);},200);}else if(e.data.type==='stop'){clearInterval(t);}};`;
 
 function requestNotificationPermission() {
   if ('Notification' in window && Notification.permission === 'default') {
@@ -1244,6 +1255,63 @@ async function pushLoginLog(email, type) {
   } catch { recordLogin(email, type); }
 }
 
+function gistFileName(email) { return `data_${email.replace(/[^a-z0-9]/gi, '_')}.json`; }
+
+async function gistPushData(email, payload) {
+  if (!GITHUB_TOKEN || !GIST_ID) return;
+  try {
+    await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { [gistFileName(email)]: { content: JSON.stringify(payload) } } })
+    });
+  } catch {}
+}
+
+async function gistPullData(email) {
+  if (!GITHUB_TOKEN || !GIST_ID) return null;
+  try {
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json' }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const content = data.files?.[gistFileName(email)]?.content;
+    return content ? JSON.parse(content) : null;
+  } catch { return null; }
+}
+
+function mergeById(local, remote) {
+  if (!Array.isArray(remote) || !remote.length) return local;
+  const ids = new Set(local.map(i => i.id));
+  return [...local, ...remote.filter(i => !ids.has(i.id))];
+}
+
+function mergeStrings(local, remote) {
+  if (!Array.isArray(remote) || !remote.length) return local;
+  return [...new Set([...local, ...remote])];
+}
+
+async function applyGistData(email, gistData) {
+  if (!gistData) return;
+  const lw = loadWorkouts(email);
+  const mw = mergeById(lw, (gistData.workouts || []).map(normalizeWorkout));
+  if (mw.length > lw.length) localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify(mw));
+  const lc = loadCalories(email);
+  const mc = mergeById(lc, gistData.calorieEntries || []);
+  if (mc.length > lc.length) localStorage.setItem(getCaloriesStorageKey(email), JSON.stringify(mc));
+  const lb = loadBodyWeight(email);
+  const mb = mergeById(lb, gistData.bodyWeightEntries || []);
+  if (mb.length > lb.length) localStorage.setItem(getBodyWeightKey(email), JSON.stringify(mb));
+  const lr = loadRestDays(email); const mr = mergeStrings(lr, gistData.restDays || []);
+  if (mr.length > lr.length) localStorage.setItem(getRestKey(email), JSON.stringify(mr));
+  const lch = loadCheatDays(email); const mch = mergeStrings(lch, gistData.cheatDays || []);
+  if (mch.length > lch.length) localStorage.setItem(getCheatKey(email), JSON.stringify(mch));
+  const lcalh = loadCalHistory(email);
+  const mcalh = mergeById(lcalh, gistData.calHistory || []);
+  if (mcalh.length > lcalh.length) localStorage.setItem(getCalHistoryKey(email), JSON.stringify(mcalh));
+}
+
 async function hashPassword(value) {
   const hashBuffer = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   return Array.from(new Uint8Array(hashBuffer)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -1311,6 +1379,11 @@ export default function App() {
   const fileInputRef = useRef(null);
   const previousCountRef = useRef(0);
   const previousExerciseRef = useRef('Bench Press');
+  const timerWorkerRef = useRef(null);
+  const wakeLockRef = useRef(null);
+  const notifTimerRef = useRef(null);
+  const timerEndAtRef = useRef(null);
+  const timerAlarmFnRef = useRef(null);
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) ?? 'dark');
   const [currentUser, setCurrentUser] = useState(() => localStorage.getItem(SESSION_KEY) || '');
   const [workouts, setWorkouts] = useState(() => loadWorkouts(localStorage.getItem(SESSION_KEY) || ''));
@@ -1364,6 +1437,10 @@ export default function App() {
   const [macroResult, setMacroResult] = useState(null);
   const [bannedUsers, setBannedUsers] = useState(() => loadBanned());
   const [modUsers, setModUsers] = useState(() => loadMods());
+  const [timerCustomInput, setTimerCustomInput] = useState('');
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const copy = ui[settings.language];
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -1562,22 +1639,50 @@ export default function App() {
     localStorage.setItem(getBodyWeightKey(currentUser), JSON.stringify(bodyWeightEntries));
   }, [bodyWeightEntries, currentUser]);
   useEffect(() => {
-    if (!timerActive || timerSeconds <= 0) return undefined;
-    const id = window.setTimeout(() => {
-      setTimerSeconds((s) => {
-        if (s <= 1) {
-          setTimerActive(false);
-          setTimerDone(true);
-          playTimerAlarm();
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(copy.timerAlarmTitle, { body: copy.timerAlarmBody, icon: '/icon-192.png' });
-          }
-        }
-        return Math.max(0, s - 1);
-      });
-    }, 1000);
-    return () => window.clearTimeout(id);
-  }, [timerActive, timerSeconds, copy.timerAlarmTitle, copy.timerAlarmBody]);
+    timerAlarmFnRef.current = () => {
+      playTimerAlarm();
+      try { navigator.vibrate([400, 100, 400, 100, 600]); } catch {}
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try { new Notification(copy.timerAlarmTitle, { body: copy.timerAlarmBody, icon: '/icon-192.png' }); } catch {}
+      }
+    };
+  }, [copy.timerAlarmTitle, copy.timerAlarmBody]);
+  useEffect(() => {
+    const blob = new Blob([TIMER_WORKER_SRC], { type: 'application/javascript' });
+    const url = URL.createObjectURL(blob);
+    const worker = new Worker(url);
+    timerWorkerRef.current = worker;
+    worker.onmessage = (e) => {
+      const { remaining } = e.data;
+      setTimerSeconds(remaining);
+      if (remaining <= 0) {
+        setTimerActive(false);
+        setTimerDone(true);
+        timerAlarmFnRef.current?.();
+        wakeLockRef.current?.release().catch(() => {});
+        wakeLockRef.current = null;
+      }
+    };
+    return () => { worker.terminate(); URL.revokeObjectURL(url); };
+  }, []);
+  useEffect(() => {
+    function onVisibilityChange() {
+      if (!timerEndAtRef.current) return;
+      const remaining = Math.max(0, Math.round((timerEndAtRef.current - Date.now()) / 1000));
+      setTimerSeconds(remaining);
+      if (remaining <= 0) {
+        setTimerActive(false);
+        setTimerDone(true);
+        timerAlarmFnRef.current?.();
+        timerWorkerRef.current?.postMessage({ type: 'stop' });
+        wakeLockRef.current?.release().catch(() => {});
+        wakeLockRef.current = null;
+        timerEndAtRef.current = null;
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, []);
   useEffect(() => { previousExerciseRef.current = selectedExercise; previousCountRef.current = selectedWorkouts.length; }, [selectedExercise, selectedWorkouts.length]);
   useEffect(() => { if (!toast) return undefined; const id = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(id); }, [toast]);
   useEffect(() => {
@@ -1585,6 +1690,17 @@ export default function App() {
     setAdminLogs(null);
     fetchLoginLogs().then(setAdminLogs);
   }, [activeSection, currentUser]);
+
+  useEffect(() => {
+    if (!GITHUB_TOKEN || !GIST_ID || !currentUser) return undefined;
+    setSyncing(true);
+    const id = setTimeout(async () => {
+      try {
+        await gistPushData(currentUser, { workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory });
+      } finally { setSyncing(false); }
+    }, 5000);
+    return () => { clearTimeout(id); setSyncing(false); };
+  }, [currentUser, workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory]);
 
   async function handleAuthSubmit(event) {
     event.preventDefault();
@@ -1621,6 +1737,7 @@ export default function App() {
         localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify([]));
         localStorage.setItem(getSettingsStorageKey(email), JSON.stringify(defaultSettings));
         await pushLoginLog(email, 'signup');
+        await applyGistData(email, await gistPullData(email));
         backendLogin(email, password).then(token => {
           if (token) pullFromBackend(email).then(data => {
             if (data?.workouts?.length) localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify(data.workouts.map(normalizeWorkout)));
@@ -1646,6 +1763,7 @@ export default function App() {
           return;
         }
         await pushLoginLog(email, 'login');
+        await applyGistData(email, await gistPullData(email));
         backendLogin(email, password).then(token => {
           if (token) pullFromBackend(email).then(data => {
             if (data) {
@@ -1932,9 +2050,51 @@ Be concise. Use average homemade/generic values, not brand values.`;
     if (tdeeForm.age) setSettings(c => ({ ...c, gender: tdeeForm.gender, age: tdeeForm.age, height: tdeeForm.height }));
     setTdeeResult({ tdee, target, dailyAdjustment });
   }
-  function startTimer(preset) { requestNotificationPermission(); setTimerPreset(preset); setTimerSeconds(preset); setTimerActive(true); setTimerDone(false); }
-  function toggleTimer() { if (timerSeconds <= 0) { setTimerSeconds(timerPreset); setTimerActive(true); setTimerDone(false); } else { setTimerActive((a) => !a); } }
-  function resetTimer() { setTimerActive(false); setTimerSeconds(timerPreset); setTimerDone(false); }
+  function startTimer(seconds) {
+    requestNotificationPermission();
+    const s = Math.max(1, Math.round(seconds));
+    setTimerPreset(s); setTimerSeconds(s); setTimerActive(true); setTimerDone(false);
+    const endAt = Date.now() + s * 1000;
+    timerEndAtRef.current = endAt;
+    timerWorkerRef.current?.postMessage({ type: 'start', endAt });
+    if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(l => { wakeLockRef.current = l; }).catch(() => {});
+    if (notifTimerRef.current) clearTimeout(notifTimerRef.current);
+    if ('Notification' in window && Notification.permission === 'granted') notifTimerRef.current = setTimeout(() => timerAlarmFnRef.current?.(), s * 1000);
+  }
+  function toggleTimer() {
+    if (timerActive) {
+      timerWorkerRef.current?.postMessage({ type: 'stop' });
+      if (notifTimerRef.current) { clearTimeout(notifTimerRef.current); notifTimerRef.current = null; }
+      wakeLockRef.current?.release().catch(() => {}); wakeLockRef.current = null; timerEndAtRef.current = null;
+      setTimerActive(false);
+    } else {
+      const s = timerSeconds > 0 ? timerSeconds : timerPreset;
+      const endAt = Date.now() + s * 1000;
+      timerEndAtRef.current = endAt;
+      timerWorkerRef.current?.postMessage({ type: 'start', endAt });
+      if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(l => { wakeLockRef.current = l; }).catch(() => {});
+      if (notifTimerRef.current) clearTimeout(notifTimerRef.current);
+      if ('Notification' in window && Notification.permission === 'granted') notifTimerRef.current = setTimeout(() => timerAlarmFnRef.current?.(), s * 1000);
+      setTimerActive(true); setTimerDone(false);
+    }
+  }
+  function resetTimer() {
+    timerWorkerRef.current?.postMessage({ type: 'stop' });
+    if (notifTimerRef.current) { clearTimeout(notifTimerRef.current); notifTimerRef.current = null; }
+    wakeLockRef.current?.release().catch(() => {}); wakeLockRef.current = null; timerEndAtRef.current = null;
+    setTimerActive(false); setTimerSeconds(timerPreset); setTimerDone(false);
+  }
+  function adjustTimer(delta) {
+    const newS = Math.max(5, timerSeconds + delta);
+    setTimerSeconds(newS);
+    if (timerActive) {
+      const endAt = Date.now() + newS * 1000;
+      timerEndAtRef.current = endAt;
+      timerWorkerRef.current?.postMessage({ type: 'start', endAt });
+      if (notifTimerRef.current) clearTimeout(notifTimerRef.current);
+      if ('Notification' in window && Notification.permission === 'granted') notifTimerRef.current = setTimeout(() => timerAlarmFnRef.current?.(), newS * 1000);
+    }
+  }
 
   function toggleRestDay() {
     const today = new Date().toISOString().slice(0, 10);
@@ -1960,21 +2120,22 @@ Be concise. Use average homemade/generic values, not brand values.`;
   }
 
   function submitRating(e) {
-    e.preventDefault();
-    if (!ratingForm.comment.trim()) return;
+    if (e && e.preventDefault) e.preventDefault();
+    if (!ratingForm.stars && !ratingForm.comment.trim()) return;
     const entry = { id: Date.now(), email: currentUser, stars: ratingForm.stars, comment: ratingForm.comment.trim(), privateComment: ratingForm.privateComment.trim(), date: new Date().toISOString().slice(0, 10) };
     const updated = [entry, ...ratings];
     setRatings(updated);
     saveRatings(updated);
     setRatingForm({ stars: 5, comment: '', privateComment: '' });
-    setToast(copy.ratingDone);
+    setFeedbackSent(true);
+    setTimeout(() => { setFeedbackOpen(false); setFeedbackSent(false); }, 1800);
   }
 
-  const NAV_ICONS = { dashboard: '🏠', exercises: '💪', history: '📋', bodyweight: '⚖️', calories: '🥗', ocenjevalec: '🔍', rankings: '🏆', advisor: '💡', ratings: '🌟', settings: '⚙️', admin: '🛡️' };
+  const NAV_ICONS = { dashboard: '🏠', exercises: '💪', history: '📋', bodyweight: '⚖️', calories: '🥗', ocenjevalec: '🔍', rankings: '🏆', advisor: '💡', settings: '⚙️', admin: '🛡️' };
   const NAV_SHORT = settings.language === 'sl'
-    ? { dashboard: 'Domov', exercises: 'Vaje', history: 'Arhiv', bodyweight: 'Teža', calories: 'Obroki', ocenjevalec: 'Išči', rankings: 'Rang', advisor: 'Nasvet', ratings: 'Ocene', settings: 'Opcije', admin: 'Admin' }
-    : { dashboard: 'Home', exercises: 'Workout', history: 'Log', bodyweight: 'Weight', calories: 'Meals', ocenjevalec: 'Search', rankings: 'Rank', advisor: 'Tips', ratings: 'Rates', settings: 'Options', admin: 'Admin' };
-  const nav = [['dashboard', copy.dashboard], ['exercises', copy.exercises], ['history', copy.history], ['bodyweight', copy.bodyweight], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['rankings', copy.rankings], ['advisor', copy.advisor], ['ratings', copy.ratingsTitle], ['settings', copy.settings], ...(currentUser === ADMIN_EMAIL ? [['admin', copy.admin]] : [])];
+    ? { dashboard: 'Domov', exercises: 'Vaje', history: 'Arhiv', bodyweight: 'Teža', calories: 'Obroki', ocenjevalec: 'Išči', rankings: 'Rang', advisor: 'Nasvet', settings: 'Opcije', admin: 'Admin' }
+    : { dashboard: 'Home', exercises: 'Workout', history: 'Log', bodyweight: 'Weight', calories: 'Meals', ocenjevalec: 'Search', rankings: 'Rank', advisor: 'Tips', settings: 'Options', admin: 'Admin' };
+  const nav = [['dashboard', copy.dashboard], ['exercises', copy.exercises], ['history', copy.history], ['bodyweight', copy.bodyweight], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['rankings', copy.rankings], ['advisor', copy.advisor], ['settings', copy.settings], ...(currentUser === ADMIN_EMAIL ? [['admin', copy.admin]] : [])];
 
   if (!currentUser) {
     return (
@@ -2027,6 +2188,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
                 ⏱ {timerDone ? copy.timerDone : `${Math.floor(timerSeconds/60).toString().padStart(2,'0')}:${(timerSeconds%60).toString().padStart(2,'0')}`}
               </button>
             )}
+            {syncing && <span className="sync-indicator" title={settings.language === 'sl' ? 'Sinhroniziram...' : 'Syncing...'}>↻</span>}
             <span className="user-chip">{getUserBadge(currentUser)}</span>
             <button className="theme-toggle" type="button" onClick={() => setTheme((c) => (c === 'dark' ? 'light' : 'dark'))}>{theme === 'dark' ? 'L' : 'D'}</button>
             <button className="action-btn-outline" type="button" onClick={logout}>{copy.logout}</button>
@@ -2094,19 +2256,37 @@ Be concise. Use average homemade/generic values, not brand values.`;
                 ))}</div>
               ) : <div className="empty-state"><p>{copy.prNoData}</p></div>}
             </section>
-            <section className="glass-panel action-panel fade-in-up">
-              <div className="panel-header"><h3>{copy.timerTitle}</h3></div>
-              <div className="timer-display" style={{textAlign:'center',padding:'1rem 0'}}>
-                <div className="timer-clock" style={{fontSize:'3.5rem',fontWeight:700,letterSpacing:'0.05em',color: timerSeconds <= 5 && timerActive ? 'var(--error)' : 'var(--text-primary)'}}>{timerSeconds <= 0 ? copy.timerDone : `${Math.floor(timerSeconds/60).toString().padStart(2,'0')}:${(timerSeconds%60).toString().padStart(2,'0')}`}</div>
-                <div className="settings-button-row" style={{justifyContent:'center',gap:'0.5rem',marginTop:'1rem'}}>
-                  {[60, 90, 120, 180].map((s) => <button key={s} className={`action-btn-outline ${timerPreset === s && !timerActive ? 'active-filter' : ''}`} type="button" onClick={() => startTimer(s)}>{s < 60 ? `${s}s` : `${s/60}min`}</button>)}
-                </div>
-                <div className="settings-button-row" style={{justifyContent:'center',gap:'0.5rem',marginTop:'0.75rem'}}>
-                  <button className="action-btn-primary" type="button" onClick={toggleTimer}>{timerActive ? copy.timerPause : copy.timerStart}</button>
-                  <button className="action-btn-outline" type="button" onClick={resetTimer}>{copy.timerReset}</button>
-                </div>
-              </div>
-            </section>
+            {(() => {
+              const r = 54; const circ = 2 * Math.PI * r;
+              const pct = timerPreset > 0 ? timerSeconds / timerPreset : 0;
+              const dash = circ * (1 - Math.min(1, Math.max(0, pct)));
+              const urgent = timerSeconds <= 5 && timerActive && timerSeconds > 0;
+              return (
+                <section className="glass-panel action-panel fade-in-up">
+                  <div className="panel-header"><h3>{copy.timerTitle}</h3></div>
+                  <div className="timer-display" style={{textAlign:'center',padding:'1rem 0'}}>
+                    <svg width="140" height="140" viewBox="0 0 140 140" style={{display:'block',margin:'0 auto'}}>
+                      <circle cx="70" cy="70" r={r} fill="none" stroke="var(--glass-border)" strokeWidth="8"/>
+                      <circle cx="70" cy="70" r={r} fill="none" stroke={timerDone ? '#4caf50' : urgent ? 'var(--error)' : 'var(--accent)'} strokeWidth="8" strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={dash} transform="rotate(-90 70 70)" style={{transition:'stroke-dashoffset 0.2s linear,stroke 0.3s'}}/>
+                      <text x="70" y="74" textAnchor="middle" dominantBaseline="middle" fill={timerDone ? '#4caf50' : urgent ? 'var(--error)' : 'var(--text-primary)'} fontSize="26" fontWeight="700" style={{fontFamily:'inherit'}}>{timerSeconds <= 0 ? '✓' : `${Math.floor(timerSeconds/60).toString().padStart(2,'0')}:${(timerSeconds%60).toString().padStart(2,'0')}`}</text>
+                    </svg>
+                    <div className="settings-button-row" style={{justifyContent:'center',gap:'0.5rem',marginTop:'1rem'}}>
+                      {[60, 90, 120, 180].map((s) => <button key={s} className={`action-btn-outline${timerPreset === s && !timerActive ? ' active-filter' : ''}`} type="button" onClick={() => startTimer(s)}>{s < 60 ? `${s}s` : `${s/60}min`}</button>)}
+                    </div>
+                    <div className="settings-button-row" style={{justifyContent:'center',gap:'0.5rem',marginTop:'0.75rem'}}>
+                      <button className="action-btn-primary" type="button" onClick={toggleTimer}>{timerActive ? copy.timerPause : copy.timerStart}</button>
+                      <button className="action-btn-outline" type="button" onClick={resetTimer}>{copy.timerReset}</button>
+                      <button className="action-btn-outline" type="button" onClick={() => adjustTimer(-15)}>−15s</button>
+                      <button className="action-btn-outline" type="button" onClick={() => adjustTimer(15)}>+15s</button>
+                    </div>
+                    <div className="settings-button-row" style={{justifyContent:'center',gap:'0.5rem',marginTop:'0.75rem'}}>
+                      <input type="number" min="5" max="3600" className="premium-select" style={{width:'80px',textAlign:'center'}} placeholder={copy.timerCustomLabel} value={timerCustomInput} onChange={e => setTimerCustomInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { const s = Number(timerCustomInput); if (s >= 5) { startTimer(s); setTimerCustomInput(''); } } }}/>
+                      <button className="action-btn-outline" type="button" onClick={() => { const s = Number(timerCustomInput); if (s >= 5) { startTimer(s); setTimerCustomInput(''); } }}>{copy.timerCustomGo}</button>
+                    </div>
+                  </div>
+                </section>
+              );
+            })()}
             <section className="glass-panel action-panel fade-in-up">
               <div className="panel-header"><h3>{copy.restDay}</h3></div>
               <div style={{textAlign:'center',padding:'1rem 0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'1rem',flex:1}}>
@@ -2393,76 +2573,6 @@ Be concise. Use average homemade/generic values, not brand values.`;
           </div>
         )}
 
-        {activeSection === 'ratings' && (() => {
-          const myRatings = ratings.filter(r => r.email === currentUser);
-          const allRatingsForAdmin = currentUser === ADMIN_EMAIL ? ratings : [];
-          const avgStars = ratings.length ? (ratings.reduce((s, r) => s + r.stars, 0) / ratings.length).toFixed(1) : null;
-          return (
-            <>
-              <div className="dashboard-grid">
-                {avgStars && <article className="glass-panel stat-card fade-in-up"><div className="stat-icon" style={{fontSize:'1.8rem'}}>⭐</div><div><p className="stat-title">{copy.ratingStars}</p><h3 className="stat-value">{avgStars} / 5</h3></div></article>}
-                <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">💬</div><div><p className="stat-title">{copy.ratingYours}</p><h3 className="stat-value">{myRatings.length}</h3></div></article>
-              </div>
-              <section className="glass-panel action-panel fade-in-up">
-                <div className="panel-header"><h3>{copy.ratingsTitle}</h3></div>
-                <p className="settings-copy" style={{marginBottom:'1rem'}}>{copy.ratingsSubtitle}</p>
-                <form className="premium-form" onSubmit={submitRating}>
-                  <div className="input-group">
-                    <label>{copy.ratingStars}</label>
-                    <div style={{display:'flex',gap:'0.5rem',fontSize:'1.6rem',margin:'0.25rem 0'}}>
-                      {[1,2,3,4,5].map(n => (
-                        <span key={n} style={{cursor:'pointer',opacity: ratingForm.stars >= n ? 1 : 0.3}} onClick={() => setRatingForm(c => ({...c, stars: n}))}>⭐</span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="input-group">
-                    <label htmlFor="rating-comment">{copy.ratingComment}</label>
-                    <textarea id="rating-comment" className="premium-input" rows={3} value={ratingForm.comment} onChange={e => setRatingForm(c => ({...c, comment: e.target.value}))} placeholder={copy.ratingCommentPlaceholder} style={{resize:'vertical',fontFamily:'inherit'}} />
-                  </div>
-                  <div className="input-group">
-                    <label htmlFor="rating-private">{copy.ratingPrivate}</label>
-                    <textarea id="rating-private" className="premium-input" rows={2} value={ratingForm.privateComment} onChange={e => setRatingForm(c => ({...c, privateComment: e.target.value}))} placeholder={copy.ratingPrivatePlaceholder} style={{resize:'vertical',fontFamily:'inherit'}} />
-                  </div>
-                  <button className="action-btn-primary full-width" type="submit">{copy.ratingSubmit}</button>
-                </form>
-              </section>
-              <section className="glass-panel history-section fade-in-up">
-                <div className="panel-header"><h3>{copy.ratingYours}</h3><span className="history-count">{myRatings.length}</span></div>
-                <div className="history-list">
-                  {myRatings.length ? myRatings.slice().reverse().map(r => (
-                    <article className="history-item" key={r.id} style={{flexDirection:'column',alignItems:'flex-start',gap:'0.4rem'}}>
-                      <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-                        <span style={{fontSize:'1.1rem'}}>{[1,2,3,4,5].map(n => n <= r.stars ? '⭐' : '☆').join('')}</span>
-                        <span style={{fontSize:'0.78rem',opacity:0.5}}>{r.date}</span>
-                      </div>
-                      <p style={{margin:0,fontSize:'0.9rem'}}>{r.comment}</p>
-                      {r.privateComment && <p style={{margin:0,fontSize:'0.8rem',opacity:0.5,fontStyle:'italic'}}>🔒 {r.privateComment}</p>}
-                    </article>
-                  )) : <div className="empty-state"><p>{copy.ratingEmpty}</p></div>}
-                </div>
-              </section>
-              {currentUser === ADMIN_EMAIL && (
-                <section className="glass-panel history-section fade-in-up">
-                  <div className="panel-header"><h3>{copy.ratingAll}</h3><span className="history-count">{allRatingsForAdmin.length}</span></div>
-                  <div className="history-list">
-                    {allRatingsForAdmin.length ? allRatingsForAdmin.slice().reverse().map(r => (
-                      <article className="history-item" key={r.id} style={{flexDirection:'column',alignItems:'flex-start',gap:'0.4rem'}}>
-                        <div style={{display:'flex',alignItems:'center',gap:'0.75rem',width:'100%'}}>
-                          <span style={{fontSize:'1.1rem'}}>{[1,2,3,4,5].map(n => n <= r.stars ? '⭐' : '☆').join('')}</span>
-                          <strong style={{fontSize:'0.85rem'}}>{r.email}</strong>
-                          <span style={{fontSize:'0.75rem',opacity:0.5,marginLeft:'auto'}}>{r.date}</span>
-                        </div>
-                        <p style={{margin:0,fontSize:'0.9rem'}}>{r.comment}</p>
-                        {r.privateComment && <div style={{width:'100%',background:'rgba(245,158,11,0.1)',borderRadius:'0.5rem',padding:'0.4rem 0.6rem',marginTop:'0.25rem'}}><p style={{margin:0,fontSize:'0.8rem',color:'#f59e0b'}}>🔒 {r.privateComment}</p></div>}
-                      </article>
-                    )) : <div className="empty-state"><p>{copy.ratingEmpty}</p></div>}
-                  </div>
-                </section>
-              )}
-            </>
-          );
-        })()}
-
         {activeSection === 'bodyweight' && <>
           <div className="dashboard-grid">
             <section className="glass-panel chart-panel fade-in-up">
@@ -2615,8 +2725,33 @@ Be concise. Use average homemade/generic values, not brand values.`;
           );
         })()}
 
-        {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.installApp}</span><p className="settings-copy">{copy.installAppDesc}</p></div><div>{isInStandaloneMode ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installDone}</span> : isIos ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installIos}</span> : <button className="action-btn-outline" type="button" onClick={triggerInstall} disabled={!installPrompt}>{copy.installBtn}</button>}</div></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
+        {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.installApp}</span><p className="settings-copy">{copy.installAppDesc}</p></div><div>{isInStandaloneMode ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installDone}</span> : isIos ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installIos}</span> : <button className="action-btn-outline" type="button" onClick={triggerInstall} disabled={!installPrompt}>{copy.installBtn}</button>}</div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.showFeedbackBtn}</span><p className="settings-copy">{copy.showFeedbackBtnDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => setSettings(c => ({...c, showFeedbackBtn: !c.showFeedbackBtn}))}>{settings.showFeedbackBtn ? '✓ On' : 'Off'}</button></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
       </main>
+      {currentUser && settings.showFeedbackBtn !== false && (
+        <div className="feedback-widget">
+          {feedbackOpen && (
+            <div className="feedback-popup glass-panel">
+              {feedbackSent ? (
+                <p className="feedback-sent">{copy.ratingDone}</p>
+              ) : (<>
+                <div className="feedback-popup-header">
+                  <span>{copy.ratingsTitle}</span>
+                  <button className="feedback-close-btn" type="button" onClick={() => setFeedbackOpen(false)}>✕</button>
+                </div>
+                <div className="feedback-stars">
+                  {[1,2,3,4,5].map(n => (
+                    <button key={n} type="button" className={`feedback-star${ratingForm.stars >= n ? ' active' : ''}`} onClick={() => setRatingForm(c => ({...c, stars: n}))}>★</button>
+                  ))}
+                </div>
+                <textarea className="feedback-textarea" rows={3} placeholder={copy.ratingCommentPlaceholder} value={ratingForm.comment} onChange={e => setRatingForm(c => ({...c, comment: e.target.value}))} />
+                <textarea className="feedback-textarea" rows={2} placeholder={copy.ratingPrivatePlaceholder} value={ratingForm.privateComment} onChange={e => setRatingForm(c => ({...c, privateComment: e.target.value}))} />
+                <button className="action-btn-primary" type="button" onClick={submitRating}>{copy.ratingSubmit}</button>
+              </>)}
+            </div>
+          )}
+          <button className="feedback-fab" type="button" title={copy.ratingsTitle} onClick={() => setFeedbackOpen(v => !v)}>💬</button>
+        </div>
+      )}
       {toast ? <div className="toast-container"><div className="toast">{toast}</div></div> : null}
       {timerDone && (
         <div className="recap-overlay" onClick={() => setTimerDone(false)}>

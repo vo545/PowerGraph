@@ -23,7 +23,15 @@
       "Bash(magick --version)",
       "Bash(node scripts/gen-icons.mjs)",
       "Bash(node scripts/gen-feature.mjs)",
-      "Bash(xargs head *)"
+      "Bash(xargs head *)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 patch.py)",
+      "Bash(python3)",
+      "Bash(python3 patch2.py)",
+      "Bash(python3 patch3.py)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('deps:', list\\(d.get\\('dependencies',{}\\).keys\\(\\)\\)\\); print\\('devdeps:', list\\(d.get\\('devDependencies',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(xargs grep *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

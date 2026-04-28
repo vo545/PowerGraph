@@ -297,6 +297,8 @@ function loadCalHistory(email) {
 
 const defaultSettings = { units: 'kg', language: 'sl', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '' };
 const RATINGS_KEY = 'powergraph_ratings';
+const BANNED_KEY = 'powergraph_banned';
+const MODS_KEY = 'powergraph_mods';
 
 const ui = {
   sl: {
@@ -556,6 +558,38 @@ const ui = {
     timerAlarmBody: 'Počitek je potekel. Nadaljuj s treningom! 💪',
     selectSection: 'Izberi skupino',
     selectExercise: 'Izberi vajo',
+    gymMode: 'Gym',
+    calisthenicsMode: 'Kalistenika',
+    advisorModeLabel: 'Na\u010din',
+    macrosTitle: 'Kalkulator makrohranil',
+    macrosGoal: 'Cilj',
+    macrosBulk: 'Nabiranje mase',
+    macrosMaintain: 'Vzdr\u017eevanje',
+    macrosCut: 'Su\u0161enje',
+    macrosProtein: 'Beljakovine / dan',
+    macrosCarbs: 'Ogljikovi hidrati / dan',
+    macrosFat: 'Ma\u0161\u010dobe / dan',
+    macrosCalories: 'Kalorije / dan',
+    macrosCalculate: 'Izra\u010dunaj',
+    macrosWeight: 'Telesna te\u017ea (kg)',
+    adminBan: 'Blokiraj',
+    adminUnban: 'Odblokiraj',
+    adminBanned: '\u274c Blokiran',
+    adminMod: '\u2705 Moderator',
+    adminSetMod: 'Nastavi mod',
+    adminRemoveMod: 'Odstrani mod',
+    adminBanConfirm: 'Blokiraj tega uporabnika?',
+    rankHowTitle: 'Kako zaslu\u017ei\u0161 to\u010dke',
+    rankHowWorkout: '+5 za vsak trening',
+    rankHowPR: '+15 za vsak osebni rekord',
+    rankHowRest: '+3 za dan po\u010ditka',
+    rankHowBodyweight: '+1 za meritev telesne te\u017ee',
+    rankHowCalories: '+2 za sledenje kalorij',
+    rankHowCaloriesBonus: '+8 bonus za dosego cilja (\u00b1200 kcal)',
+    rankHowCaloriesMinus: '-3 za prekoračitev cilja (>200 kcal)',
+    rankHowInactive: '-4 za neaktiven dan (po 2 dneh brez aktivnosti)',
+    timerDoneTitle: 'Odmor kon\u010dan!',
+    timerDoneContinue: 'Nadaljuj',
   },
   en: {
     app: 'PowerGraph',
@@ -814,6 +848,38 @@ const ui = {
     timerAlarmBody: 'Rest time is up. Get back to training! 💪',
     selectSection: 'Select group',
     selectExercise: 'Select exercise',
+    gymMode: 'Gym',
+    calisthenicsMode: 'Calisthenics',
+    advisorModeLabel: 'Mode',
+    macrosTitle: 'Macros Calculator',
+    macrosGoal: 'Goal',
+    macrosBulk: 'Bulk',
+    macrosMaintain: 'Maintain',
+    macrosCut: 'Cut',
+    macrosProtein: 'Protein / day',
+    macrosCarbs: 'Carbs / day',
+    macrosFat: 'Fat / day',
+    macrosCalories: 'Calories / day',
+    macrosCalculate: 'Calculate',
+    macrosWeight: 'Body weight (kg)',
+    adminBan: 'Ban',
+    adminUnban: 'Unban',
+    adminBanned: '❌ Banned',
+    adminMod: '✅ Moderator',
+    adminSetMod: 'Set mod',
+    adminRemoveMod: 'Remove mod',
+    adminBanConfirm: 'Ban this user?',
+    rankHowTitle: 'How to earn points',
+    rankHowWorkout: '+5 per workout',
+    rankHowPR: '+15 per personal record',
+    rankHowRest: '+3 per rest day',
+    rankHowBodyweight: '+1 per body weight entry',
+    rankHowCalories: '+2 per calorie tracking day',
+    rankHowCaloriesBonus: '+8 bonus for hitting target (±200 kcal)',
+    rankHowCaloriesMinus: '-3 for exceeding target (>200 kcal)',
+    rankHowInactive: '-4 per inactive day (after 2 days without activity)',
+    timerDoneTitle: 'Rest over!',
+    timerDoneContinue: 'Continue',
   },
 };
 
@@ -923,7 +989,74 @@ const exerciseEquipment = {
   Plank: { sl: 'Podloga', en: 'Exercise mat' },
   'Russian Twist': { sl: 'Podloga, po \u017eelji medicinka ali ro\u010dka', en: 'Exercise mat, optional medicine ball or dumbbell' },
   'Cable Crunch': { sl: 'Kabelski \u0161kripec z vrvjo', en: 'Cable station with rope attachment' },
+  'Wide Push-Up': { sl: 'Brez opreme ali podloge', en: 'No equipment or mat' },
+  'Diamond Push-Up': { sl: 'Brez opreme ali podloge', en: 'No equipment or mat' },
+  'Archer Push-Up': { sl: 'Brez opreme ali podloge', en: 'No equipment or mat' },
+  'Pseudo-Planche Push-Up': { sl: 'Brez opreme ali podloge', en: 'No equipment or mat' },
+  'Chin-Up': { sl: 'Drog za zgibe', en: 'Pull-up bar' },
+  'Inverted Row': { sl: 'Nizka pre\u010dka ali TRX', en: 'Low bar or TRX' },
+  'Australian Pull-Up': { sl: 'Nizka pre\u010dka', en: 'Low bar' },
+  'Muscle-Up': { sl: 'Drog za zgibe', en: 'Pull-up bar or rings' },
+  'Bodyweight Squat': { sl: 'Brez opreme', en: 'No equipment' },
+  'Bulgarian Split Squat': { sl: 'Klop ali stol', en: 'Bench or chair' },
+  'Pistol Squat': { sl: 'Brez opreme', en: 'No equipment' },
+  'Jump Squat': { sl: 'Brez opreme', en: 'No equipment' },
+  'Wall Sit': { sl: 'Stena', en: 'Wall' },
+  'Archer Pull-Up': { sl: 'Drog za zgibe', en: 'Pull-up bar' },
+  'Commando Pull-Up': { sl: 'Drog za zgibe', en: 'Pull-up bar' },
+  'Dip': { sl: 'Parale ali klopi', en: 'Parallel bars or bench' },
+  'Close Grip Push-Up': { sl: 'Brez opreme ali podloge', en: 'No equipment or mat' },
+  'Pike Push-Up': { sl: 'Brez opreme ali podloge', en: 'No equipment or mat' },
+  'Handstand Push-Up': { sl: 'Stena', en: 'Wall' },
+  'Shoulder Tap': { sl: 'Brez opreme ali podloge', en: 'No equipment or mat' },
+  'Mountain Climber': { sl: 'Brez opreme ali podloge', en: 'No equipment or mat' },
+  'Box Jump': { sl: 'Plo\u0161\u010dad ali \u0161katla', en: 'Box or platform' },
+  'L-Sit': { sl: 'Parale, \u0161katle ali paraleti', en: 'Parallel bars, boxes, or parallettes' },
+  'Hollow Body Hold': { sl: 'Brez opreme ali podloge', en: 'No equipment or mat' },
+  'V-Up': { sl: 'Brez opreme ali podloge', en: 'No equipment or mat' },
+  'Dead Hang': { sl: 'Drog za zgibe', en: 'Pull-up bar' },
 };
+
+const calisthenicsSections = {
+  Chest: ['Push-Up', 'Wide Push-Up', 'Diamond Push-Up', 'Archer Push-Up', 'Pseudo-Planche Push-Up'],
+  Back: ['Pull-Up', 'Chin-Up', 'Inverted Row', 'Australian Pull-Up', 'Muscle-Up'],
+  Legs: ['Bodyweight Squat', 'Bulgarian Split Squat', 'Pistol Squat', 'Jump Squat', 'Wall Sit'],
+  Triceps: ['Dip', 'Diamond Push-Up', 'Close Grip Push-Up', 'Bench Dip', 'Close Grip Bench Press'],
+  Biceps: ['Chin-Up', 'Archer Pull-Up', 'Commando Pull-Up', 'Pull-Up'],
+  Shoulders: ['Pike Push-Up', 'Handstand Push-Up', 'Shoulder Tap', 'Lateral Raise'],
+  'Stamina/Cardio': ['Burpee', 'Mountain Climber', 'Jump Rope', 'Box Jump', 'Running'],
+  Abs: ['Plank', 'L-Sit', 'Hollow Body Hold', 'Leg Raise', 'V-Up'],
+  Forearms: ['Dead Hang', 'Farmer Carry', 'Plate Pinch Hold'],
+};
+
+Object.assign(exerciseInfo, {
+  'Wide Push-Up': { sl: '\u0160iroke sklece', en: 'Wide Push-Up', targets: { sl: 'Prsa, zunanja glava, triceps', en: 'Outer chest, triceps' }, primary: { sl: 'Prsa', en: 'Chest' }, howTo: { sl: 'Postavi roke \u0161ir\u0161e kot ramena in se spusti do tal.', en: 'Place hands wider than shoulders and lower chest to floor.' }, cues: { sl: 'Komolce dr\u017ei v 45\u00b0 kotu.', en: 'Keep elbows at a 45\u00b0 angle.' } },
+  'Diamond Push-Up': { sl: 'Diamantne sklece', en: 'Diamond Push-Up', targets: { sl: 'Triceps, notranja prsa', en: 'Triceps, inner chest' }, primary: { sl: 'Triceps', en: 'Triceps' }, howTo: { sl: 'Palce in kazalce spoji v obliki diamanta pod prsmi.', en: 'Form a diamond shape with thumbs and index fingers under chest.' }, cues: { sl: 'Komolce dr\u017ei ob telesu.', en: 'Keep elbows close to body.' } },
+  'Archer Push-Up': { sl: 'Lokostrelske sklece', en: 'Archer Push-Up', targets: { sl: 'Prsa, triceps, jedro', en: 'Chest, triceps, core' }, primary: { sl: 'Prsa', en: 'Chest' }, howTo: { sl: 'Ena roka ravna v stran, z drugo roko se spusti nizko.', en: 'One arm extended to side, lower body with the other.' }, cues: { sl: 'Telo dr\u017ei v ravni liniji.', en: 'Keep the body in a straight line.' } },
+  'Pseudo-Planche Push-Up': { sl: 'Pseudo planche sklece', en: 'Pseudo-Planche Push-Up', targets: { sl: 'Prsa, rame, jedro, zapestja', en: 'Chest, shoulders, core, wrists' }, primary: { sl: 'Prsa', en: 'Chest' }, howTo: { sl: 'Prste usmeri nazaj, roke pomakni ni\u017eje na bokih in se spusti.', en: 'Fingers pointing back, shift hands to hips and lower down.' }, cues: { sl: 'Nagni telo naprej nad dlanmi.', en: 'Lean body forward over the hands.' } },
+  'Chin-Up': { sl: 'Zgibi s podprijemom', en: 'Chin-Up', targets: { sl: 'Biceps, lats, jedro', en: 'Biceps, lats, core' }, primary: { sl: 'Biceps', en: 'Biceps' }, howTo: { sl: 'Z dlanmi obrnjenim k sebi se dvigni do brade nad drogu.', en: 'Palms facing you, pull up until chin is over the bar.' }, cues: { sl: 'Komolce potegni k bokom.', en: 'Drive elbows to hips.' } },
+  'Inverted Row': { sl: 'Vodoravno veslanje', en: 'Inverted Row', targets: { sl: 'Hrbet, biceps, jedro', en: 'Back, biceps, core' }, primary: { sl: 'Hrbet', en: 'Back' }, howTo: { sl: 'Le\u017ei pod nizko pre\u010dko in se dvigni k njej.', en: 'Lie under a low bar and pull yourself up to it.' }, cues: { sl: 'Telo dr\u017ei v ravni liniji.', en: 'Keep the body straight throughout.' } },
+  'Australian Pull-Up': { sl: 'Avstralski zgib', en: 'Australian Pull-Up', targets: { sl: 'Hrbet, biceps', en: 'Back, biceps' }, primary: { sl: 'Hrbet', en: 'Back' }, howTo: { sl: 'Dr\u017ei nizko pre\u010dko v kotu in potegni prsi k njej.', en: 'Hold a low bar at an angle and pull chest to it.' }, cues: { sl: 'Pete ostanejo na tleh.', en: 'Heels stay on the floor.' } },
+  'Muscle-Up': { sl: 'Muscle up', en: 'Muscle-Up', targets: { sl: 'Celotno zgornje telo', en: 'Full upper body' }, primary: { sl: 'Lats, triceps', en: 'Lats, triceps' }, howTo: { sl: 'Eksplozivno se dvigni nad drog in potisni navzgor.', en: 'Explosively pull above the bar and press up.' }, cues: { sl: 'Mah iz bokov za za\u010detek giba.', en: 'Use hip drive to initiate the movement.' } },
+  'Bodyweight Squat': { sl: 'Po\u010dep z lastno te\u017eo', en: 'Bodyweight Squat', targets: { sl: 'Kvadricepsi, gluteusi, zadnja lo\u017ea', en: 'Quads, glutes, hamstrings' }, primary: { sl: 'Noge', en: 'Legs' }, howTo: { sl: 'Noge v \u0161irini ramen, po\u010dep do ravnine kolka ali ni\u017eje.', en: 'Feet shoulder-width, squat to parallel or below.' }, cues: { sl: 'Kolena sledijo prstom, prsa pokon\u010di.', en: 'Knees track toes, chest up.' } },
+  'Bulgarian Split Squat': { sl: 'Bolgarski po\u010dep', en: 'Bulgarian Split Squat', targets: { sl: 'Kvadricepsi, gluteusi', en: 'Quads, glutes' }, primary: { sl: 'Gluteusi', en: 'Glutes' }, howTo: { sl: 'Zadnjo nogo polo\u017ei na klop in po\u010depni navpi\u010dno.', en: 'Rear foot on bench, squat straight down.' }, cues: { sl: 'Sprednje koleno ne sme iti \u010dez prste.', en: 'Front knee should not pass the toes.' } },
+  'Pistol Squat': { sl: 'Pistolski po\u010dep', en: 'Pistol Squat', targets: { sl: 'Kvadricepsi, gluteusi, ravnote\u017eje', en: 'Quads, glutes, balance' }, primary: { sl: 'Kvadricepsi', en: 'Quads' }, howTo: { sl: 'Ena noga iztegnjena naprej, po\u010dep na drugi nogi.', en: 'One leg extended forward, squat on the other.' }, cues: { sl: 'Hrbet dr\u017ei raven, roke naprej za ravnote\u017eje.', en: 'Keep back straight, arms forward for balance.' } },
+  'Jump Squat': { sl: 'Skok iz po\u010depa', en: 'Jump Squat', targets: { sl: 'Noge, eksplozivna mo\u010d', en: 'Legs, explosive power' }, primary: { sl: 'Noge', en: 'Legs' }, howTo: { sl: 'Po\u010depni in eksplozivno sko\u010di navzgor.', en: 'Squat down and explode upward.' }, cues: { sl: 'Mehko pristani z ukrivljenimi koleni.', en: 'Land softly with bent knees.' } },
+  'Wall Sit': { sl: 'Stenska sede\u017ena vaja', en: 'Wall Sit', targets: { sl: 'Kvadricepsi, izometri\u010dna vzdr\u017eljivost', en: 'Quads, isometric endurance' }, primary: { sl: 'Kvadricepsi', en: 'Quads' }, howTo: { sl: 'Hrbet na steni, kolena v kotu 90\u00b0 \u2013 dr\u017ei.', en: 'Back against wall, knees at 90\u00b0 \u2013 hold.' }, cues: { sl: 'Stegna vzporedna s tlemi.', en: 'Thighs parallel to the floor.' } },
+  'Archer Pull-Up': { sl: 'Lokostrelski zgib', en: 'Archer Pull-Up', targets: { sl: 'Lats, biceps enostransko', en: 'Lats, biceps unilaterally' }, primary: { sl: 'Lats', en: 'Lats' }, howTo: { sl: 'Ena roka ravna v stran, z drugo se dvigni.', en: 'One arm extended, pull with the other.' }, cues: { sl: 'Obe roki sta na drogu ves \u010das.', en: 'Both hands on bar throughout.' } },
+  'Commando Pull-Up': { sl: 'Commando zgib', en: 'Commando Pull-Up', targets: { sl: 'Lats, biceps, jedro', en: 'Lats, biceps, core' }, primary: { sl: 'Lats', en: 'Lats' }, howTo: { sl: 'Nevtralni prijem, dvigni se izmenjaje na vsako stran.', en: 'Neutral grip, alternate sides each rep.' }, cues: { sl: 'Jedro napeto skozi cel gib.', en: 'Core braced throughout.' } },
+  'Dip': { sl: 'Dip na paralah', en: 'Dip', targets: { sl: 'Triceps, prsa, sprednje rame', en: 'Triceps, chest, front delts' }, primary: { sl: 'Triceps', en: 'Triceps' }, howTo: { sl: 'Na paralah se spusti do kota 90\u00b0 v komolcih in se odrini.', en: 'On bars, lower to 90\u00b0 elbow bend and press back up.' }, cues: { sl: 'Trup rahlo naprej za prsa, pokon\u010di za triceps.', en: 'Lean forward for chest, upright for triceps.' } },
+  'Close Grip Push-Up': { sl: 'Ozke sklece', en: 'Close Grip Push-Up', targets: { sl: 'Triceps, notranja prsa', en: 'Triceps, inner chest' }, primary: { sl: 'Triceps', en: 'Triceps' }, howTo: { sl: 'Roke skupaj pod prsmi, spusti se in potisni.', en: 'Hands together under chest, lower and press.' }, cues: { sl: 'Komolce dr\u017ei ob telesu.', en: 'Keep elbows close.' } },
+  'Pike Push-Up': { sl: 'Skleca pike', en: 'Pike Push-Up', targets: { sl: 'Rame, triceps', en: 'Shoulders, triceps' }, primary: { sl: 'Rame', en: 'Shoulders' }, howTo: { sl: 'V obliki V spusti glavo med roke in se odrini.', en: 'In V-shape, lower head between hands and press.' }, cues: { sl: 'Boki visoko, hrbet raven.', en: 'Hips high, back straight.' } },
+  'Handstand Push-Up': { sl: 'Skleca v stoji na rokah', en: 'Handstand Push-Up', targets: { sl: 'Rame, triceps, jedro', en: 'Shoulders, triceps, core' }, primary: { sl: 'Rame', en: 'Shoulders' }, howTo: { sl: 'V stoji na rokah ob steni se spusti do tal in odrini.', en: 'In wall handstand, lower head to floor and press up.' }, cues: { sl: 'Jedro napeto, komolce dr\u017ei pred telesom.', en: 'Core tight, elbows in front.' } },
+  'Shoulder Tap': { sl: 'Tapkanje rame', en: 'Shoulder Tap', targets: { sl: 'Jedro, rame, stabilizatorji', en: 'Core, shoulders, stabilizers' }, primary: { sl: 'Jedro', en: 'Core' }, howTo: { sl: 'V deski izmenjaje tapni nasprotno ramo.', en: 'In plank position, alternately tap opposite shoulder.' }, cues: { sl: 'Boke dr\u017ei ravne brez rotacije.', en: 'Keep hips level with no rotation.' } },
+  'Mountain Climber': { sl: 'Plezalec', en: 'Mountain Climber', targets: { sl: 'Jedro, kardio, noge', en: 'Core, cardio, legs' }, primary: { sl: 'Jedro', en: 'Core' }, howTo: { sl: 'V deski hitro izmenjaj kolena k prsim.', en: 'In plank, rapidly alternate knees to chest.' }, cues: { sl: 'Boki ne smejo biti previsoki.', en: 'Do not let hips rise.' } },
+  'Box Jump': { sl: 'Skok na \u0161katlo', en: 'Box Jump', targets: { sl: 'Noge, eksplozivna mo\u010d, kardio', en: 'Legs, explosive power, cardio' }, primary: { sl: 'Noge', en: 'Legs' }, howTo: { sl: 'Iz po\u010depa eksplozivno sko\u010di na vi\u0161jo povr\u0161ino.', en: 'Explode from a squat onto a higher surface.' }, cues: { sl: 'Mehko pristani z ukrivljenimi koleni.', en: 'Absorb landing with soft bent knees.' } },
+  'L-Sit': { sl: 'L-sed', en: 'L-Sit', targets: { sl: 'Abs, upogibalke kolka, triceps', en: 'Abs, hip flexors, triceps' }, primary: { sl: 'Jedro', en: 'Core' }, howTo: { sl: 'Na paralah iztegni noge v horizontalo in dr\u017ei.', en: 'On bars or ground, extend legs to horizontal and hold.' }, cues: { sl: 'Noge popolnoma iztegnjene, prsti v loku.', en: 'Legs fully extended, toes pointed.' } },
+  'Hollow Body Hold': { sl: 'Votla dr\u017ea', en: 'Hollow Body Hold', targets: { sl: 'Jedro, abs, stabilizatorji', en: 'Core, abs, stabilizers' }, primary: { sl: 'Jedro', en: 'Core' }, howTo: { sl: 'Na hrbtu iztegni roke in noge ter dvigni oba para od tal.', en: 'On back, extend arms and legs, raise both off the floor.' }, cues: { sl: 'Spodnji hrbet pritisni v tla.', en: 'Press lower back into the floor.' } },
+  'V-Up': { sl: 'V-dvig', en: 'V-Up', targets: { sl: 'Abs, upogibalke kolka', en: 'Abs, hip flexors' }, primary: { sl: 'Abs', en: 'Abs' }, howTo: { sl: 'Hkrati dvigni ravne noge in trup ter se dotakni prstov na nogah.', en: 'Simultaneously raise straight legs and torso, touch toes.' }, cues: { sl: 'Ne zamahuj z nogami.', en: 'Avoid swinging the legs.' } },
+  'Dead Hang': { sl: 'Mrtvo ve\u0161anje', en: 'Dead Hang', targets: { sl: 'Prijem, podlahti, rame, jedro', en: 'Grip, forearms, shoulders, core' }, primary: { sl: 'Prijem', en: 'Grip' }, howTo: { sl: 'Visi na drogu z iztegnjenimi rokami \u010dim dalje.', en: 'Hang from bar with straight arms as long as possible.' }, cues: { sl: 'Rame rahlo aktiviraj, ne visi pasivno.', en: 'Slightly activate shoulders, do not hang passively.' } },
+});
 
 
 const normalizeWorkout = (w, i = 0) => ({ id: w.id ?? Date.now() + i, date: w.date ?? new Date().toISOString().slice(0, 10), exercise: w.exercise ?? 'Bench Press', weight: Number(w.weight ?? 0), setDetails: (Array.isArray(w.setDetails) ? w.setDetails : []).map((v) => Number(v) || 0).filter((v) => v > 0).length ? (Array.isArray(w.setDetails) ? w.setDetails : []).map((v) => Number(v) || 0).filter((v) => v > 0) : [1] });
@@ -991,6 +1124,11 @@ function saveAdminBonus(email, pts) { localStorage.setItem(getAdminBonusKey(emai
 
 function loadRatings() { try { return JSON.parse(localStorage.getItem(RATINGS_KEY) || '[]'); } catch { return []; } }
 function saveRatings(ratings) { localStorage.setItem(RATINGS_KEY, JSON.stringify(ratings)); }
+function loadBanned() { try { return JSON.parse(localStorage.getItem(BANNED_KEY) || '[]'); } catch { return []; } }
+function saveBanned(list) { localStorage.setItem(BANNED_KEY, JSON.stringify(list)); }
+function loadMods() { try { return JSON.parse(localStorage.getItem(MODS_KEY) || '[]'); } catch { return []; } }
+function saveMods(list) { localStorage.setItem(MODS_KEY, JSON.stringify(list)); }
+
 
 function playTimerAlarm() {
   try {
@@ -1221,6 +1359,11 @@ export default function App() {
   const [ratings, setRatings] = useState(() => loadRatings());
   const [ratingForm, setRatingForm] = useState({ stars: 5, comment: '', privateComment: '' });
   const [timerDone, setTimerDone] = useState(false);
+  const [advisorMode, setAdvisorMode] = useState('gym');
+  const [macroForm, setMacroForm] = useState({ weight: '', goal: 'maintain', activity: 'moderate' });
+  const [macroResult, setMacroResult] = useState(null);
+  const [bannedUsers, setBannedUsers] = useState(() => loadBanned());
+  const [modUsers, setModUsers] = useState(() => loadMods());
 
   const copy = ui[settings.language];
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -1278,16 +1421,17 @@ export default function App() {
     return matches.length ? matches[0].weight : null;
   }, [workouts, formData.exercise]);
 
+  const activeAdvisorSections = advisorMode === 'calisthenics' ? calisthenicsSections : sections;
   const advisor = useMemo(() => {
     const latestSectionDate = {};
     const latestExerciseDate = {};
     workouts.forEach((w) => {
-      const section = findSection(w.exercise);
+      const section = Object.entries(activeAdvisorSections).find(([, items]) => items.includes(w.exercise))?.[0] ?? findSection(w.exercise);
       if (!latestSectionDate[section] || w.date > latestSectionDate[section]) latestSectionDate[section] = w.date;
       if (!latestExerciseDate[w.exercise] || w.date > latestExerciseDate[w.exercise]) latestExerciseDate[w.exercise] = w.date;
     });
     const today = new Date().toISOString().slice(0, 10);
-    const ranked = Object.keys(sections)
+    const ranked = Object.keys(activeAdvisorSections)
       .map((section) => ({ section, last: latestSectionDate[section] ?? '', score: latestSectionDate[section] ? Math.floor((new Date(today) - new Date(latestSectionDate[section])) / 86400000) : 9999 }))
       .sort((a, b) => b.score - a.score);
     const chosen = ranked[0];
@@ -1296,9 +1440,9 @@ export default function App() {
       last: chosen.last,
       reason: !chosen.last ? copy.reasonEmpty : chosen.score >= 4 ? copy.reasonCold : copy.reasonBalance,
       plan: chosen.section === 'Stamina/Cardio' ? copy.planCardio : copy.planStrength,
-      exercises: sections[chosen.section].map((name) => ({ name, last: latestExerciseDate[name] ?? '' })).sort((a, b) => (a.last || '').localeCompare(b.last || '')).slice(0, 5),
+      exercises: (activeAdvisorSections[chosen.section] || sections[chosen.section] || []).map((name) => ({ name, last: latestExerciseDate[name] ?? '' })).sort((a, b) => (a.last || '').localeCompare(b.last || '')).slice(0, 5),
     };
-  }, [copy.planCardio, copy.planStrength, copy.reasonBalance, copy.reasonCold, copy.reasonEmpty, workouts]);
+  }, [copy.planCardio, copy.planStrength, copy.reasonBalance, copy.reasonCold, copy.reasonEmpty, workouts, advisorMode, activeAdvisorSections]);
 
   const rankData = useMemo(() => {
     const base = calculatePoints(workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, settings.calorieGoal);
@@ -1329,6 +1473,17 @@ export default function App() {
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
+
+
+  useEffect(() => {
+    const handleSwUpdate = () => {
+      setToast(settings.language === 'sl' ? 'Nova verzija nameščena. Osvežujem...' : 'New version installed. Reloading...');
+      setTimeout(() => window.location.reload(), 2200);
+    };
+    if (window.__swUpdated) { handleSwUpdate(); }
+    window.addEventListener('sw-updated', handleSwUpdate);
+    return () => window.removeEventListener('sw-updated', handleSwUpdate);
+  }, [settings.language]);
 
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem(THEME_KEY, theme); }, [theme]);
   useEffect(() => {
@@ -1477,6 +1632,11 @@ export default function App() {
         });
         setCurrentUser(email);
       } else {
+        const banned = loadBanned();
+        if (banned.includes(email)) {
+          setAuthError(settings.language === 'sl' ? 'Ta ra\u010dun je blokiran.' : 'This account has been banned.');
+          return;
+        }
         if (!existing) {
           setAuthError(copy.authNotFound);
           return;
@@ -1577,6 +1737,40 @@ export default function App() {
     setInstallPrompt(null);
   }
 
+
+  function calculateMacros(e) {
+    e.preventDefault();
+    const w = Number(macroForm.weight);
+    if (!w || w < 20) return;
+    const activityMult = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, veryactive: 1.9 }[macroForm.activity] || 1.55;
+    const bmr = settings.gender === 'female' ? 10 * w + 6.25 * Number(settings.height || 170) - 5 * Number(settings.age || 25) - 161 : 10 * w + 6.25 * Number(settings.height || 170) - 5 * Number(settings.age || 25) + 5;
+    const tdee = Math.round(bmr * activityMult);
+    const adj = macroForm.goal === 'bulk' ? 300 : macroForm.goal === 'cut' ? -500 : 0;
+    const targetCal = tdee + adj;
+    const protein = Math.round(w * 2.2);
+    const fat = Math.round(targetCal * 0.25 / 9);
+    const carbs = Math.round((targetCal - protein * 4 - fat * 9) / 4);
+    setMacroResult({ calories: targetCal, protein, carbs, fat });
+  }
+
+  function banUser(email) {
+    if (!window.confirm(copy.adminBanConfirm)) return;
+    const list = loadBanned();
+    if (!list.includes(email)) { list.push(email); saveBanned(list); setBannedUsers([...list]); }
+    setToast(`${copy.adminBan}: ${email}`);
+  }
+  function unbanUser(email) {
+    const list = loadBanned().filter(e => e !== email);
+    saveBanned(list); setBannedUsers([...list]);
+    setToast(`${copy.adminUnban}: ${email}`);
+  }
+  function toggleMod(email) {
+    const list = loadMods();
+    const isMod = list.includes(email);
+    const next = isMod ? list.filter(e => e !== email) : [...list, email];
+    saveMods(next); setModUsers([...next]);
+    setToast(isMod ? `${copy.adminRemoveMod}: ${email}` : `${copy.adminSetMod}: ${email}`);
+  }
   function adminShowRecap() {
     const now = new Date();
     const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -1863,7 +2057,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
               {chartSection && (
                 <div style={{display:'flex',flexWrap:'wrap',gap:'0.4rem',marginBottom:'0.75rem'}}>
                   {sections[chartSection].map(name => (
-                    <button key={name} type="button" className={`action-btn-outline${selectedExercise === name ? ' active-filter' : ''}`} style={{fontSize:'0.78rem',padding:'0.25rem 0.65rem'}} onClick={() => setSelectedExercise(name)}>
+                    <button key={name} type="button" className={`action-btn-outline chart-ex-btn-active${selectedExercise === name ? ' active-filter' : ''}`} style={{fontSize:'0.78rem',padding:'0.25rem 0.65rem'}} onClick={() => setSelectedExercise(name)}>
                       {getExerciseName(name, settings.language)}
                     </button>
                   ))}
@@ -2000,7 +2194,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
           })()}
         </section>}
 
-        {activeSection === 'advisor' && <section className="glass-panel stats-section fade-in-up"><div className="panel-header"><h3>{copy.advisorTitle}</h3></div><div className="advisor-grid"><article className="advisor-card"><p className="exercise-category">{copy.focus}</p><h3>{sectionNames[advisor.section]}</h3><p className="settings-copy">{copy.advisorText}</p><div className="stats-list mt-1"><div className="stats-row"><span>{copy.lastWorked}</span><strong>{advisor.last ? formatDateValue(advisor.last, settings.dateFormat) : copy.neverWorked}</strong></div><div className="stats-row"><span>{copy.sets}</span><strong>{advisor.plan}</strong></div></div></article><article className="advisor-card"><p className="exercise-category">{copy.why}</p><p>{advisor.reason}</p></article></div><div className="panel-header mt-1"><h3>{copy.suggested}</h3></div><div className="exercise-grid">{advisor.exercises.map((item) => { const meta = getExerciseInfo(item.name); return <article className="exercise-card" key={item.name}><div className="exercise-top"><div><p className="exercise-category">{sectionNames[advisor.section]}</p><h4>{getExerciseName(item.name, settings.language)}</h4></div><span className="exercise-badge">{item.last ? formatDateValue(item.last, settings.dateFormat) : copy.neverWorked}</span></div><div className="exercise-copy"><p><strong>{copy.target}:</strong> {localize(meta.targets, settings.language)}</p><p><strong>{copy.equipment}:</strong> {localize(meta.equipment, settings.language)}</p><p><strong>{copy.howTo}:</strong> {localize(meta.howTo, settings.language)}</p><p><strong>{copy.cues}:</strong> {localize(meta.cues, settings.language)}</p></div></article>; })}</div></section>}
+        {activeSection === 'advisor' && <section className="glass-panel stats-section fade-in-up"><div className="panel-header"><h3>{copy.advisorTitle}</h3><div style={{display:'flex',gap:'0.4rem',marginLeft:'auto'}}><button className={`action-btn-${advisorMode === 'gym' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem'}} onClick={() => setAdvisorMode('gym')}>🏋️ {copy.gymMode}</button><button className={`action-btn-${advisorMode === 'calisthenics' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem'}} onClick={() => setAdvisorMode('calisthenics')}>🤸 {copy.calisthenicsMode}</button></div></div><div className="advisor-grid"><article className="advisor-card"><p className="exercise-category">{copy.focus}</p><h3>{sectionNames[advisor.section]}</h3><p className="settings-copy">{copy.advisorText}</p><div className="stats-list mt-1"><div className="stats-row"><span>{copy.lastWorked}</span><strong>{advisor.last ? formatDateValue(advisor.last, settings.dateFormat) : copy.neverWorked}</strong></div><div className="stats-row"><span>{copy.sets}</span><strong>{advisor.plan}</strong></div></div></article><article className="advisor-card"><p className="exercise-category">{copy.why}</p><p>{advisor.reason}</p></article></div><div className="panel-header mt-1"><h3>{copy.suggested}</h3></div><div className="exercise-grid">{advisor.exercises.map((item) => { const meta = getExerciseInfo(item.name); return <article className="exercise-card" key={item.name}><div className="exercise-top"><div><p className="exercise-category">{sectionNames[advisor.section]}</p><h4>{getExerciseName(item.name, settings.language)}</h4></div><span className="exercise-badge">{item.last ? formatDateValue(item.last, settings.dateFormat) : copy.neverWorked}</span></div><div className="exercise-copy"><p><strong>{copy.target}:</strong> {localize(meta.targets, settings.language)}</p><p><strong>{copy.equipment}:</strong> {localize(meta.equipment, settings.language)}</p><p><strong>{copy.howTo}:</strong> {localize(meta.howTo, settings.language)}</p><p><strong>{copy.cues}:</strong> {localize(meta.cues, settings.language)}</p></div></article>; })}</div></section>}
 
         {activeSection === 'calories' && <>
           <div className="dashboard-grid">
@@ -2152,6 +2346,27 @@ Be concise. Use average homemade/generic values, not brand values.`;
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon orange-glow">🔥</div><div><p className="stat-title">{copy.streak}</p><h3 className="stat-value">{calculateStreak(workouts)}</h3></div></article>
 
             <section className="glass-panel history-section fade-in-up" style={{gridColumn:'span 2'}}>
+              <div className="panel-header"><h3>{copy.rankHowTitle}</h3></div>
+              <div className="history-list">
+                {[
+                  {text: copy.rankHowWorkout, color: 'var(--primary-glow)', icon: '💪'},
+                  {text: copy.rankHowPR, color: '#f59e0b', icon: '🏆'},
+                  {text: copy.rankHowRest, color: 'var(--secondary-glow)', icon: '😴'},
+                  {text: copy.rankHowBodyweight, color: '#a78bfa', icon: '⚖️'},
+                  {text: copy.rankHowCalories, color: '#fb923c', icon: '🍽'},
+                  {text: copy.rankHowCaloriesBonus, color: '#34d399', icon: '🎯'},
+                  {text: copy.rankHowCaloriesMinus, color: 'var(--error)', icon: '⚠️'},
+                  {text: copy.rankHowInactive, color: 'var(--error)', icon: '📉'},
+                ].map((item, i) => (
+                  <article className="history-item" key={i} style={{gap:'0.6rem'}}>
+                    <span style={{fontSize:'1.2rem',flexShrink:0}}>{item.icon}</span>
+                    <strong style={{color: item.color, fontFamily:'monospace',fontSize:'0.9rem'}}>{item.text}</strong>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <section className="glass-panel history-section fade-in-up" style={{gridColumn:'span 2'}}>
               <div className="panel-header"><h3>{copy.rankAllRanks}</h3></div>
               <div className="history-list">
                 {RANKS.map((r, i) => {
@@ -2265,6 +2480,23 @@ Be concise. Use average homemade/generic values, not brand values.`;
           </div>
           <div className="dashboard-grid">
             <section className="glass-panel action-panel fade-in-up">
+              <div className="panel-header"><h3>{copy.macrosTitle}</h3></div>
+              <form className="premium-form" onSubmit={calculateMacros}>
+                <div className="input-group"><label>{copy.macrosWeight}</label><input type="number" step="0.1" min="20" value={macroForm.weight} onChange={e => setMacroForm(c => ({...c, weight: e.target.value}))} placeholder="75" /></div>
+                <div className="input-group"><label>{copy.macrosGoal}</label><select className="premium-select" value={macroForm.goal} onChange={e => setMacroForm(c => ({...c, goal: e.target.value}))}><option value="bulk">{copy.macrosBulk}</option><option value="maintain">{copy.macrosMaintain}</option><option value="cut">{copy.macrosCut}</option></select></div>
+                <div className="input-group"><label>{copy.tdeeActivity}</label><select className="premium-select" value={macroForm.activity} onChange={e => setMacroForm(c => ({...c, activity: e.target.value}))}><option value="sedentary">{copy.tdeeSedentary}</option><option value="light">{copy.tdeeLight}</option><option value="moderate">{copy.tdeeModerate}</option><option value="active">{copy.tdeeActive}</option><option value="veryactive">{copy.tdeeVeryActive}</option></select></div>
+                <button className="action-btn-primary full-width" type="submit">{copy.macrosCalculate}</button>
+              </form>
+              {macroResult && (
+                <div className="stats-list" style={{marginTop:'1rem'}}>
+                  <div className="stats-row"><span>{copy.macrosCalories}</span><strong style={{fontSize:'1.1rem'}}>{macroResult.calories} kcal</strong></div>
+                  <div className="stats-row"><span>{copy.macrosProtein}</span><strong style={{color:'#60a5fa'}}>{macroResult.protein} g</strong></div>
+                  <div className="stats-row"><span>{copy.macrosCarbs}</span><strong style={{color:'#fb923c'}}>{macroResult.carbs} g</strong></div>
+                  <div className="stats-row"><span>{copy.macrosFat}</span><strong style={{color:'#34d399'}}>{macroResult.fat} g</strong></div>
+                </div>
+              )}
+            </section>
+            <section className="glass-panel action-panel fade-in-up">
               <div className="panel-header"><h3>{copy.tdeeTitle}</h3></div>
               <form className="premium-form" onSubmit={calculateTDEE}>
                 <div className="input-group"><label>{copy.tdeeGender}</label><select className="premium-select" value={tdeeForm.gender} onChange={(e) => setTdeeForm((c) => ({ ...c, gender: e.target.value }))}><option value="male">{copy.tdeeMale}</option><option value="female">{copy.tdeeFemale}</option></select></div>
@@ -2349,10 +2581,14 @@ Be concise. Use average homemade/generic values, not brand values.`;
                         <div className="stats-row"><span>{copy.adminLastWorkout}</span><strong>{u.lastWorkout ? formatDateValue(u.lastWorkout, settings.dateFormat) : copy.adminNever}</strong></div>
                         <div className="stats-row"><span>{copy.rankTitle}</span><strong>{u.rank.displayName} ({u.pts} {copy.rankPoints})</strong></div>
                       </div>
-                      <div style={{display:'flex',gap:'0.5rem',marginTop:'0.25rem'}}>
+                      <div style={{display:'flex',gap:'0.5rem',marginTop:'0.25rem',flexWrap:'wrap'}}>
                         <button className="action-btn-outline" type="button" onClick={() => adminChangeRank(u.email, 'up')}>{copy.adminRankUp}</button>
                         <button className="action-btn-outline" type="button" onClick={() => adminChangeRank(u.email, 'down')}>{copy.adminDemote}</button>
+                        {u.email !== ADMIN_EMAIL && (bannedUsers.includes(u.email) ? <button className="action-btn-outline" type="button" style={{color:'var(--secondary-glow)',borderColor:'var(--secondary-glow)'}} onClick={() => unbanUser(u.email)}>{copy.adminUnban}</button> : <button className="action-btn-outline danger-button" type="button" onClick={() => banUser(u.email)}>{copy.adminBan}</button>)}
+                        {u.email !== ADMIN_EMAIL && (modUsers.includes(u.email) ? <button className="action-btn-outline" type="button" style={{color:'#f59e0b',borderColor:'#f59e0b'}} onClick={() => toggleMod(u.email)}>{copy.adminRemoveMod}</button> : <button className="action-btn-outline" type="button" onClick={() => toggleMod(u.email)}>{copy.adminSetMod}</button>)}
                       </div>
+                      {bannedUsers.includes(u.email) && <div style={{fontSize:'0.78rem',color:'var(--error)',fontWeight:600,padding:'0.2rem 0'}}>{copy.adminBanned}</div>}
+                      {modUsers.includes(u.email) && !bannedUsers.includes(u.email) && <div style={{fontSize:'0.78rem',color:'#22c55e',fontWeight:600,padding:'0.2rem 0'}}>{copy.adminMod}</div>}
                     </article>
                   ))}
                 </div>
@@ -2382,6 +2618,16 @@ Be concise. Use average homemade/generic values, not brand values.`;
         {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.installApp}</span><p className="settings-copy">{copy.installAppDesc}</p></div><div>{isInStandaloneMode ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installDone}</span> : isIos ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installIos}</span> : <button className="action-btn-outline" type="button" onClick={triggerInstall} disabled={!installPrompt}>{copy.installBtn}</button>}</div></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
       </main>
       {toast ? <div className="toast-container"><div className="toast">{toast}</div></div> : null}
+      {timerDone && (
+        <div className="recap-overlay" onClick={() => setTimerDone(false)}>
+          <div className="timer-done-modal glass-panel" onClick={e => e.stopPropagation()}>
+            <div style={{fontSize:'4rem',marginBottom:'0.5rem',animation:'timerDonePulse 0.6s ease-in-out infinite alternate'}}>⏰</div>
+            <h2 style={{margin:'0 0 0.5rem',fontSize:'1.6rem'}}>{copy.timerDoneTitle}</h2>
+            <p style={{opacity:0.7,marginBottom:'1.5rem'}}>{copy.timerAlarmBody}</p>
+            <button className="action-btn-primary" type="button" style={{minWidth:'10rem',fontSize:'1rem'}} onClick={() => { setTimerDone(false); resetTimer(); }}>{copy.timerDoneContinue}</button>
+          </div>
+        </div>
+      )}
       {showRecap && recapData && (
         <div className="recap-overlay" onClick={() => setShowRecap(false)}>
           <div className="recap-modal glass-panel" onClick={(e) => e.stopPropagation()}>

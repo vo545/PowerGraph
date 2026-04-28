@@ -21,7 +21,15 @@
     <script type="module" src="/src/main.jsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/PowerGraph/sw.js');
+        navigator.serviceWorker.register('/PowerGraph/sw.js', { updateViaCache: 'none' });
+        // The SW posts SW_UPDATED when a new version activates.
+        // App.jsx listens and shows a toast before reloading.
+        navigator.serviceWorker.addEventListener('message', (e) => {
+          if (e.data?.type === 'SW_UPDATED') {
+            window.__swUpdated = true;
+            window.dispatchEvent(new CustomEvent('sw-updated'));
+          }
+        });
       }
     </script>
   </body>

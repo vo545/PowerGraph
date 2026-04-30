@@ -632,6 +632,27 @@ const ui = {
     rankHowInactive: '-4 za neaktiven dan (po 2 dneh brez aktivnosti)',
     timerDoneTitle: 'Odmor kon\u010dan!',
     timerDoneContinue: 'Nadaljuj',
+    tutorialOpen: 'Odpri vodič',
+    tutorialOpenDesc: 'Pokaži vodič za začetnike.',
+    tutorialNext: 'Naprej',
+    tutorialBack: 'Nazaj',
+    tutorialClose: 'Začni',
+    tutorialStep1Title: 'Dobrodošel v PowerGraph! 💪',
+    tutorialStep1: 'PowerGraph je dnevnik treningov, ki deluje v tvojem brskalniku. Vse je shranjeno lokalno – nobenih strežnikov, brez čakanja.',
+    tutorialStep2Title: 'Nadzorna plošča 📊',
+    tutorialStep2: 'Tukaj vidiš svoje statistike: aktivni niz dni, število treningov, kalorije in telesno težo. Graf prikazuje napredek po mesecih.',
+    tutorialStep3Title: 'Dodaj trening ➕',
+    tutorialStep3: 'Pritisni "Dodaj trening", izberi vajo in vnesi serije ter ponovitve. Za vsak trening dobiš točke za lestvico rangov.',
+    tutorialStep4Title: 'Vaje 🏋️',
+    tutorialStep4: 'V zavihku Vaje najdeš podrobnosti o vsaki vaji: kako jo izvajamo, katera oprema je potrebna in kako zahtevna je.',
+    tutorialStep5Title: 'Kalorije 🍎',
+    tutorialStep5: 'Sledi dnevnemu vnosu kalorij in makrohranil. Dodaj obroke ali uporabi kalkulator, da ostaneš v okviru cilja.',
+    tutorialStep6Title: 'Nasvetovalec 🧠',
+    tutorialStep6: 'Vsak dan ti predlagamo vajo glede na to, kaj si nazadnje treniral. Predlog temelji na skupini, ki je bila najmanj trenirana.',
+    tutorialStep7Title: 'Lestvica rangov 🏆',
+    tutorialStep7: 'Za vsak trening, osebni rekord in dan počitka dobiš točke. Z njimi napreduj skozi range – od začetnika do legende!',
+    tutorialStep8Title: 'Nastavitve ⚙️',
+    tutorialStep8: 'V nastavitvah izberi jezik, enote in varnostno kopiranje. Vodič (ta zaslon) je vedno dostopen tukaj.',
   },
   en: {
     app: 'PowerGraph',
@@ -939,6 +960,27 @@ const ui = {
     rankHowInactive: '-4 per inactive day (after 2 days without activity)',
     timerDoneTitle: 'Rest over!',
     timerDoneContinue: 'Continue',
+    tutorialOpen: 'Open tutorial',
+    tutorialOpenDesc: 'Show the beginner guide.',
+    tutorialNext: 'Next',
+    tutorialBack: 'Back',
+    tutorialClose: 'Get started',
+    tutorialStep1Title: 'Welcome to PowerGraph! 💪',
+    tutorialStep1: 'PowerGraph is a workout log that runs entirely in your browser. Everything is stored locally — no servers, no waiting.',
+    tutorialStep2Title: 'Dashboard 📊',
+    tutorialStep2: 'Here you see your stats: active streak, workout count, calories, and body weight. The chart shows your progress over the last months.',
+    tutorialStep3Title: 'Add a workout ➕',
+    tutorialStep3: 'Click "Add workout", pick an exercise and enter your sets and reps. Every workout earns you points on the leaderboard.',
+    tutorialStep4Title: 'Exercises 🏋️',
+    tutorialStep4: 'The Exercises tab has details for every exercise: how to perform it, what equipment you need, and the difficulty level.',
+    tutorialStep5Title: 'Calories 🍎',
+    tutorialStep5: 'Track your daily calorie and macro intake. Add meals or use the calorie estimator to stay within your goal.',
+    tutorialStep6Title: 'Advisor 🧠',
+    tutorialStep6: 'Every day the Advisor suggests a workout based on what you trained recently and which muscle group has been neglected the most.',
+    tutorialStep7Title: 'Rankings 🏆',
+    tutorialStep7: 'Earn points for every workout, personal record, and rest day. Climb through ranks — from Beginner all the way to Legend!',
+    tutorialStep8Title: 'Settings ⚙️',
+    tutorialStep8: 'In Settings you can change the language, units, and backup options. The tutorial button is also here if you want to see this guide again.',
   },
 };
 
@@ -1598,6 +1640,8 @@ export default function App() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
 
   const copy = ui[settings.language];
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -1920,6 +1964,8 @@ export default function App() {
           });
         });
         setCurrentUser(email);
+        setTutorialStep(0);
+        setShowTutorial(true);
       } else {
         const banned = loadBanned();
         if (banned.includes(email)) {
@@ -2991,7 +3037,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
           );
         })()}
 
-        {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.installApp}</span><p className="settings-copy">{copy.installAppDesc}</p></div><div>{isInStandaloneMode ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installDone}</span> : isIos ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installIos}</span> : <button className="action-btn-outline" type="button" onClick={triggerInstall} disabled={!installPrompt}>{copy.installBtn}</button>}</div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.showFeedbackBtn}</span><p className="settings-copy">{copy.showFeedbackBtnDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => setSettings(c => ({...c, showFeedbackBtn: !c.showFeedbackBtn}))}>{settings.showFeedbackBtn ? '✓ On' : 'Off'}</button></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
+        {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.installApp}</span><p className="settings-copy">{copy.installAppDesc}</p></div><div>{isInStandaloneMode ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installDone}</span> : isIos ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installIos}</span> : <button className="action-btn-outline" type="button" onClick={triggerInstall} disabled={!installPrompt}>{copy.installBtn}</button>}</div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.showFeedbackBtn}</span><p className="settings-copy">{copy.showFeedbackBtnDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => setSettings(c => ({...c, showFeedbackBtn: !c.showFeedbackBtn}))}>{settings.showFeedbackBtn ? '✓ On' : 'Off'}</button></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.tutorialOpen}</span><p className="settings-copy">{copy.tutorialOpenDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => { setTutorialStep(0); setShowTutorial(true); }}>{copy.tutorialOpen}</button></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
       </main>
       {currentUser && settings.showFeedbackBtn !== false && (
         <div className="feedback-widget">
@@ -3040,6 +3086,40 @@ Be concise. Use average homemade/generic values, not brand values.`;
           </div>
         </div>
       )}
+      {showTutorial && (() => {
+        const steps = [
+          { title: copy.tutorialStep1Title, desc: copy.tutorialStep1 },
+          { title: copy.tutorialStep2Title, desc: copy.tutorialStep2 },
+          { title: copy.tutorialStep3Title, desc: copy.tutorialStep3 },
+          { title: copy.tutorialStep4Title, desc: copy.tutorialStep4 },
+          { title: copy.tutorialStep5Title, desc: copy.tutorialStep5 },
+          { title: copy.tutorialStep6Title, desc: copy.tutorialStep6 },
+          { title: copy.tutorialStep7Title, desc: copy.tutorialStep7 },
+          { title: copy.tutorialStep8Title, desc: copy.tutorialStep8 },
+        ];
+        const step = steps[tutorialStep];
+        const isLast = tutorialStep === steps.length - 1;
+        return (
+          <div className="recap-overlay" onClick={() => setShowTutorial(false)}>
+            <div className="recap-modal glass-panel" style={{maxWidth:'28rem',textAlign:'center'}} onClick={e => e.stopPropagation()}>
+              <h2 style={{fontSize:'1.3rem',marginBottom:'0.75rem',lineHeight:1.3}}>{step.title}</h2>
+              <p style={{opacity:0.8,marginBottom:'1.5rem',lineHeight:1.6,fontSize:'0.95rem'}}>{step.desc}</p>
+              <div style={{display:'flex',justifyContent:'center',gap:'0.4rem',marginBottom:'1.5rem'}}>
+                {steps.map((_, i) => (
+                  <button key={i} type="button" onClick={() => setTutorialStep(i)} style={{width:'0.55rem',height:'0.55rem',borderRadius:'50%',border:'none',padding:0,cursor:'pointer',background: i === tutorialStep ? 'var(--accent)' : 'var(--border-color)',transition:'background 0.2s'}} />
+                ))}
+              </div>
+              <div style={{display:'flex',gap:'0.75rem',justifyContent:'center'}}>
+                {tutorialStep > 0 && <button className="action-btn-outline" type="button" style={{minWidth:'7rem'}} onClick={() => setTutorialStep(s => s - 1)}>{copy.tutorialBack}</button>}
+                {isLast
+                  ? <button className="action-btn-primary" type="button" style={{minWidth:'10rem'}} onClick={() => setShowTutorial(false)}>{copy.tutorialClose}</button>
+                  : <button className="action-btn-primary" type="button" style={{minWidth:'7rem'}} onClick={() => setTutorialStep(s => s + 1)}>{copy.tutorialNext}</button>
+                }
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {showRecap && recapData && (
         <div className="recap-overlay" onClick={() => setShowRecap(false)}>
           <div className="recap-modal glass-panel" onClick={(e) => e.stopPropagation()}>

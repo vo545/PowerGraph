@@ -2402,10 +2402,11 @@ Be concise. Use average homemade/generic values, not brand values.`;
         )}
 
         {activeSection === 'exercises' && <section className="glass-panel exercise-section fade-in-up">
-          <div className="panel-header"><h3>{copy.exercises}</h3><input className="history-search-input" type="search" placeholder={copy.searchExercise} value={exerciseSearch} onChange={e => setExerciseSearch(e.target.value)} /></div>
+          <div className="panel-header"><h3>{copy.exercises}</h3><div style={{display:'flex',gap:'0.4rem',marginLeft:'auto',alignItems:'center'}}><button className={`action-btn-${advisorMode === 'gym' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem'}} onClick={() => setAdvisorMode('gym')}>🏋️ {copy.gymMode}</button><button className={`action-btn-${advisorMode === 'calisthenics' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem'}} onClick={() => setAdvisorMode('calisthenics')}>🤸 {copy.calisthenicsMode}</button></div><input className="history-search-input" type="search" placeholder={copy.searchExercise} value={exerciseSearch} onChange={e => setExerciseSearch(e.target.value)} /></div>
           {(() => {
             const q = exerciseSearch.toLowerCase().trim();
-            const filtered = Object.entries(sections).map(([section, names]) => {
+            const activeSections = advisorMode === 'calisthenics' ? calisthenicsSections : sections;
+            const filtered = Object.entries(activeSections).map(([section, names]) => {
               const matchedNames = names.filter(name => !q || getExerciseName(name, settings.language).toLowerCase().includes(q) || name.toLowerCase().includes(q));
               return [section, matchedNames];
             }).filter(([, names]) => names.length > 0);

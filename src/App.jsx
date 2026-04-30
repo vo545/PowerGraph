@@ -364,7 +364,8 @@ const ui = {
     noHistory: 'Treningov \u0161e ni.',
     byExercise: 'Statistika po vajah',
     target: 'Target',
-    primary: 'Glavni target',
+    primary: 'Primarni target',
+    difficulty: 'Težavnost',
     howTo: 'Kako izvajamo',
     cues: 'Na kaj paziti',
     equipment: 'Oprema / naprave',
@@ -660,7 +661,8 @@ const ui = {
     noHistory: 'No workouts yet.',
     byExercise: 'Stats by exercise',
     target: 'Targets',
-    primary: 'Primary target',
+    primary: 'Primary targeting',
+    difficulty: 'Difficulty',
     howTo: 'How to do it',
     cues: 'What to watch for',
     equipment: 'Equipment / machines',
@@ -1053,16 +1055,89 @@ const exerciseEquipment = {
   'Dead Hang': { sl: 'Drog za zgibe', en: 'Pull-up bar' },
 };
 
+const exerciseDifficulty = {
+  'Bench Press': { sl: 'Srednja', en: 'Intermediate' },
+  'Incline Bench Press': { sl: 'Srednja', en: 'Intermediate' },
+  'Decline Bench Press': { sl: 'Srednja', en: 'Intermediate' },
+  'Chest Fly': { sl: 'Začetniška', en: 'Beginner' },
+  'Push-Up': { sl: 'Začetniška', en: 'Beginner' },
+  Squat: { sl: 'Srednja', en: 'Intermediate' },
+  'Leg Press': { sl: 'Začetniška', en: 'Beginner' },
+  'Romanian Deadlift': { sl: 'Srednja', en: 'Intermediate' },
+  'Walking Lunge': { sl: 'Začetniška', en: 'Beginner' },
+  'Leg Extension': { sl: 'Začetniška', en: 'Beginner' },
+  'Triceps Pushdown': { sl: 'Začetniška', en: 'Beginner' },
+  'Overhead Triceps Extension': { sl: 'Začetniška', en: 'Beginner' },
+  'Close Grip Bench Press': { sl: 'Srednja', en: 'Intermediate' },
+  'Bench Dip': { sl: 'Začetniška', en: 'Beginner' },
+  'Skull Crusher': { sl: 'Srednja', en: 'Intermediate' },
+  'Barbell Curl': { sl: 'Začetniška', en: 'Beginner' },
+  'Dumbbell Curl': { sl: 'Začetniška', en: 'Beginner' },
+  'Hammer Curl': { sl: 'Začetniška', en: 'Beginner' },
+  'Preacher Curl': { sl: 'Začetniška', en: 'Beginner' },
+  'Cable Curl': { sl: 'Začetniška', en: 'Beginner' },
+  'Wrist Curl': { sl: 'Začetniška', en: 'Beginner' },
+  'Reverse Wrist Curl': { sl: 'Začetniška', en: 'Beginner' },
+  'Farmer Carry': { sl: 'Začetniška', en: 'Beginner' },
+  'Plate Pinch Hold': { sl: 'Začetniška', en: 'Beginner' },
+  'Reverse Curl': { sl: 'Začetniška', en: 'Beginner' },
+  'Overhead Press': { sl: 'Srednja', en: 'Intermediate' },
+  'Lateral Raise': { sl: 'Začetniška', en: 'Beginner' },
+  'Front Raise': { sl: 'Začetniška', en: 'Beginner' },
+  'Rear Delt Fly': { sl: 'Začetniška', en: 'Beginner' },
+  'Arnold Press': { sl: 'Srednja', en: 'Intermediate' },
+  Running: { sl: 'Začetniška', en: 'Beginner' },
+  Cycling: { sl: 'Začetniška', en: 'Beginner' },
+  Rowing: { sl: 'Začetniška', en: 'Beginner' },
+  'Jump Rope': { sl: 'Začetniška', en: 'Beginner' },
+  Burpee: { sl: 'Srednja', en: 'Intermediate' },
+  'Barbell Row': { sl: 'Srednja', en: 'Intermediate' },
+  'Lat Pulldown': { sl: 'Začetniška', en: 'Beginner' },
+  'Pull-Up': { sl: 'Srednja', en: 'Intermediate' },
+  'Seated Cable Row': { sl: 'Začetniška', en: 'Beginner' },
+  'Straight Arm Pulldown': { sl: 'Začetniška', en: 'Beginner' },
+  Crunch: { sl: 'Začetniška', en: 'Beginner' },
+  'Leg Raise': { sl: 'Začetniška', en: 'Beginner' },
+  Plank: { sl: 'Začetniška', en: 'Beginner' },
+  'Russian Twist': { sl: 'Začetniška', en: 'Beginner' },
+  'Cable Crunch': { sl: 'Začetniška', en: 'Beginner' },
+  'Wide Push-Up': { sl: 'Začetniška', en: 'Beginner' },
+  'Diamond Push-Up': { sl: 'Začetniška', en: 'Beginner' },
+  'Archer Push-Up': { sl: 'Napredna', en: 'Advanced' },
+  'Pseudo-Planche Push-Up': { sl: 'Napredna', en: 'Advanced' },
+  'Chin-Up': { sl: 'Srednja', en: 'Intermediate' },
+  'Inverted Row': { sl: 'Začetniška', en: 'Beginner' },
+  'Australian Pull-Up': { sl: 'Začetniška', en: 'Beginner' },
+  'Muscle-Up': { sl: 'Napredna', en: 'Advanced' },
+  'Bodyweight Squat': { sl: 'Začetniška', en: 'Beginner' },
+  'Bulgarian Split Squat': { sl: 'Srednja', en: 'Intermediate' },
+  'Pistol Squat': { sl: 'Napredna', en: 'Advanced' },
+  'Jump Squat': { sl: 'Srednja', en: 'Intermediate' },
+  'Wall Sit': { sl: 'Začetniška', en: 'Beginner' },
+  'Archer Pull-Up': { sl: 'Napredna', en: 'Advanced' },
+  'Commando Pull-Up': { sl: 'Srednja', en: 'Intermediate' },
+  Dip: { sl: 'Srednja', en: 'Intermediate' },
+  'Close Grip Push-Up': { sl: 'Začetniška', en: 'Beginner' },
+  'Pike Push-Up': { sl: 'Srednja', en: 'Intermediate' },
+  'Handstand Push-Up': { sl: 'Napredna', en: 'Advanced' },
+  'Shoulder Tap': { sl: 'Srednja', en: 'Intermediate' },
+  'Mountain Climber': { sl: 'Srednja', en: 'Intermediate' },
+  'Box Jump': { sl: 'Srednja', en: 'Intermediate' },
+  'L-Sit': { sl: 'Napredna', en: 'Advanced' },
+  'Hollow Body Hold': { sl: 'Srednja', en: 'Intermediate' },
+  'V-Up': { sl: 'Srednja', en: 'Intermediate' },
+  'Dead Hang': { sl: 'Začetniška', en: 'Beginner' },
+};
+
 const calisthenicsSections = {
   Chest: ['Push-Up', 'Wide Push-Up', 'Diamond Push-Up', 'Archer Push-Up', 'Pseudo-Planche Push-Up'],
-  Back: ['Pull-Up', 'Chin-Up', 'Inverted Row', 'Australian Pull-Up', 'Muscle-Up'],
+  Back: ['Pull-Up', 'Inverted Row', 'Australian Pull-Up', 'Muscle-Up', 'Dead Hang'],
   Legs: ['Bodyweight Squat', 'Bulgarian Split Squat', 'Pistol Squat', 'Jump Squat', 'Wall Sit'],
-  Triceps: ['Dip', 'Diamond Push-Up', 'Close Grip Push-Up', 'Bench Dip', 'Close Grip Bench Press'],
-  Biceps: ['Chin-Up', 'Archer Pull-Up', 'Commando Pull-Up', 'Pull-Up'],
-  Shoulders: ['Pike Push-Up', 'Handstand Push-Up', 'Shoulder Tap', 'Lateral Raise'],
+  Triceps: ['Dip', 'Close Grip Push-Up', 'Bench Dip'],
+  Biceps: ['Chin-Up', 'Archer Pull-Up', 'Commando Pull-Up'],
+  Shoulders: ['Pike Push-Up', 'Handstand Push-Up', 'Shoulder Tap'],
   'Stamina/Cardio': ['Burpee', 'Mountain Climber', 'Jump Rope', 'Box Jump', 'Running'],
   Abs: ['Plank', 'L-Sit', 'Hollow Body Hold', 'Leg Raise', 'V-Up'],
-  Forearms: ['Dead Hang', 'Farmer Carry', 'Plate Pinch Hold'],
 };
 
 Object.assign(exerciseInfo, {
@@ -1108,6 +1183,7 @@ const localize = (pair, lang) => pair[lang];
 const getExerciseInfo = (exercise) => ({
   ...(exerciseInfo[exercise] ?? { sl: exercise, en: exercise, targets: { sl: '', en: '' }, primary: { sl: '', en: '' }, howTo: { sl: '', en: '' }, cues: { sl: '', en: '' } }),
   equipment: exerciseEquipment[exercise] ?? { sl: 'Osnovna gym oprema', en: 'Basic gym equipment' },
+  difficulty: exerciseDifficulty[exercise] ?? { sl: 'Srednja', en: 'Intermediate' },
 });
 const getExerciseName = (exercise, lang) => getExerciseInfo(exercise)[lang] ?? exercise;
 const getWorkoutStorageKey = (email) => `${WORKOUTS_KEY_PREFIX}${email}`;
@@ -2414,7 +2490,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
             return filtered.map(([section, names]) => (
               <div className="exercise-section-block" key={section}>
                 <div className="exercise-section-header"><h4>{sectionNames[section]}</h4><span className="exercise-badge">{names.length}</span></div>
-                <div className="exercise-grid">{names.map((name) => { const meta = getExerciseInfo(name); return <article className="exercise-card" key={name}><div className="exercise-top"><div><p className="exercise-category">{sectionNames[section]}</p><h4>{getExerciseName(name, settings.language)}</h4></div><span className="exercise-badge">{localize(meta.primary, settings.language)}</span></div><div className="exercise-copy"><p><strong>{copy.target}:</strong> {localize(meta.targets, settings.language)}</p><p><strong>{copy.primary}:</strong> {localize(meta.primary, settings.language)}</p><p><strong>{copy.equipment}:</strong> {localize(meta.equipment, settings.language)}</p><p><strong>{copy.howTo}:</strong> {localize(meta.howTo, settings.language)}</p><p><strong>{copy.cues}:</strong> {localize(meta.cues, settings.language)}</p></div></article>; })}</div>
+                <div className="exercise-grid">{names.map((name) => { const meta = getExerciseInfo(name); return <article className="exercise-card" key={name}><div className="exercise-top"><div><p className="exercise-category">{sectionNames[section]}</p><h4>{getExerciseName(name, settings.language)}</h4></div><span className="exercise-badge">{localize(meta.primary, settings.language)}</span></div><div className="exercise-copy"><p><strong>{copy.difficulty}:</strong> {localize(meta.difficulty, settings.language)}</p><p><strong>{copy.primary}:</strong> {localize(meta.primary, settings.language)}</p><p><strong>{copy.equipment}:</strong> {localize(meta.equipment, settings.language)}</p><p><strong>{copy.howTo}:</strong> {localize(meta.howTo, settings.language)}</p><p><strong>{copy.cues}:</strong> {localize(meta.cues, settings.language)}</p></div></article>; })}</div>
               </div>
             ));
           })()}

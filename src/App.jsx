@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CategoryScale, Chart as ChartJS, Filler, LinearScale, LineElement, PointElement, Tooltip } from 'chart.js';
-import { Line } from 'react-chartjs-2';
+import { BarElement, CategoryScale, Chart as ChartJS, Filler, LinearScale, LineElement, PointElement, Tooltip } from 'chart.js';
+import { Bar, Line } from 'react-chartjs-2';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler, BarElement);
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 const JWT_KEY_PREFIX = 'powergraph_jwt_';
@@ -55,6 +55,30 @@ const ADMIN_EMAIL = 'vid.oreskovic@gmail.com';
 const LOGINS_KEY = 'powergraph_logins';
 const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
 const GIST_ID = import.meta.env.VITE_GIST_ID || '';
+
+const BAR_OPTS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8', font: { size: 11 } } },
+    y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8', precision: 0, stepSize: 1 } },
+  },
+};
+
+function getMonthBarData(dates, lang, n = 12) {
+  const counts = {};
+  dates.forEach(d => { const k = d.slice(0, 7); counts[k] = (counts[k] || 0) + 1; });
+  const labels = [], data = [];
+  const now = new Date();
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    labels.push(d.toLocaleString(lang === 'sl' ? 'sl-SI' : 'en-US', { month: 'short', year: '2-digit' }));
+    data.push(counts[key] || 0);
+  }
+  return { labels, data };
+}
 
 const LOCAL_FOODS = {
   // --- Meso / Meat ---
@@ -524,6 +548,8 @@ const ui = {
     restDayDone: '✓ Dan za počitek',
     restDayLast: 'Zadnji počitek',
     restDayNever: 'Še nikoli',
+    restDayChart: 'Dnevi počitka po mesecih',
+    cheatDayChart: 'Goljufivi dnevi po mesecih',
     addComment: 'Dodaj opombo',
     editComment: 'Uredi opombo',
     commentPlaceholder: 'Npr. danes sem bil utrujen, nova teža...',
@@ -533,7 +559,7 @@ const ui = {
     recapRank: 'Tvoj rang',
     recapPoints: 'Skupaj točk',
     repeatWorkout: 'Ponovi',
-    heatmapTitle: 'Aktivnost (16 tednov)',
+    heatmapTitle: 'Aktivnost',
     reuseMeal: 'Uporabi',
     weightDrop: 'Weight Drop',
     weightDropDesc: 'Vnesi kg za vsak set posebej',
@@ -818,6 +844,8 @@ const ui = {
     restDayDone: '✓ Rest day',
     restDayLast: 'Last rest',
     restDayNever: 'Never',
+    restDayChart: 'Rest days per month',
+    cheatDayChart: 'Cheat days per month',
     addComment: 'Add note',
     editComment: 'Edit note',
     commentPlaceholder: 'e.g. felt tired today, new weight...',
@@ -827,7 +855,7 @@ const ui = {
     recapRank: 'Your rank',
     recapPoints: 'Total points',
     repeatWorkout: 'Repeat',
-    heatmapTitle: 'Activity (16 weeks)',
+    heatmapTitle: 'Activity',
     reuseMeal: 'Reuse',
     weightDrop: 'Weight Drop',
     weightDropDesc: 'Enter kg for each set individually',
@@ -1392,6 +1420,7 @@ export default function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [selectedExercise, setSelectedExercise] = useState('Bench Press');
   const [toast, setToast] = useState('');
+  const [swUpdatePending, setSwUpdatePending] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
@@ -1483,12 +1512,20 @@ export default function App() {
   const bwSorted = useMemo(() => [...bodyWeightEntries].sort((a, b) => new Date(a.date) - new Date(b.date)).slice(-30), [bodyWeightEntries]);
   const bodyWeightChartData = useMemo(() => ({ labels: bwSorted.map((e) => formatDateValue(e.date, settings.dateFormat)), datasets: [{ data: bwSorted.map((e) => e.weight), borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.18)', fill: true, tension: 0.3, borderWidth: 3, pointRadius: 4 }] }), [bwSorted, settings.dateFormat]);
   const heatmapDays = useMemo(() => {
+    if (!workouts.length) return [];
     const workoutDates = new Set(workouts.map(w => w.date));
+    const earliest = workouts.reduce((min, w) => w.date < min ? w.date : min, workouts[0].date);
+    const start = new Date(earliest);
+    const dow = start.getDay();
+    start.setDate(start.getDate() - (dow === 0 ? 6 : dow - 1)); // back to Monday
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().slice(0, 10);
     const days = [];
-    for (let i = 111; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      days.push({ key, active: workoutDates.has(key), today: i === 0 });
+    const cur = new Date(start);
+    while (cur <= today) {
+      const key = cur.toISOString().slice(0, 10);
+      days.push({ key, active: workoutDates.has(key), today: key === todayStr });
+      cur.setDate(cur.getDate() + 1);
     }
     return days;
   }, [workouts]);
@@ -1553,14 +1590,11 @@ export default function App() {
 
 
   useEffect(() => {
-    const handleSwUpdate = () => {
-      setToast(settings.language === 'sl' ? 'Nova verzija nameščena. Osvežujem...' : 'New version installed. Reloading...');
-      setTimeout(() => window.location.reload(), 2200);
-    };
-    if (window.__swUpdated) { handleSwUpdate(); }
+    const handleSwUpdate = () => setSwUpdatePending(true);
+    if (window.__swUpdated) handleSwUpdate();
     window.addEventListener('sw-updated', handleSwUpdate);
     return () => window.removeEventListener('sw-updated', handleSwUpdate);
-  }, [settings.language]);
+  }, []);
 
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem(THEME_KEY, theme); }, [theme]);
   useEffect(() => {
@@ -2298,6 +2332,16 @@ Be concise. Use average homemade/generic values, not brand values.`;
             </section>
           </div>
 
+          {restDays.length > 0 && (() => {
+            const { labels, data } = getMonthBarData(restDays, settings.language);
+            return (
+              <section className="glass-panel fade-in-up" style={{padding:'1.25rem 1.5rem'}}>
+                <div className="panel-header"><h3>{copy.restDayChart}</h3><span className="history-count">{restDays.length}</span></div>
+                <div className="chart-container"><Bar data={{ labels, datasets: [{ data, backgroundColor: 'rgba(99,179,237,0.45)', borderColor: '#63b3ed', borderWidth: 2, borderRadius: 6 }] }} options={BAR_OPTS} /></div>
+              </section>
+            );
+          })()}
+
           <section className="glass-panel stats-section fade-in-up">
             <div className="panel-header"><h3>{copy.byExercise}</h3><div className="settings-button-row"><button className={`action-btn-outline ${analyticsRange === 'week' ? 'active-filter' : ''}`} type="button" onClick={() => setAnalyticsRange('week')}>{copy.weekly}</button><button className={`action-btn-outline ${analyticsRange === 'month' ? 'active-filter' : ''}`} type="button" onClick={() => setAnalyticsRange('month')}>{copy.monthly}</button></div></div>
             <div className="stats-split">
@@ -2308,7 +2352,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
           </section>
 
           <section className="glass-panel fade-in-up" style={{padding:'1.25rem 1.5rem'}}>
-            <div className="panel-header"><h3>{copy.heatmapTitle}</h3><span className="history-count">{workouts.length}</span></div>
+            <div className="panel-header"><h3>{copy.heatmapTitle}</h3><span className="history-count">{Math.ceil(heatmapDays.length / 7)} {settings.language === 'sl' ? 'tednov' : 'weeks'}</span></div>
             <div className="heatmap-grid">
               {heatmapDays.map(d => (
                 <div key={d.key} title={d.key} className={`heatmap-cell${d.active ? ' active' : ''}${d.today ? ' today' : ''}`} />
@@ -2423,6 +2467,16 @@ Be concise. Use average homemade/generic values, not brand values.`;
               {selectedDayEntries.length ? selectedDayEntries.map((entry) => <article className="history-item" key={entry.id}><div><h3>{entry.name}</h3><p>{({ breakfast: copy.breakfast, lunch: copy.lunch, dinner: copy.dinner, snack: copy.snack })[entry.mealType]}</p></div><div className="history-metrics"><span>{Math.round(entry.calories)} {copy.kcalShort}</span>{settings.calorieTrackerMode === 'advanced' ? <><span>P {Math.round(entry.protein)}g</span><span>C {Math.round(entry.carbs)}g</span><span>F {Math.round(entry.fat)}g</span></> : null}</div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={() => reuseMeal(entry)}>🔁 {copy.reuseMeal}</button><button className="action-btn-outline" type="button" onClick={() => startEditMeal(entry)}>{copy.edit}</button><button className="action-btn-outline danger-button" type="button" onClick={() => deleteMeal(entry.id)}>{copy.delete}</button></div></article>) : <div className="empty-state"><h4>{copy.caloriesTitle}</h4><p>{copy.noMeals}</p></div>}
             </div>
           </section>
+
+          {cheatDays.length > 0 && (() => {
+            const { labels, data } = getMonthBarData(cheatDays, settings.language);
+            return (
+              <section className="glass-panel fade-in-up" style={{padding:'1.25rem 1.5rem'}}>
+                <div className="panel-header"><h3>{copy.cheatDayChart}</h3><span className="history-count">{cheatDays.length}</span></div>
+                <div className="chart-container"><Bar data={{ labels, datasets: [{ data, backgroundColor: 'rgba(251,146,60,0.45)', borderColor: '#fb923c', borderWidth: 2, borderRadius: 6 }] }} options={BAR_OPTS} /></div>
+              </section>
+            );
+          })()}
         </>}
 
         {activeSection === 'ocenjevalec' && (<>
@@ -2750,6 +2804,17 @@ Be concise. Use average homemade/generic values, not brand values.`;
             </div>
           )}
           <button className="feedback-fab" type="button" title={copy.ratingsTitle} onClick={() => setFeedbackOpen(v => !v)}>💬</button>
+        </div>
+      )}
+      {swUpdatePending && (
+        <div className="sw-update-banner">
+          <span>{settings.language === 'sl' ? '🆕 Nova verzija je na voljo!' : '🆕 New version available!'}</span>
+          <div className="sw-update-actions">
+            <button className="action-btn-primary" style={{padding:'0.35rem 1rem',fontSize:'0.85rem'}} type="button" onClick={() => window.location.reload()}>
+              {settings.language === 'sl' ? 'Osveži' : 'Reload'}
+            </button>
+            <button className="action-btn-outline" style={{padding:'0.35rem 0.6rem',fontSize:'0.85rem'}} type="button" onClick={() => setSwUpdatePending(false)}>✕</button>
+          </div>
         </div>
       )}
       {toast ? <div className="toast-container"><div className="toast">{toast}</div></div> : null}

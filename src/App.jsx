@@ -323,6 +323,7 @@ const defaultSettings = { units: 'kg', language: 'sl', dateFormat: 'DD.MM.YYYY',
 const RATINGS_KEY = 'powergraph_ratings';
 const BANNED_KEY = 'powergraph_banned';
 const MODS_KEY = 'powergraph_mods';
+const PRESENCE_KEY = 'powergraph_presence';
 
 const ui = {
   sl: {
@@ -536,6 +537,16 @@ const ui = {
     adminDemoteDone: 'Rang znižan',
     adminMaxRank: 'Že na max rangu',
     adminMinRank: 'Že na min rangu',
+    adminActiveUsers: 'Aktivni uporabniki',
+    adminOnlineNow: '🟢 Aktiven zdaj',
+    adminRecentlyActive: '🟡 Nedavno aktiven',
+    adminOffline: '⚫ Offline',
+    adminNoActive: 'Ni aktivnih uporabnikov.',
+    adminLastSeen: 'Zadnjič viden',
+    adminComments: 'Komentarji uporabnikov',
+    adminNoComments: 'Ni komentarjev.',
+    adminPrivateNote: 'Zasebna opomba',
+    adminStars: 'Ocena',
     loading: 'Nalagam...',
     rankings: 'Lestvica rangov',
     rankTitle: 'Moj rang',
@@ -833,6 +844,16 @@ const ui = {
     adminDemoteDone: 'Rank decreased',
     adminMaxRank: 'Already at max rank',
     adminMinRank: 'Already at min rank',
+    adminActiveUsers: 'Active users',
+    adminOnlineNow: '🟢 Online now',
+    adminRecentlyActive: '🟡 Recently active',
+    adminOffline: '⚫ Offline',
+    adminNoActive: 'No active users.',
+    adminLastSeen: 'Last seen',
+    adminComments: 'User comments',
+    adminNoComments: 'No comments yet.',
+    adminPrivateNote: 'Private note',
+    adminStars: 'Rating',
     loading: 'Loading...',
     rankings: 'Rankings',
     rankTitle: 'My rank',
@@ -1359,6 +1380,36 @@ async function pushLoginLog(email, type) {
   } catch { recordLogin(email, type); }
 }
 
+function loadPresence() { try { return JSON.parse(localStorage.getItem(PRESENCE_KEY) || '[]'); } catch { return []; } }
+function savePresence(list) { localStorage.setItem(PRESENCE_KEY, JSON.stringify(list)); }
+async function pushPresenceToGist(email) {
+  const ua = navigator.userAgent.slice(0, 80);
+  const entry = { email, ts: new Date().toISOString(), ua };
+  if (!GITHUB_TOKEN || !GIST_ID) {
+    const list = loadPresence().filter(p => p.email !== email);
+    list.push(entry);
+    savePresence(list);
+    return;
+  }
+  try {
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, { headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json' } });
+    const data = await res.json();
+    let list = [];
+    try { list = JSON.parse(data.files?.['presence.json']?.content || '[]'); } catch {}
+    list = list.filter(p => p.email !== email);
+    list.push(entry);
+    await fetch(`https://api.github.com/gists/${GIST_ID}`, { method: 'PATCH', headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify({ files: { 'presence.json': { content: JSON.stringify(list) } } }) });
+  } catch {}
+}
+async function fetchPresence() {
+  if (!GITHUB_TOKEN || !GIST_ID) return loadPresence();
+  try {
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, { headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json' } });
+    const data = await res.json();
+    return JSON.parse(data.files?.['presence.json']?.content || '[]');
+  } catch { return loadPresence(); }
+}
+
 function gistFileName(email) { return `data_${email.replace(/[^a-z0-9]/gi, '_')}.json`; }
 
 async function gistPushData(email, payload) {
@@ -1525,6 +1576,7 @@ export default function App() {
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
   const [adminLogs, setAdminLogs] = useState(null);
+  const [adminPresence, setAdminPresence] = useState([]);
   const [adminBonus, setAdminBonus] = useState(() => loadAdminBonus(localStorage.getItem(SESSION_KEY) || ''));
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [commentText, setCommentText] = useState('');
@@ -1799,7 +1851,17 @@ export default function App() {
     if (activeSection !== 'admin' || currentUser !== ADMIN_EMAIL) return;
     setAdminLogs(null);
     fetchLoginLogs().then(setAdminLogs);
+    fetchPresence().then(setAdminPresence);
+    const id = setInterval(() => fetchPresence().then(setAdminPresence), 30000);
+    return () => clearInterval(id);
   }, [activeSection, currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return undefined;
+    pushPresenceToGist(currentUser);
+    const id = setInterval(() => pushPresenceToGist(currentUser), 60000);
+    return () => clearInterval(id);
+  }, [currentUser]);
 
   useEffect(() => {
     if (!GITHUB_TOKEN || !GIST_ID || !currentUser) return undefined;
@@ -2801,6 +2863,10 @@ Be concise. Use average homemade/generic values, not brand values.`;
           const totalWorkouts = userStats.reduce((s, u) => s + u.workouts, 0);
           const loginLogs = adminLogs || [];
           const recentLogins = [...loginLogs].reverse().slice(0, 100);
+          const now = Date.now();
+          const allPresence = [...adminPresence].sort((a, b) => new Date(b.ts) - new Date(a.ts));
+          const activeNow = allPresence.filter(p => now - new Date(p.ts).getTime() < 3 * 60000);
+          const allRatings = loadRatings();
           return (
             <>
               <section className="glass-panel action-panel fade-in-up">
@@ -2812,35 +2878,93 @@ Be concise. Use average homemade/generic values, not brand values.`;
               <div className="dashboard-grid">
                 <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">U</div><div><p className="stat-title">{copy.adminTotalUsers}</p><h3 className="stat-value">{allUsers.length}</h3></div></article>
                 <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">T</div><div><p className="stat-title">{copy.adminTotalWorkouts}</p><h3 className="stat-value">{totalWorkouts}</h3></div></article>
+                <article className="glass-panel stat-card fade-in-up"><div className="stat-icon" style={{background:'#22c55e',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#000'}}>●</div><div><p className="stat-title">{copy.adminActiveUsers}</p><h3 className="stat-value">{activeNow.length}</h3></div></article>
               </div>
+              <section className="glass-panel history-section fade-in-up">
+                <div className="panel-header"><h3>{copy.adminActiveUsers}</h3><span className="history-count">{activeNow.length}</span></div>
+                {allPresence.length === 0
+                  ? <div className="empty-state"><p>{copy.adminNoActive}</p></div>
+                  : <div className="exercise-grid" style={{padding:'0.5rem 0'}}>
+                      {allPresence.map(p => {
+                        const diffMs = now - new Date(p.ts).getTime();
+                        const mins = Math.floor(diffMs / 60000);
+                        const status = mins < 2 ? copy.adminOnlineNow : mins < 5 ? copy.adminRecentlyActive : copy.adminOffline;
+                        const isMod = modUsers.includes(p.email);
+                        return (
+                          <article className="glass-panel" key={p.email} style={{padding:'0.85rem 1rem',display:'flex',flexDirection:'column',gap:'0.4rem'}}>
+                            <div style={{display:'flex',alignItems:'center',gap:'0.6rem'}}>
+                              <div className="stat-icon blue-glow" style={{width:'1.8rem',height:'1.8rem',fontSize:'0.8rem',flexShrink:0}}>{p.email[0].toUpperCase()}</div>
+                              <div style={{flex:1,minWidth:0}}>
+                                <h4 style={{fontSize:'0.85rem',wordBreak:'break-all',margin:0}}>{p.email}</h4>
+                                {isMod && <span style={{fontSize:'0.72rem',color:'#f59e0b',fontWeight:600}}>Moderator</span>}
+                              </div>
+                            </div>
+                            <p style={{fontSize:'0.78rem',margin:0}}>{status}</p>
+                            <p style={{fontSize:'0.72rem',opacity:0.5,margin:0}}>{copy.adminLastSeen}: {new Date(p.ts).toLocaleTimeString()}</p>
+                            <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap',marginTop:'0.25rem'}}>
+                              <button className="action-btn-outline" style={{fontSize:'0.72rem',padding:'0.2rem 0.5rem'}} type="button" onClick={() => adminChangeRank(p.email, 'up')}>{copy.adminRankUp}</button>
+                              {p.email !== ADMIN_EMAIL && (isMod
+                                ? <button className="action-btn-outline" style={{fontSize:'0.72rem',padding:'0.2rem 0.5rem',color:'#f59e0b',borderColor:'#f59e0b'}} type="button" onClick={() => toggleMod(p.email)}>{copy.adminRemoveMod}</button>
+                                : <button className="action-btn-primary" style={{fontSize:'0.72rem',padding:'0.2rem 0.5rem'}} type="button" onClick={() => toggleMod(p.email)}>{copy.adminSetMod}</button>
+                              )}
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                }
+              </section>
               <section className="glass-panel history-section fade-in-up">
                 <div className="panel-header"><h3>{copy.adminUsers}</h3><span className="history-count">{allUsers.length}</span></div>
                 <div className="history-list">
                   {userStats.length === 0 && <div className="empty-state"><p>{copy.adminNoUsers}</p></div>}
-                  {userStats.map((u) => (
-                    <article className="history-item" key={u.email} style={{flexDirection:'column',alignItems:'flex-start',gap:'0.5rem'}}>
-                      <div style={{display:'flex',alignItems:'center',gap:'0.75rem',width:'100%'}}>
-                        <div className="stat-icon blue-glow" style={{width:'2rem',height:'2rem',fontSize:'0.85rem',flexShrink:0}}>{u.email[0].toUpperCase()}</div>
+                  {userStats.map((u) => {
+                    const presenceEntry = adminPresence.find(p => p.email === u.email);
+                    const isOnline = presenceEntry && (now - new Date(presenceEntry.ts).getTime()) < 3 * 60000;
+                    return (
+                      <article className="history-item" key={u.email} style={{flexDirection:'column',alignItems:'flex-start',gap:'0.5rem'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:'0.75rem',width:'100%'}}>
+                          <div className="stat-icon blue-glow" style={{width:'2rem',height:'2rem',fontSize:'0.85rem',flexShrink:0}}>{u.email[0].toUpperCase()}</div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <h3 style={{fontSize:'0.95rem',wordBreak:'break-all'}}>{u.email}{isOnline && <span style={{marginLeft:'0.5rem',fontSize:'0.75rem',color:'#22c55e',fontWeight:600}}>● online</span>}</h3>
+                            <p style={{fontSize:'0.78rem',opacity:0.6}}>{copy.adminRegistered}: {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</p>
+                          </div>
+                        </div>
+                        <div className="stats-list" style={{width:'100%',marginTop:'0.25rem'}}>
+                          <div className="stats-row"><span>{copy.adminWorkouts}</span><strong>{u.workouts}</strong></div>
+                          <div className="stats-row"><span>{copy.adminMeals}</span><strong>{u.meals}</strong></div>
+                          <div className="stats-row"><span>{copy.adminBodyWeight}</span><strong>{u.bw}</strong></div>
+                          <div className="stats-row"><span>{copy.adminLastWorkout}</span><strong>{u.lastWorkout ? formatDateValue(u.lastWorkout, settings.dateFormat) : copy.adminNever}</strong></div>
+                          <div className="stats-row"><span>{copy.rankTitle}</span><strong>{u.rank.displayName} ({u.pts} {copy.rankPoints})</strong></div>
+                        </div>
+                        <div style={{display:'flex',gap:'0.5rem',marginTop:'0.25rem',flexWrap:'wrap'}}>
+                          <button className="action-btn-outline" type="button" onClick={() => adminChangeRank(u.email, 'up')}>{copy.adminRankUp}</button>
+                          <button className="action-btn-outline" type="button" onClick={() => adminChangeRank(u.email, 'down')}>{copy.adminDemote}</button>
+                          {u.email !== ADMIN_EMAIL && (bannedUsers.includes(u.email) ? <button className="action-btn-outline" type="button" style={{color:'var(--secondary-glow)',borderColor:'var(--secondary-glow)'}} onClick={() => unbanUser(u.email)}>{copy.adminUnban}</button> : <button className="action-btn-outline danger-button" type="button" onClick={() => banUser(u.email)}>{copy.adminBan}</button>)}
+                          {u.email !== ADMIN_EMAIL && (modUsers.includes(u.email) ? <button className="action-btn-outline" type="button" style={{color:'#f59e0b',borderColor:'#f59e0b'}} onClick={() => toggleMod(u.email)}>{copy.adminRemoveMod}</button> : <button className="action-btn-primary" type="button" onClick={() => toggleMod(u.email)}>{copy.adminSetMod}</button>)}
+                        </div>
+                        {bannedUsers.includes(u.email) && <div style={{fontSize:'0.78rem',color:'var(--error)',fontWeight:600,padding:'0.2rem 0'}}>{copy.adminBanned}</div>}
+                        {modUsers.includes(u.email) && !bannedUsers.includes(u.email) && <div style={{fontSize:'0.78rem',color:'#22c55e',fontWeight:600,padding:'0.2rem 0'}}>{copy.adminMod}</div>}
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+              <section className="glass-panel history-section fade-in-up">
+                <div className="panel-header"><h3>{copy.adminComments}</h3><span className="history-count">{allRatings.length}</span></div>
+                <div className="history-list">
+                  {allRatings.length === 0 && <div className="empty-state"><p>{copy.adminNoComments}</p></div>}
+                  {[...allRatings].reverse().map((r) => (
+                    <article className="history-item" key={r.id} style={{flexDirection:'column',alignItems:'flex-start',gap:'0.35rem'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'0.6rem',width:'100%'}}>
+                        <div className="stat-icon" style={{width:'2rem',height:'2rem',fontSize:'0.8rem',flexShrink:0,background:'var(--primary-glow)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center'}}>{(r.email || '?')[0].toUpperCase()}</div>
                         <div style={{flex:1,minWidth:0}}>
-                          <h3 style={{fontSize:'0.95rem',wordBreak:'break-all'}}>{u.email}</h3>
-                          <p style={{fontSize:'0.78rem',opacity:0.6}}>{copy.adminRegistered}: {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</p>
+                          <h3 style={{fontSize:'0.9rem',wordBreak:'break-all'}}>{r.email || '—'}</h3>
+                          <p style={{fontSize:'0.75rem',opacity:0.55}}>{new Date(r.date).toLocaleString()} · {'★'.repeat(r.stars)}{'☆'.repeat(5 - r.stars)}</p>
                         </div>
                       </div>
-                      <div className="stats-list" style={{width:'100%',marginTop:'0.25rem'}}>
-                        <div className="stats-row"><span>{copy.adminWorkouts}</span><strong>{u.workouts}</strong></div>
-                        <div className="stats-row"><span>{copy.adminMeals}</span><strong>{u.meals}</strong></div>
-                        <div className="stats-row"><span>{copy.adminBodyWeight}</span><strong>{u.bw}</strong></div>
-                        <div className="stats-row"><span>{copy.adminLastWorkout}</span><strong>{u.lastWorkout ? formatDateValue(u.lastWorkout, settings.dateFormat) : copy.adminNever}</strong></div>
-                        <div className="stats-row"><span>{copy.rankTitle}</span><strong>{u.rank.displayName} ({u.pts} {copy.rankPoints})</strong></div>
-                      </div>
-                      <div style={{display:'flex',gap:'0.5rem',marginTop:'0.25rem',flexWrap:'wrap'}}>
-                        <button className="action-btn-outline" type="button" onClick={() => adminChangeRank(u.email, 'up')}>{copy.adminRankUp}</button>
-                        <button className="action-btn-outline" type="button" onClick={() => adminChangeRank(u.email, 'down')}>{copy.adminDemote}</button>
-                        {u.email !== ADMIN_EMAIL && (bannedUsers.includes(u.email) ? <button className="action-btn-outline" type="button" style={{color:'var(--secondary-glow)',borderColor:'var(--secondary-glow)'}} onClick={() => unbanUser(u.email)}>{copy.adminUnban}</button> : <button className="action-btn-outline danger-button" type="button" onClick={() => banUser(u.email)}>{copy.adminBan}</button>)}
-                        {u.email !== ADMIN_EMAIL && (modUsers.includes(u.email) ? <button className="action-btn-outline" type="button" style={{color:'#f59e0b',borderColor:'#f59e0b'}} onClick={() => toggleMod(u.email)}>{copy.adminRemoveMod}</button> : <button className="action-btn-outline" type="button" onClick={() => toggleMod(u.email)}>{copy.adminSetMod}</button>)}
-                      </div>
-                      {bannedUsers.includes(u.email) && <div style={{fontSize:'0.78rem',color:'var(--error)',fontWeight:600,padding:'0.2rem 0'}}>{copy.adminBanned}</div>}
-                      {modUsers.includes(u.email) && !bannedUsers.includes(u.email) && <div style={{fontSize:'0.78rem',color:'#22c55e',fontWeight:600,padding:'0.2rem 0'}}>{copy.adminMod}</div>}
+                      {r.comment && <p style={{fontSize:'0.85rem',margin:0,paddingLeft:'0.25rem'}}>{r.comment}</p>}
+                      {r.privateComment && <p style={{fontSize:'0.82rem',margin:0,paddingLeft:'0.25rem',color:'#f59e0b',fontStyle:'italic'}}><strong>{copy.adminPrivateNote}:</strong> {r.privateComment}</p>}
                     </article>
                   ))}
                 </div>

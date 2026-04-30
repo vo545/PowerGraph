@@ -2321,23 +2321,24 @@ Be concise. Use average homemade/generic values, not brand values.`;
                 </section>
               );
             })()}
-            <section className="glass-panel action-panel fade-in-up">
-              <div className="panel-header"><h3>{copy.restDay}</h3></div>
-              <div style={{textAlign:'center',padding:'1rem 0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'1rem',flex:1}}>
-                <button className={`action-btn-${restDays.includes(new Date().toISOString().slice(0,10)) ? 'primary' : 'outline'}`} type="button" onClick={toggleRestDay} style={{minWidth:'10rem'}}>
-                  {restDays.includes(new Date().toISOString().slice(0,10)) ? copy.restDayDone : copy.restDay}
-                </button>
-                <p style={{fontSize:'0.78rem',opacity:0.5,margin:0}}>{copy.restDayLast}: {(() => { const last = [...restDays].filter(d => d !== new Date().toISOString().slice(0,10)).sort().at(-1); return last || copy.restDayNever; })()}</p>
-              </div>
-            </section>
           </div>
 
-          {restDays.length > 0 && (() => {
-            const { labels, data } = getMonthBarData(restDays, settings.language);
+          {(() => {
+            const _todayStr = new Date().toISOString().slice(0, 10);
+            const _lastRest = [...restDays].filter(d => d !== _todayStr).sort().at(-1);
+            const _restBar = restDays.length > 0 ? getMonthBarData(restDays, settings.language) : null;
             return (
               <section className="glass-panel fade-in-up" style={{padding:'1.25rem 1.5rem'}}>
-                <div className="panel-header"><h3>{copy.restDayChart}</h3><span className="history-count">{restDays.length}</span></div>
-                <div className="chart-container"><Bar data={{ labels, datasets: [{ data, backgroundColor: 'rgba(99,179,237,0.45)', borderColor: '#63b3ed', borderWidth: 2, borderRadius: 6 }] }} options={BAR_OPTS} /></div>
+                <div style={{display:'flex',flexDirection:'column',gap:'0.75rem'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:'1rem',flexWrap:'wrap'}}>
+                    <button className={`action-btn-${restDays.includes(_todayStr) ? 'primary' : 'outline'}`} type="button" onClick={toggleRestDay}>
+                      {restDays.includes(_todayStr) ? copy.restDayDone : copy.restDay}
+                    </button>
+                    <span style={{fontSize:'0.78rem',opacity:0.5}}>{copy.restDayLast}: {_lastRest || copy.restDayNever}</span>
+                    {restDays.length > 0 && <span className="history-count" style={{marginLeft:'auto'}}>{restDays.length}</span>}
+                  </div>
+                  {_restBar && <div className="chart-container"><Bar data={{ labels: _restBar.labels, datasets: [{ data: _restBar.data, backgroundColor: 'rgba(99,179,237,0.45)', borderColor: '#63b3ed', borderWidth: 2, borderRadius: 6 }] }} options={BAR_OPTS} /></div>}
+                </div>
               </section>
             );
           })()}
@@ -2427,7 +2428,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow">⚡</div><div><p className="stat-title">{copy.caloriesRemaining}</p><h3 className="stat-value">{Math.round(settings.calorieGoal - selectedDayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
 
             <section className="glass-panel chart-panel fade-in-up">
-              <div className="panel-header"><h3>{copy.caloriesProgress}</h3><div className="settings-button-row"><button className={`action-btn-outline ${settings.calorieTrackerMode === 'simple' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'simple' }))}>{copy.simpleTracker}</button><button className={`action-btn-outline ${settings.calorieTrackerMode === 'advanced' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'advanced' }))}>{copy.advancedTracker}</button><input type="date" value={calorieForm.date} onChange={(e) => setCalorieForm((c) => ({ ...c, date: e.target.value }))} /><button className={`action-btn-outline ${cheatDays.includes(calorieForm.date) ? 'active-filter' : ''}`} type="button" onClick={() => toggleCheatDay(calorieForm.date)}>{cheatDays.includes(calorieForm.date) ? copy.cheatDayDone : copy.cheatDay}</button></div></div>
+              <div className="panel-header"><h3>{copy.caloriesProgress}</h3><div className="settings-button-row"><button className={`action-btn-outline ${settings.calorieTrackerMode === 'simple' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'simple' }))}>{copy.simpleTracker}</button><button className={`action-btn-outline ${settings.calorieTrackerMode === 'advanced' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'advanced' }))}>{copy.advancedTracker}</button><input type="date" value={calorieForm.date} onChange={(e) => setCalorieForm((c) => ({ ...c, date: e.target.value }))} /></div></div>
               <div className="calorie-progress-card">
                 <div className="progress-rail"><div className="progress-fill" style={{ width: `${Math.min((selectedDayTotals.calories / Math.max(settings.calorieGoal, 1)) * 100, 100)}%` }} /></div>
                 {settings.calorieTrackerMode === 'advanced' ? <div className="stats-list mt-1">
@@ -2458,25 +2459,34 @@ Be concise. Use average homemade/generic values, not brand values.`;
             </section>
           </div>
 
-          <section className="glass-panel history-section fade-in-up">
-            <div className="panel-header"><h3>{copy.mealsHistory}</h3><div className="settings-button-row"><button className={`action-btn-outline ${analyticsRange === 'week' ? 'active-filter' : ''}`} type="button" onClick={() => setAnalyticsRange('week')}>{copy.weekly}</button><button className={`action-btn-outline ${analyticsRange === 'month' ? 'active-filter' : ''}`} type="button" onClick={() => setAnalyticsRange('month')}>{copy.monthly}</button><span className="history-count">{selectedDayEntries.length}</span></div></div>
-            <div className="stats-split">
-              <div className="stats-block"><div className="stats-list"><div className="stats-row"><span>{copy.analytics}</span><strong>{analyticsRange === 'week' ? copy.weekly : copy.monthly}</strong></div><div className="stats-row"><span>{copy.caloriesConsumed}</span><strong>{Math.round(analyticsFood.calories)} {copy.kcalShort}</strong></div><div className="stats-row"><span>{copy.mealCount}</span><strong>{analyticsFood.entries}</strong></div>{settings.calorieTrackerMode === 'advanced' ? <div className="stats-row"><span>{copy.protein}</span><strong>{Math.round(analyticsFood.protein)} g</strong></div> : null}</div></div>
-            </div>
-            <div className="history-list">
-              {selectedDayEntries.length ? selectedDayEntries.map((entry) => <article className="history-item" key={entry.id}><div><h3>{entry.name}</h3><p>{({ breakfast: copy.breakfast, lunch: copy.lunch, dinner: copy.dinner, snack: copy.snack })[entry.mealType]}</p></div><div className="history-metrics"><span>{Math.round(entry.calories)} {copy.kcalShort}</span>{settings.calorieTrackerMode === 'advanced' ? <><span>P {Math.round(entry.protein)}g</span><span>C {Math.round(entry.carbs)}g</span><span>F {Math.round(entry.fat)}g</span></> : null}</div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={() => reuseMeal(entry)}>🔁 {copy.reuseMeal}</button><button className="action-btn-outline" type="button" onClick={() => startEditMeal(entry)}>{copy.edit}</button><button className="action-btn-outline danger-button" type="button" onClick={() => deleteMeal(entry.id)}>{copy.delete}</button></div></article>) : <div className="empty-state"><h4>{copy.caloriesTitle}</h4><p>{copy.noMeals}</p></div>}
-            </div>
-          </section>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem',alignItems:'start'}}>
+            <section className="glass-panel history-section fade-in-up">
+              <div className="panel-header"><h3>{copy.mealsHistory}</h3><div className="settings-button-row"><button className={`action-btn-outline ${analyticsRange === 'week' ? 'active-filter' : ''}`} type="button" onClick={() => setAnalyticsRange('week')}>{copy.weekly}</button><button className={`action-btn-outline ${analyticsRange === 'month' ? 'active-filter' : ''}`} type="button" onClick={() => setAnalyticsRange('month')}>{copy.monthly}</button><span className="history-count">{selectedDayEntries.length}</span></div></div>
+              <div className="stats-split">
+                <div className="stats-block"><div className="stats-list"><div className="stats-row"><span>{copy.analytics}</span><strong>{analyticsRange === 'week' ? copy.weekly : copy.monthly}</strong></div><div className="stats-row"><span>{copy.caloriesConsumed}</span><strong>{Math.round(analyticsFood.calories)} {copy.kcalShort}</strong></div><div className="stats-row"><span>{copy.mealCount}</span><strong>{analyticsFood.entries}</strong></div>{settings.calorieTrackerMode === 'advanced' ? <div className="stats-row"><span>{copy.protein}</span><strong>{Math.round(analyticsFood.protein)} g</strong></div> : null}</div></div>
+              </div>
+              <div className="history-list">
+                {selectedDayEntries.length ? selectedDayEntries.map((entry) => <article className="history-item" key={entry.id}><div><h3>{entry.name}</h3><p>{({ breakfast: copy.breakfast, lunch: copy.lunch, dinner: copy.dinner, snack: copy.snack })[entry.mealType]}</p></div><div className="history-metrics"><span>{Math.round(entry.calories)} {copy.kcalShort}</span>{settings.calorieTrackerMode === 'advanced' ? <><span>P {Math.round(entry.protein)}g</span><span>C {Math.round(entry.carbs)}g</span><span>F {Math.round(entry.fat)}g</span></> : null}</div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={() => reuseMeal(entry)}>🔁 {copy.reuseMeal}</button><button className="action-btn-outline" type="button" onClick={() => startEditMeal(entry)}>{copy.edit}</button><button className="action-btn-outline danger-button" type="button" onClick={() => deleteMeal(entry.id)}>{copy.delete}</button></div></article>) : <div className="empty-state"><h4>{copy.caloriesTitle}</h4><p>{copy.noMeals}</p></div>}
+              </div>
+            </section>
 
-          {cheatDays.length > 0 && (() => {
-            const { labels, data } = getMonthBarData(cheatDays, settings.language);
-            return (
-              <section className="glass-panel fade-in-up" style={{padding:'1.25rem 1.5rem'}}>
-                <div className="panel-header"><h3>{copy.cheatDayChart}</h3><span className="history-count">{cheatDays.length}</span></div>
-                <div className="chart-container"><Bar data={{ labels, datasets: [{ data, backgroundColor: 'rgba(251,146,60,0.45)', borderColor: '#fb923c', borderWidth: 2, borderRadius: 6 }] }} options={BAR_OPTS} /></div>
-              </section>
-            );
-          })()}
+            {(() => {
+              const _cheatBar = cheatDays.length > 0 ? getMonthBarData(cheatDays, settings.language) : null;
+              return (
+                <section className="glass-panel fade-in-up" style={{padding:'1.25rem 1.5rem'}}>
+                  <div style={{display:'flex',flexDirection:'column',gap:'0.75rem'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'1rem',flexWrap:'wrap'}}>
+                      <button className={`action-btn-${cheatDays.includes(calorieForm.date) ? 'primary' : 'outline'}`} type="button" onClick={() => toggleCheatDay(calorieForm.date)}>
+                        {cheatDays.includes(calorieForm.date) ? copy.cheatDayDone : copy.cheatDay}
+                      </button>
+                      {cheatDays.length > 0 && <span className="history-count" style={{marginLeft:'auto'}}>{cheatDays.length}</span>}
+                    </div>
+                    {_cheatBar && <div className="chart-container"><Bar data={{ labels: _cheatBar.labels, datasets: [{ data: _cheatBar.data, backgroundColor: 'rgba(251,146,60,0.45)', borderColor: '#fb923c', borderWidth: 2, borderRadius: 6 }] }} options={BAR_OPTS} /></div>}
+                  </div>
+                </section>
+              );
+            })()}
+          </div>
         </>}
 
         {activeSection === 'ocenjevalec' && (<>

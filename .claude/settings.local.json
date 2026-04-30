@@ -32,7 +32,8 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('deps:', list\\(d.get\\('dependencies',{}\\).keys\\(\\)\\)\\); print\\('devdeps:', list\\(d.get\\('devDependencies',{}\\).keys\\(\\)\\)\\)\")",
       "Bash(xargs grep *)",
       "Bash(git commit -m ' *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(grep -o \"showFeedbackBtn.*$\" \"c:/Users/vidor/PowerGraph/src/App.jsx\")"
     ]
   }
 }

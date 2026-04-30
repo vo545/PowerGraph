@@ -2321,28 +2321,27 @@ Be concise. Use average homemade/generic values, not brand values.`;
                 </section>
               );
             })()}
+            {(() => {
+              const _todayStr = new Date().toISOString().slice(0, 10);
+              const _lastRest = [...restDays].filter(d => d !== _todayStr).sort().at(-1);
+              const { labels: _rLabels, data: _rData } = getMonthBarData(restDays, settings.language);
+              return (
+                <section className="glass-panel action-panel fade-in-up">
+                  <div className="panel-header">
+                    <h3>{copy.restDay}</h3>
+                    {restDays.length > 0 && <span className="history-count">{restDays.length}</span>}
+                  </div>
+                  <div style={{textAlign:'center',paddingBottom:'0.5rem',display:'flex',flexDirection:'column',alignItems:'center',gap:'0.75rem'}}>
+                    <button className={`action-btn-${restDays.includes(_todayStr) ? 'primary' : 'outline'}`} type="button" onClick={toggleRestDay} style={{minWidth:'10rem'}}>
+                      {restDays.includes(_todayStr) ? copy.restDayDone : copy.restDay}
+                    </button>
+                    <p style={{fontSize:'0.78rem',opacity:0.5,margin:0}}>{copy.restDayLast}: {_lastRest || copy.restDayNever}</p>
+                  </div>
+                  <div className="chart-container"><Bar data={{ labels: _rLabels, datasets: [{ data: _rData, backgroundColor: 'rgba(99,179,237,0.45)', borderColor: '#63b3ed', borderWidth: 2, borderRadius: 6 }] }} options={BAR_OPTS} /></div>
+                </section>
+              );
+            })()}
           </div>
-
-          {(() => {
-            const _todayStr = new Date().toISOString().slice(0, 10);
-            const _lastRest = [...restDays].filter(d => d !== _todayStr).sort().at(-1);
-            const { labels: _rLabels, data: _rData } = getMonthBarData(restDays, settings.language);
-            return (
-              <section className="glass-panel action-panel fade-in-up">
-                <div className="panel-header">
-                  <h3>{copy.restDay}</h3>
-                  {restDays.length > 0 && <span className="history-count">{restDays.length}</span>}
-                </div>
-                <div style={{textAlign:'center',paddingBottom:'0.5rem',display:'flex',flexDirection:'column',alignItems:'center',gap:'0.75rem'}}>
-                  <button className={`action-btn-${restDays.includes(_todayStr) ? 'primary' : 'outline'}`} type="button" onClick={toggleRestDay} style={{minWidth:'10rem'}}>
-                    {restDays.includes(_todayStr) ? copy.restDayDone : copy.restDay}
-                  </button>
-                  <p style={{fontSize:'0.78rem',opacity:0.5,margin:0}}>{copy.restDayLast}: {_lastRest || copy.restDayNever}</p>
-                </div>
-                <div className="chart-container"><Bar data={{ labels: _rLabels, datasets: [{ data: _rData, backgroundColor: 'rgba(99,179,237,0.45)', borderColor: '#63b3ed', borderWidth: 2, borderRadius: 6 }] }} options={BAR_OPTS} /></div>
-              </section>
-            );
-          })()}
 
           <section className="glass-panel stats-section fade-in-up">
             <div className="panel-header"><h3>{copy.byExercise}</h3><div className="settings-button-row"><button className={`action-btn-outline ${analyticsRange === 'week' ? 'active-filter' : ''}`} type="button" onClick={() => setAnalyticsRange('week')}>{copy.weekly}</button><button className={`action-btn-outline ${analyticsRange === 'month' ? 'active-filter' : ''}`} type="button" onClick={() => setAnalyticsRange('month')}>{copy.monthly}</button></div></div>

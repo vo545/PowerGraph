@@ -62,7 +62,7 @@ const BAR_OPTS = {
   plugins: { legend: { display: false } },
   scales: {
     x: { grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8', font: { size: 11 } } },
-    y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8', precision: 0, stepSize: 1 } },
+    y: { beginAtZero: true, suggestedMax: 10, grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8', precision: 0, stepSize: 1 } },
   },
 };
 

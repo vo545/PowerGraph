@@ -475,6 +475,12 @@ const ui = {
     calEstHistoryEmpty: 'Še ni iskanj. Poišči prvo jed zgoraj.',
     calEstSaved: 'Shranjeno v knjižnico.',
     calEstAiResponse: 'Ocena AI',
+    calPhotoTitle: 'Oceni s sliko 📷',
+    calPhotoDesc: 'Slikaj jed – AI oceni kalorije za celoten obrok na sliki.',
+    calPhotoBtn: 'Dodaj sliko / Fotografiraj',
+    calPhotoChange: 'Zamenjaj sliko',
+    calPhotoAnalyze: 'Oceni kalorije',
+    calPhotoNoKey: 'Gemini API ključ ni nastavljen.',
     prTitle: 'Osebni rekordi',
     prBadge: 'PR',
     prNoData: 'Še ni PR-jev. Dodaj trening!',
@@ -803,6 +809,12 @@ const ui = {
     calEstHistoryEmpty: 'No searches yet. Look up your first food above.',
     calEstSaved: 'Saved to library.',
     calEstAiResponse: 'AI estimate',
+    calPhotoTitle: 'Estimate from photo 📷',
+    calPhotoDesc: 'Take a photo – AI estimates the calories for the entire portion shown.',
+    calPhotoBtn: 'Add photo / Take photo',
+    calPhotoChange: 'Change photo',
+    calPhotoAnalyze: 'Estimate calories',
+    calPhotoNoKey: 'Gemini API key is not set.',
     prTitle: 'Personal Records',
     prBadge: 'PR',
     prNoData: 'No PRs yet. Add a workout!',
@@ -1574,6 +1586,7 @@ function downloadFile(name, content, type) {
 
 export default function App() {
   const fileInputRef = useRef(null);
+  const calImageRef = useRef(null);
   const previousCountRef = useRef(0);
   const previousExerciseRef = useRef('Bench Press');
   const timerWorkerRef = useRef(null);
@@ -1604,6 +1617,10 @@ export default function App() {
   const [calResult, setCalResult] = useState(null);
   const [calLoading, setCalLoading] = useState(false);
   const [calError, setCalError] = useState('');
+  const [calImage, setCalImage] = useState(null);
+  const [calImageLoading, setCalImageLoading] = useState(false);
+  const [calPhotoResult, setCalPhotoResult] = useState(null);
+  const [calPhotoError, setCalPhotoError] = useState('');
   const [calHistory, setCalHistory] = useState(() => loadCalHistory(localStorage.getItem(SESSION_KEY) || ''));
   const [bodyWeightEntries, setBodyWeightEntries] = useState(() => loadBodyWeight(localStorage.getItem(SESSION_KEY) || ''));
   const [bwForm, setBwForm] = useState({ date: new Date().toISOString().slice(0, 10), weight: '' });
@@ -2233,6 +2250,64 @@ Be concise. Use average homemade/generic values, not brand values.`;
   }
   function deleteCalHistoryEntry(id) { setCalHistory(prev => prev.filter(e => e.id !== id)); }
 
+  function handleCalImage(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      setCalImage({ base64: dataUrl.split(',')[1], mimeType: file.type || 'image/jpeg', preview: dataUrl });
+      setCalPhotoResult(null);
+      setCalPhotoError('');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function analyzeImageCalories() {
+    if (!calImage) return;
+    const key = import.meta.env.VITE_GEMINI_KEY || '';
+    if (!key) { setCalPhotoError('noKey'); return; }
+    setCalImageLoading(true);
+    setCalPhotoError('');
+    setCalPhotoResult(null);
+    try {
+      const prompt = `You are a nutritionist. Analyze this food photo carefully.
+Identify the food and estimate the total calories for the entire portion shown.
+Briefly describe what you see (1 sentence).
+Then on a new line write exactly: FOOD_NAME: <name of the main food or meal>
+Then on a new line write exactly: KCAL_PER_100G: <average kcal per 100g>
+Then on a new line write exactly: TOTAL_KCAL: <estimated total kcal for the portion shown>
+Be concise. Use average homemade/generic values, not brand values.`;
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ inlineData: { mimeType: calImage.mimeType, data: calImage.base64 } }, { text: prompt }] }] }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const foodMatch = text.match(/FOOD_NAME:\s*(.+)/i);
+        const per100Match = text.match(/KCAL_PER_100G:\s*(\d+)/i);
+        const totalMatch = text.match(/TOTAL_KCAL:\s*(\d+)/i);
+        if (per100Match && totalMatch) {
+          const foodName = foodMatch ? foodMatch[1].trim() : 'Food';
+          const kcalPer100 = Number(per100Match[1]);
+          const total = Number(totalMatch[1]);
+          const aiText = text.replace(/FOOD_NAME:\s*.+/i, '').replace(/KCAL_PER_100G:\s*\d+/i, '').replace(/TOTAL_KCAL:\s*\d+/i, '').trim();
+          const estimatedGrams = kcalPer100 > 0 ? Math.round(total / kcalPer100 * 100) : 100;
+          setCalPhotoResult({ name: foodName, kcalPer100, total, aiText });
+          setCalHistory(prev => [{ id: Date.now(), name: foodName, grams: estimatedGrams, kcalPer100, total, date: new Date().toISOString().slice(0, 10) }, ...prev]);
+          setToast(copy.calEstSaved);
+        } else {
+          setCalPhotoError('error');
+        }
+      } else {
+        setCalPhotoError('error');
+      }
+    } catch { setCalPhotoError('error'); }
+    finally { setCalImageLoading(false); }
+  }
+
   function saveBodyWeight(event) {
     event.preventDefault();
     if (!bwForm.weight || !bwForm.date) return;
@@ -2715,6 +2790,58 @@ Be concise. Use average homemade/generic values, not brand values.`;
                   <div className="glass-panel" style={{marginTop:'1rem',padding:'1rem'}}>
                     <p className="settings-label" style={{marginBottom:'0.4rem'}}>{copy.calEstAiResponse}</p>
                     <p style={{fontSize:'0.9rem',lineHeight:1.5,opacity:.85}}>{calResult.aiText}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+          <section className="glass-panel action-panel fade-in-up">
+            <div className="panel-header"><h3>{copy.calPhotoTitle}</h3></div>
+            <p className="settings-copy" style={{marginBottom:'1rem'}}>{copy.calPhotoDesc}</p>
+            <input ref={calImageRef} type="file" accept="image/*" capture="environment" className="hidden-input" onChange={handleCalImage} />
+            {!calImage ? (
+              <button className="action-btn-outline" style={{width:'100%',padding:'1.5rem',fontSize:'1rem',borderStyle:'dashed'}} type="button" onClick={() => calImageRef.current?.click()}>
+                📷 {copy.calPhotoBtn}
+              </button>
+            ) : (
+              <div style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
+                <div style={{borderRadius:'12px',overflow:'hidden',maxHeight:'18rem',display:'flex',justifyContent:'center',background:'rgba(0,0,0,0.25)'}}>
+                  <img src={calImage.preview} alt="food" style={{maxHeight:'18rem',maxWidth:'100%',objectFit:'contain'}} />
+                </div>
+                <div style={{display:'flex',gap:'0.75rem'}}>
+                  <button className="action-btn-outline" type="button" style={{flex:1}} onClick={() => { setCalImage(null); setCalPhotoResult(null); setCalPhotoError(''); if (calImageRef.current) calImageRef.current.value = ''; }}>
+                    ↺ {copy.calPhotoChange}
+                  </button>
+                  <button className="action-btn-primary" type="button" style={{flex:2}} disabled={calImageLoading} onClick={analyzeImageCalories}>
+                    {calImageLoading ? copy.calEstLoading : `🔍 ${copy.calPhotoAnalyze}`}
+                  </button>
+                </div>
+                {calPhotoError === 'noKey' && <p className="auth-error">{copy.calPhotoNoKey}</p>}
+                {calPhotoError === 'error' && <p className="auth-error">{copy.calEstError}</p>}
+                {calPhotoResult && (
+                  <div>
+                    <div className="dashboard-grid" style={{marginTop:'0.5rem'}}>
+                      <article className="glass-panel stat-card fade-in-up">
+                        <div className="stat-icon blue-glow">📊</div>
+                        <div>
+                          <p className="stat-title">{calPhotoResult.name}</p>
+                          <h3 className="stat-value">{calPhotoResult.kcalPer100} <span style={{fontSize:'0.9rem',opacity:.7}}>{copy.calEstPer100}</span></h3>
+                        </div>
+                      </article>
+                      <article className="glass-panel stat-card fade-in-up">
+                        <div className="stat-icon green-glow">∑</div>
+                        <div>
+                          <p className="stat-title">{copy.calEstTotal}</p>
+                          <h3 className="stat-value">{calPhotoResult.total} kcal</h3>
+                        </div>
+                      </article>
+                    </div>
+                    {calPhotoResult.aiText && (
+                      <div className="glass-panel" style={{marginTop:'1rem',padding:'1rem'}}>
+                        <p className="settings-label" style={{marginBottom:'0.4rem'}}>{copy.calEstAiResponse}</p>
+                        <p style={{fontSize:'0.9rem',lineHeight:1.5,opacity:.85}}>{calPhotoResult.aiText}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

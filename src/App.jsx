@@ -1226,14 +1226,9 @@ const calisthenicsSections = {
 };
 
 const GYM_SPLIT_COMBOS = [
-  { id: 'back_biceps',    sections: ['Back', 'Biceps'],                  label: { sl: 'Hrbet + Biceps',    en: 'Back + Biceps' } },
-  { id: 'chest_triceps',  sections: ['Chest', 'Triceps'],                label: { sl: 'Prsa + Triceps',    en: 'Chest + Triceps' } },
-  { id: 'legs_shoulders', sections: ['Legs', 'Shoulders'],               label: { sl: 'Noge + Ramena',     en: 'Legs + Shoulders' } },
-  { id: 'back_triceps',   sections: ['Back', 'Triceps'],                  label: { sl: 'Hrbet + Triceps',   en: 'Back + Triceps' } },
-  { id: 'chest_biceps',   sections: ['Chest', 'Biceps'],                  label: { sl: 'Prsa + Biceps',     en: 'Chest + Biceps' } },
-  { id: 'push',           sections: ['Chest', 'Triceps', 'Shoulders'],   label: { sl: 'Push',              en: 'Push' } },
-  { id: 'pull',           sections: ['Back', 'Biceps', 'Forearms'],      label: { sl: 'Pull',              en: 'Pull' } },
-  { id: 'legs_abs',       sections: ['Legs', 'Abs'],                     label: { sl: 'Noge + Trebušne',   en: 'Legs + Abs' } },
+  { id: 'push', sections: ['Chest', 'Triceps', 'Shoulders'], label: { sl: 'Push', en: 'Push' } },
+  { id: 'pull', sections: ['Back', 'Biceps', 'Forearms'],    label: { sl: 'Pull', en: 'Pull' } },
+  { id: 'legs', sections: ['Legs', 'Abs'],                   label: { sl: 'Noge', en: 'Legs' } },
 ];
 
 Object.assign(exerciseInfo, {

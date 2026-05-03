@@ -609,6 +609,11 @@ const ui = {
     gymMode: 'Gym',
     calisthenicsMode: 'Kalistenika',
     advisorModeLabel: 'Na\u010din',
+    splitSectionTitle: 'Mi\u0161i\u010dni split',
+    splitAutoLabel: 'Samodejno',
+    splitCustomLabel: 'Lasten',
+    splitCustomPlaceholder: 'Izberi mi\u0161ice za trening',
+    splitActiveLabel: 'Aktiven split',
     macrosTitle: 'Kalkulator makrohranil',
     macrosGoal: 'Cilj',
     macrosBulk: 'Nabiranje mase',
@@ -943,6 +948,11 @@ const ui = {
     gymMode: 'Gym',
     calisthenicsMode: 'Calisthenics',
     advisorModeLabel: 'Mode',
+    splitSectionTitle: 'Muscle split',
+    splitAutoLabel: 'Auto',
+    splitCustomLabel: 'Custom',
+    splitCustomPlaceholder: 'Select muscles to train',
+    splitActiveLabel: 'Active split',
     macrosTitle: 'Macros Calculator',
     macrosGoal: 'Goal',
     macrosBulk: 'Bulk',
@@ -1214,6 +1224,17 @@ const calisthenicsSections = {
   'Stamina/Cardio': ['Burpee', 'Mountain Climber', 'Jump Rope', 'Box Jump', 'Running'],
   Abs: ['Plank', 'L-Sit', 'Hollow Body Hold', 'Leg Raise', 'V-Up'],
 };
+
+const GYM_SPLIT_COMBOS = [
+  { id: 'back_biceps',    sections: ['Back', 'Biceps'],                  label: { sl: 'Hrbet + Biceps',    en: 'Back + Biceps' } },
+  { id: 'chest_triceps',  sections: ['Chest', 'Triceps'],                label: { sl: 'Prsa + Triceps',    en: 'Chest + Triceps' } },
+  { id: 'legs_shoulders', sections: ['Legs', 'Shoulders'],               label: { sl: 'Noge + Ramena',     en: 'Legs + Shoulders' } },
+  { id: 'back_triceps',   sections: ['Back', 'Triceps'],                  label: { sl: 'Hrbet + Triceps',   en: 'Back + Triceps' } },
+  { id: 'chest_biceps',   sections: ['Chest', 'Biceps'],                  label: { sl: 'Prsa + Biceps',     en: 'Chest + Biceps' } },
+  { id: 'push',           sections: ['Chest', 'Triceps', 'Shoulders'],   label: { sl: 'Push',              en: 'Push' } },
+  { id: 'pull',           sections: ['Back', 'Biceps', 'Forearms'],      label: { sl: 'Pull',              en: 'Pull' } },
+  { id: 'legs_abs',       sections: ['Legs', 'Abs'],                     label: { sl: 'Noge + Trebušne',   en: 'Legs + Abs' } },
+];
 
 Object.assign(exerciseInfo, {
   'Wide Push-Up': { sl: '\u0160iroke sklece', en: 'Wide Push-Up', targets: { sl: 'Prsa, zunanja glava, triceps', en: 'Outer chest, triceps' }, primary: { sl: 'Prsa', en: 'Chest' }, howTo: { sl: 'Postavi roke \u0161ir\u0161e kot ramena in se spusti do tal.', en: 'Place hands wider than shoulders and lower chest to floor.' }, cues: { sl: 'Komolce dr\u017ei v 45\u00b0 kotu.', en: 'Keep elbows at a 45\u00b0 angle.' } },
@@ -1649,6 +1670,8 @@ export default function App() {
   const [ratingForm, setRatingForm] = useState({ stars: 5, comment: '', privateComment: '' });
   const [timerDone, setTimerDone] = useState(false);
   const [advisorMode, setAdvisorMode] = useState('gym');
+  const [advisorSplitId, setAdvisorSplitId] = useState('auto');
+  const [customSplitSections, setCustomSplitSections] = useState([]);
   const [macroForm, setMacroForm] = useState({ weight: '', goal: 'maintain', activity: 'moderate' });
   const [macroResult, setMacroResult] = useState(null);
   const [bannedUsers, setBannedUsers] = useState(() => loadBanned());
@@ -1734,18 +1757,53 @@ export default function App() {
       if (!latestExerciseDate[w.exercise] || w.date > latestExerciseDate[w.exercise]) latestExerciseDate[w.exercise] = w.date;
     });
     const today = new Date().toISOString().slice(0, 10);
-    const ranked = Object.keys(activeAdvisorSections)
-      .map((section) => ({ section, last: latestSectionDate[section] ?? '', score: latestSectionDate[section] ? Math.floor((new Date(today) - new Date(latestSectionDate[section])) / 86400000) : 9999 }))
-      .sort((a, b) => b.score - a.score);
-    const chosen = ranked[0];
-    return {
-      section: chosen.section,
-      last: chosen.last,
-      reason: !chosen.last ? copy.reasonEmpty : chosen.score >= 4 ? copy.reasonCold : copy.reasonBalance,
-      plan: chosen.section === 'Stamina/Cardio' ? copy.planCardio : copy.planStrength,
-      exercises: (activeAdvisorSections[chosen.section] || sections[chosen.section] || []).map((name) => ({ name, last: latestExerciseDate[name] ?? '' })).sort((a, b) => (a.last || '').localeCompare(b.last || '')).slice(0, 5),
-    };
-  }, [copy.planCardio, copy.planStrength, copy.reasonBalance, copy.reasonCold, copy.reasonEmpty, workouts, advisorMode, activeAdvisorSections]);
+    const sectionScore = (sec) => latestSectionDate[sec] ? Math.floor((new Date(today) - new Date(latestSectionDate[sec])) / 86400000) : 9999;
+
+    let chosenSections;
+    let comboLabel = '';
+
+    if (advisorSplitId === 'custom') {
+      chosenSections = customSplitSections.length ? customSplitSections : Object.keys(activeAdvisorSections).slice(0, 1);
+      comboLabel = chosenSections.join(' + ');
+    } else if (advisorSplitId !== 'auto') {
+      const preset = GYM_SPLIT_COMBOS.find(c => c.id === advisorSplitId);
+      chosenSections = preset ? preset.sections : Object.keys(activeAdvisorSections).slice(0, 1);
+      comboLabel = preset ? preset.label[settings.language] || preset.label.en : '';
+    } else if (advisorMode === 'gym') {
+      // auto: pick the GYM_SPLIT_COMBO where the least-trained section is the most neglected
+      const scored = GYM_SPLIT_COMBOS.map(combo => ({
+        combo,
+        score: Math.max(...combo.sections.map(sectionScore)),
+      })).sort((a, b) => b.score - a.score);
+      const best = scored[0].combo;
+      chosenSections = best.sections;
+      comboLabel = best.label[settings.language] || best.label.en;
+    } else {
+      // calisthenics auto: original single-section logic
+      const ranked = Object.keys(activeAdvisorSections)
+        .map((section) => ({ section, score: sectionScore(section) }))
+        .sort((a, b) => b.score - a.score);
+      chosenSections = [ranked[0].section];
+      comboLabel = '';
+    }
+
+    const last = chosenSections.reduce((best, sec) => {
+      const d = latestSectionDate[sec] ?? '';
+      return !best || d > best ? d : best;
+    }, '');
+    const worstScore = Math.max(...chosenSections.map(sectionScore));
+    const reason = !last ? copy.reasonEmpty : worstScore >= 4 ? copy.reasonCold : copy.reasonBalance;
+    const plan = chosenSections.includes('Stamina/Cardio') ? copy.planCardio : copy.planStrength;
+
+    const exercises = chosenSections.flatMap(sec =>
+      (activeAdvisorSections[sec] || sections[sec] || [])
+        .map(name => ({ name, last: latestExerciseDate[name] ?? '', section: sec }))
+        .sort((a, b) => (a.last || '').localeCompare(b.last || ''))
+        .slice(0, 4)
+    );
+
+    return { sections: chosenSections, comboLabel, last, reason, plan, exercises };
+  }, [copy.planCardio, copy.planStrength, copy.reasonBalance, copy.reasonCold, copy.reasonEmpty, workouts, advisorMode, advisorSplitId, customSplitSections, activeAdvisorSections, settings.language]);
 
   const rankData = useMemo(() => {
     const base = calculatePoints(workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, settings.calorieGoal);
@@ -2679,7 +2737,76 @@ Be concise. Use average homemade/generic values, not brand values.`;
           })()}
         </section>}
 
-        {activeSection === 'advisor' && <section className="glass-panel stats-section fade-in-up"><div className="panel-header"><h3>{copy.advisorTitle}</h3><div style={{display:'flex',gap:'0.4rem',marginLeft:'auto'}}><button className={`action-btn-${advisorMode === 'gym' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem'}} onClick={() => setAdvisorMode('gym')}>🏋️ {copy.gymMode}</button><button className={`action-btn-${advisorMode === 'calisthenics' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem'}} onClick={() => setAdvisorMode('calisthenics')}>🤸 {copy.calisthenicsMode}</button></div></div><div className="advisor-grid"><article className="advisor-card"><p className="exercise-category">{copy.focus}</p><h3>{sectionNames[advisor.section]}</h3><p className="settings-copy">{copy.advisorText}</p><div className="stats-list mt-1"><div className="stats-row"><span>{copy.lastWorked}</span><strong>{advisor.last ? formatDateValue(advisor.last, settings.dateFormat) : copy.neverWorked}</strong></div><div className="stats-row"><span>{copy.sets}</span><strong>{advisor.plan}</strong></div></div></article><article className="advisor-card"><p className="exercise-category">{copy.why}</p><p>{advisor.reason}</p></article></div><div className="panel-header mt-1"><h3>{copy.suggested}</h3></div><div className="exercise-grid">{advisor.exercises.map((item) => { const meta = getExerciseInfo(item.name); return <article className="exercise-card" key={item.name}><div className="exercise-top"><div><p className="exercise-category">{sectionNames[advisor.section]}</p><h4>{getExerciseName(item.name, settings.language)}</h4></div><span className="exercise-badge">{item.last ? formatDateValue(item.last, settings.dateFormat) : copy.neverWorked}</span></div><div className="exercise-copy"><p><strong>{copy.target}:</strong> {localize(meta.targets, settings.language)}</p><p><strong>{copy.equipment}:</strong> {localize(meta.equipment, settings.language)}</p><p><strong>{copy.howTo}:</strong> {localize(meta.howTo, settings.language)}</p><p><strong>{copy.cues}:</strong> {localize(meta.cues, settings.language)}</p></div></article>; })}</div></section>}
+        {activeSection === 'advisor' && <section className="glass-panel stats-section fade-in-up">
+          <div className="panel-header">
+            <h3>{copy.advisorTitle}</h3>
+            <div style={{display:'flex',gap:'0.4rem',marginLeft:'auto'}}>
+              <button className={`action-btn-${advisorMode === 'gym' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem'}} onClick={() => { setAdvisorMode('gym'); setAdvisorSplitId('auto'); }}>🏋️ {copy.gymMode}</button>
+              <button className={`action-btn-${advisorMode === 'calisthenics' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem'}} onClick={() => { setAdvisorMode('calisthenics'); setAdvisorSplitId('auto'); }}>🤸 {copy.calisthenicsMode}</button>
+            </div>
+          </div>
+
+          {advisorMode === 'gym' && (
+            <div style={{marginBottom:'1rem'}}>
+              <p className="settings-label" style={{marginBottom:'0.5rem'}}>{copy.splitSectionTitle}</p>
+              <div style={{display:'flex',flexWrap:'wrap',gap:'0.4rem',marginBottom: advisorSplitId === 'custom' ? '0.75rem' : 0}}>
+                <button className={`action-btn-${advisorSplitId === 'auto' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.25rem 0.6rem'}} onClick={() => setAdvisorSplitId('auto')}>⚡ {copy.splitAutoLabel}</button>
+                {GYM_SPLIT_COMBOS.map(combo => (
+                  <button key={combo.id} className={`action-btn-${advisorSplitId === combo.id ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.25rem 0.6rem'}} onClick={() => setAdvisorSplitId(combo.id)}>
+                    {combo.label[settings.language] || combo.label.en}
+                  </button>
+                ))}
+                <button className={`action-btn-${advisorSplitId === 'custom' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.25rem 0.6rem'}} onClick={() => setAdvisorSplitId('custom')}>✏️ {copy.splitCustomLabel}</button>
+              </div>
+              {advisorSplitId === 'custom' && (
+                <div style={{display:'flex',flexWrap:'wrap',gap:'0.4rem'}}>
+                  {Object.keys(sections).map(sec => (
+                    <button key={sec} type="button"
+                      className={`action-btn-${customSplitSections.includes(sec) ? 'primary' : 'outline'}`}
+                      style={{fontSize:'0.75rem',padding:'0.25rem 0.6rem'}}
+                      onClick={() => setCustomSplitSections(prev => prev.includes(sec) ? prev.filter(s => s !== sec) : [...prev, sec])}>
+                      {sectionNames[sec]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="advisor-grid">
+            <article className="advisor-card">
+              <p className="exercise-category">{copy.focus}</p>
+              <h3>{advisor.comboLabel || advisor.sections.map(s => sectionNames[s]).join(' + ')}</h3>
+              <p className="settings-copy">{copy.advisorText}</p>
+              <div className="stats-list mt-1">
+                <div className="stats-row"><span>{copy.lastWorked}</span><strong>{advisor.last ? formatDateValue(advisor.last, settings.dateFormat) : copy.neverWorked}</strong></div>
+                <div className="stats-row"><span>{copy.sets}</span><strong>{advisor.plan}</strong></div>
+              </div>
+            </article>
+            <article className="advisor-card">
+              <p className="exercise-category">{copy.why}</p>
+              <p>{advisor.reason}</p>
+            </article>
+          </div>
+          <div className="panel-header mt-1"><h3>{copy.suggested}</h3></div>
+          <div className="exercise-grid">
+            {advisor.exercises.map((item) => {
+              const meta = getExerciseInfo(item.name);
+              return <article className="exercise-card" key={item.name}>
+                <div className="exercise-top">
+                  <div><p className="exercise-category">{sectionNames[item.section]}</p><h4>{getExerciseName(item.name, settings.language)}</h4></div>
+                  <span className="exercise-badge">{item.last ? formatDateValue(item.last, settings.dateFormat) : copy.neverWorked}</span>
+                </div>
+                <div className="exercise-copy">
+                  <p><strong>{copy.target}:</strong> {localize(meta.targets, settings.language)}</p>
+                  <p><strong>{copy.equipment}:</strong> {localize(meta.equipment, settings.language)}</p>
+                  <p><strong>{copy.howTo}:</strong> {localize(meta.howTo, settings.language)}</p>
+                  <p><strong>{copy.cues}:</strong> {localize(meta.cues, settings.language)}</p>
+                </div>
+              </article>;
+            })}
+          </div>
+        </section>}
 
         {activeSection === 'calories' && <>
           <div className="dashboard-grid">

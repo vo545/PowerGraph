@@ -612,8 +612,6 @@ const ui = {
     splitSectionTitle: 'Mi\u0161i\u010dni split',
     splitAutoLabel: 'Samodejno',
     splitCustomLabel: 'Lasten',
-    splitCustomPlaceholder: 'Izberi mi\u0161ice za trening',
-    splitActiveLabel: 'Aktiven split',
     macrosTitle: 'Kalkulator makrohranil',
     macrosGoal: 'Cilj',
     macrosBulk: 'Nabiranje mase',
@@ -951,8 +949,6 @@ const ui = {
     splitSectionTitle: 'Muscle split',
     splitAutoLabel: 'Auto',
     splitCustomLabel: 'Custom',
-    splitCustomPlaceholder: 'Select muscles to train',
-    splitActiveLabel: 'Active split',
     macrosTitle: 'Macros Calculator',
     macrosGoal: 'Goal',
     macrosBulk: 'Bulk',
@@ -1600,6 +1596,18 @@ function downloadFile(name, content, type) {
   URL.revokeObjectURL(url);
 }
 
+const GEMINI_KEY = import.meta.env.VITE_GEMINI_KEY || '';
+async function callGemini(parts) {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts }] }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data) return null;
+  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+}
+
 export default function App() {
   const fileInputRef = useRef(null);
   const calImageRef = useRef(null);
@@ -1751,15 +1759,15 @@ export default function App() {
       if (!latestSectionDate[section] || w.date > latestSectionDate[section]) latestSectionDate[section] = w.date;
       if (!latestExerciseDate[w.exercise] || w.date > latestExerciseDate[w.exercise]) latestExerciseDate[w.exercise] = w.date;
     });
-    const today = new Date().toISOString().slice(0, 10);
-    const sectionScore = (sec) => latestSectionDate[sec] ? Math.floor((new Date(today) - new Date(latestSectionDate[sec])) / 86400000) : 9999;
+    const todayMs = Date.now() - (Date.now() % 86400000);
+    const sectionScore = (sec) => latestSectionDate[sec] ? Math.floor((todayMs - new Date(latestSectionDate[sec]).getTime()) / 86400000) : 9999;
 
     let chosenSections;
     let comboLabel = '';
 
     if (advisorSplitId === 'custom') {
       chosenSections = customSplitSections.length ? customSplitSections : Object.keys(activeAdvisorSections).slice(0, 1);
-      comboLabel = chosenSections.join(' + ');
+      comboLabel = chosenSections.map(s => sectionNames[s] || s).join(' + ');
     } else if (advisorSplitId !== 'auto') {
       const preset = GYM_SPLIT_COMBOS.find(c => c.id === advisorSplitId);
       chosenSections = preset ? preset.sections : Object.keys(activeAdvisorSections).slice(0, 1);
@@ -2248,12 +2256,11 @@ export default function App() {
     setCalError('');
     setCalResult(null);
 
-    const effectiveKey = import.meta.env.VITE_GEMINI_KEY || '';
     const normalized = normalizeFoodQuery(calQuery);
     const local = LOCAL_FOODS[normalized];
 
     // 1. Gemini AI estimate (if key available)
-    if (effectiveKey) {
+    if (GEMINI_KEY) {
       try {
         const prompt = `You are a nutritionist. The user ate: "${calQuery.trim()}", ${calGrams}g.
 Give a realistic average calorie estimate for this food (not a branded product).
@@ -2261,22 +2268,15 @@ Briefly state what ingredients/preparation you assumed (1 sentence).
 Then on a new line write exactly: KCAL_PER_100G: <number>
 Then on a new line write exactly: TOTAL_KCAL: <number>
 Be concise. Use average homemade/generic values, not brand values.`;
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${effectiveKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const text = await callGemini([{ text: prompt }]);
+        if (text) {
           const per100Match = text.match(/KCAL_PER_100G:\s*(\d+)/i);
           const totalMatch = text.match(/TOTAL_KCAL:\s*(\d+)/i);
           if (per100Match && totalMatch) {
             const kcalPer100 = Number(per100Match[1]);
             const total = Number(totalMatch[1]);
             const aiText = text.replace(/KCAL_PER_100G:\s*\d+/i, '').replace(/TOTAL_KCAL:\s*\d+/i, '').trim();
-            const result = { name: calQuery.trim(), kcalPer100, total, aiText };
-            setCalResult(result);
+            setCalResult({ name: calQuery.trim(), kcalPer100, total, aiText });
             setCalHistory(prev => [{ id: Date.now(), name: calQuery.trim(), grams: Number(calGrams), kcalPer100, total, date: new Date().toISOString().slice(0, 10) }, ...prev]);
             setToast(copy.calEstSaved);
             setCalLoading(false);
@@ -2331,8 +2331,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
 
   async function analyzeImageCalories() {
     if (!calImage) return;
-    const key = import.meta.env.VITE_GEMINI_KEY || '';
-    if (!key) { setCalPhotoError('noKey'); return; }
+    if (!GEMINI_KEY) { setCalPhotoError('noKey'); return; }
     setCalImageLoading(true);
     setCalPhotoError('');
     setCalPhotoResult(null);
@@ -2344,14 +2343,11 @@ Then on a new line write exactly: FOOD_NAME: <name of the main food or meal>
 Then on a new line write exactly: KCAL_PER_100G: <average kcal per 100g>
 Then on a new line write exactly: TOTAL_KCAL: <estimated total kcal for the portion shown>
 Be concise. Use average homemade/generic values, not brand values.`;
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ inlineData: { mimeType: calImage.mimeType, data: calImage.base64 } }, { text: prompt }] }] }),
-      });
-      const data = await res.json().catch(() => null);
-      if (res.ok && data) {
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const text = await callGemini([
+        { inlineData: { mimeType: calImage.mimeType, data: calImage.base64 } },
+        { text: prompt },
+      ]);
+      if (text) {
         const foodMatch = text.match(/FOOD_NAME:\s*(.+)/i);
         const per100Match = text.match(/KCAL_PER_100G:\s*(\d+)/i);
         const totalMatch = text.match(/TOTAL_KCAL:\s*(\d+)/i);
@@ -2368,10 +2364,9 @@ Be concise. Use average homemade/generic values, not brand values.`;
           setCalPhotoError('error');
         }
       } else {
-        console.error('Gemini photo error:', res.status, data);
         setCalPhotoError('error');
       }
-    } catch (err) { console.error('analyzeImageCalories:', err); setCalPhotoError('error'); }
+    } catch { setCalPhotoError('error'); }
     finally { setCalImageLoading(false); }
   }
 
@@ -2768,15 +2763,22 @@ Be concise. Use average homemade/generic values, not brand values.`;
                 <button className={`action-btn-${advisorSplitId === 'custom' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.25rem 0.6rem'}} onClick={() => setAdvisorSplitId('custom')}>✏️ {copy.splitCustomLabel}</button>
               </div>
               {advisorSplitId === 'custom' && (
-                <div style={{display:'flex',flexWrap:'wrap',gap:'0.4rem'}}>
-                  {Object.keys(sections).map(sec => (
-                    <button key={sec} type="button"
-                      className={`action-btn-${customSplitSections.includes(sec) ? 'primary' : 'outline'}`}
-                      style={{fontSize:'0.75rem',padding:'0.25rem 0.6rem'}}
-                      onClick={() => setCustomSplitSections(prev => prev.includes(sec) ? prev.filter(s => s !== sec) : [...prev, sec])}>
-                      {sectionNames[sec]}
-                    </button>
-                  ))}
+                <div style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:'0.4rem'}}>
+                    {Object.keys(sections).map(sec => (
+                      <button key={sec} type="button"
+                        className={`action-btn-${customSplitSections.includes(sec) ? 'primary' : 'outline'}`}
+                        style={{fontSize:'0.75rem',padding:'0.25rem 0.6rem'}}
+                        onClick={() => setCustomSplitSections(prev => prev.includes(sec) ? prev.filter(s => s !== sec) : [...prev, sec])}>
+                        {sectionNames[sec]}
+                      </button>
+                    ))}
+                  </div>
+                  {customSplitSections.length === 0 && (
+                    <p className="settings-copy" style={{fontSize:'0.8rem',opacity:0.6,margin:0}}>
+                      {settings.language === 'sl' ? 'Izberi vsaj eno mišično skupino.' : 'Select at least one muscle group.'}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -2934,7 +2936,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
           <section className="glass-panel action-panel fade-in-up">
             <div className="panel-header"><h3>{copy.calPhotoTitle}</h3></div>
             <p className="settings-copy" style={{marginBottom:'1rem'}}>{copy.calPhotoDesc}</p>
-            <input ref={calImageRef} type="file" accept="image/*" capture="environment" className="hidden-input" onChange={handleCalImage} />
+            <input ref={calImageRef} type="file" accept="image/*" className="hidden-input" onChange={handleCalImage} />
             {!calImage ? (
               <button className="action-btn-outline" style={{width:'100%',padding:'1.5rem',fontSize:'1rem',borderStyle:'dashed'}} type="button" onClick={() => calImageRef.current?.click()}>
                 📷 {copy.calPhotoBtn}

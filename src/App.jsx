@@ -2306,14 +2306,27 @@ Be concise. Use average homemade/generic values, not brand values.`;
   function handleCalImage(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target.result;
-      setCalImage({ base64: dataUrl.split(',')[1], mimeType: file.type || 'image/jpeg', preview: dataUrl });
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1280;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+        else { width = Math.round(width * MAX / height); height = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      setCalImage({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg', preview: dataUrl });
       setCalPhotoResult(null);
       setCalPhotoError('');
     };
-    reader.readAsDataURL(file);
+    img.onerror = () => { URL.revokeObjectURL(url); setCalPhotoError('error'); };
+    img.src = url;
   }
 
   async function analyzeImageCalories() {
@@ -2336,8 +2349,8 @@ Be concise. Use average homemade/generic values, not brand values.`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ inlineData: { mimeType: calImage.mimeType, data: calImage.base64 } }, { text: prompt }] }] }),
       });
-      if (res.ok) {
-        const data = await res.json();
+      const data = await res.json().catch(() => null);
+      if (res.ok && data) {
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
         const foodMatch = text.match(/FOOD_NAME:\s*(.+)/i);
         const per100Match = text.match(/KCAL_PER_100G:\s*(\d+)/i);
@@ -2355,9 +2368,10 @@ Be concise. Use average homemade/generic values, not brand values.`;
           setCalPhotoError('error');
         }
       } else {
+        console.error('Gemini photo error:', res.status, data);
         setCalPhotoError('error');
       }
-    } catch { setCalPhotoError('error'); }
+    } catch (err) { console.error('analyzeImageCalories:', err); setCalPhotoError('error'); }
     finally { setCalImageLoading(false); }
   }
 

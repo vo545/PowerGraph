@@ -42,6 +42,7 @@ async function pullFromBackend(email) {
 
 const WORKOUTS_KEY_PREFIX = 'powergraph_workouts_';
 const CALORIES_KEY_PREFIX = 'powergraph_calories_';
+const CUSTOM_EX_KEY_PREFIX = 'powergraph_custom_ex_';
 const CAL_HISTORY_KEY_PREFIX = 'powergraph_calhistory_';
 const BODYWEIGHT_KEY_PREFIX = 'powergraph_bodyweight_';
 const RECAP_KEY_PREFIX = 'powergraph_recap_';
@@ -304,6 +305,8 @@ function getRestKey(email) { return `${REST_KEY_PREFIX}${(email || '').split('@'
 function getCheatKey(email) { return `${CHEAT_KEY_PREFIX}${(email || '').split('@')[0]}`; }
 function loadRestDays(email) { if (!email) return []; try { return JSON.parse(localStorage.getItem(getRestKey(email)) || '[]'); } catch { return []; } }
 function loadCheatDays(email) { if (!email) return []; try { return JSON.parse(localStorage.getItem(getCheatKey(email)) || '[]'); } catch { return []; } }
+function getCustomExKey(email) { return `${CUSTOM_EX_KEY_PREFIX}${email}`; }
+function loadCustomExercises(email) { if (!email) return []; try { return JSON.parse(localStorage.getItem(getCustomExKey(email)) || '[]'); } catch { return []; } }
 function loadBodyWeight(email) {
   if (!email) return [];
   try {
@@ -662,6 +665,16 @@ const ui = {
     tutorialStep7: 'Za vsak trening, osebni rekord in dan počitka dobiš točke. Z njimi napreduj skozi range – od začetnika do legende!',
     tutorialStep8Title: 'Nastavitve ⚙️',
     tutorialStep8: 'V nastavitvah izberi jezik, enote in varnostno kopiranje. Vodič (ta zaslon) je vedno dostopen tukaj.',
+    myEquipmentTitle: 'Moja oprema',
+    addCustomExercise: 'Dodaj vajo',
+    customExName: 'Ime vaje (npr. Lat Pulldown)',
+    customExSection: 'Mišična skupina',
+    customExFetch: 'Pridobi navodila z AI',
+    customExAdding: 'Iščem navodila…',
+    customExAdded: 'Vaja dodana!',
+    customExError: 'Napaka pri iskanju navodil. Poskusi znova.',
+    customExEmpty: 'Dodaj svojo prvo vajo s klikom na + Dodaj vajo.',
+    customExDelete: 'Odstrani',
   },
   en: {
     app: 'PowerGraph',
@@ -999,6 +1012,16 @@ const ui = {
     tutorialStep7: 'Earn points for every workout, personal record, and rest day. Climb through ranks — from Beginner all the way to Legend!',
     tutorialStep8Title: 'Settings ⚙️',
     tutorialStep8: 'In Settings you can change the language, units, and backup options. The tutorial button is also here if you want to see this guide again.',
+    myEquipmentTitle: 'My Equipment',
+    addCustomExercise: 'Add exercise',
+    customExName: 'Exercise name (e.g. Lat Pulldown)',
+    customExSection: 'Muscle group',
+    customExFetch: 'Fetch AI instructions',
+    customExAdding: 'Fetching instructions…',
+    customExAdded: 'Exercise added!',
+    customExError: 'Failed to fetch instructions. Try again.',
+    customExEmpty: 'Add your first exercise by clicking + Add exercise.',
+    customExDelete: 'Remove',
   },
 };
 
@@ -1685,6 +1708,11 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
+  const [customExercises, setCustomExercises] = useState(() => loadCustomExercises(localStorage.getItem(SESSION_KEY) || ''));
+  const [showAddExercise, setShowAddExercise] = useState(false);
+  const [addExForm, setAddExForm] = useState({ name: '', section: 'Back' });
+  const [addExLoading, setAddExLoading] = useState(false);
+  const [addExError, setAddExError] = useState('');
 
   const copy = ui[settings.language];
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -1701,7 +1729,7 @@ export default function App() {
     ratings: settings.language === 'sl' ? 'Oceni aplikacijo z zvezdami in napiši predlog za izboljšavo.' : 'Rate the app with stars and write a suggestion for improvement.',
     admin: settings.language === 'sl' ? 'Pregled vseh registriranih uporabnikov in njihovih podatkov.' : 'Overview of all registered users and their data.',
   };
-  const exerciseOptions = useMemo(() => [...new Set([...Object.values(sections).flat(), ...workouts.map((w) => w.exercise)])].sort(), [workouts]);
+  const exerciseOptions = useMemo(() => [...new Set([...Object.values(sections).flat(), ...workouts.map((w) => w.exercise), ...customExercises.map(e => e.name)])].sort(), [workouts, customExercises]);
   const selectedWorkouts = useMemo(() => workouts.filter((w) => w.exercise === selectedExercise).sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id), [selectedExercise, workouts]);
   const sortedWorkouts = useMemo(() => [...workouts].sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id), [workouts]);
   const overall = useMemo(() => workouts.reduce((a, w) => ({ workouts: a.workouts + 1, sets: a.sets + getSetCount(w), reps: a.reps + getTotalReps(w), volumeKg: a.volumeKg + getVolume(w), bestKg: Math.max(a.bestKg, w.weight) }), { workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }), [workouts]);
@@ -1858,6 +1886,7 @@ export default function App() {
     setRestDays(loadRestDays(currentUser));
     setCheatDays(loadCheatDays(currentUser));
     setAdminBonus(loadAdminBonus(currentUser));
+    setCustomExercises(loadCustomExercises(currentUser));
     setSelectedExercise('Bench Press');
     setActiveSection('dashboard');
     // Monthly recap check
@@ -2370,6 +2399,52 @@ Be concise. Use average homemade/generic values, not brand values.`;
     finally { setCalImageLoading(false); }
   }
 
+  async function handleAddCustomExercise() {
+    const name = addExForm.name.trim();
+    if (!name) return;
+    setAddExLoading(true);
+    setAddExError('');
+
+    let howTo = { sl: '', en: '' };
+    let cues = { sl: '', en: '' };
+    let targets = { sl: '', en: '' };
+    let primary = { sl: sectionNames[addExForm.section] || addExForm.section, en: addExForm.section };
+
+    if (GEMINI_KEY) {
+      try {
+        const prompt = `You are a fitness expert. For the exercise "${name}" targeting the "${addExForm.section}" muscle group, respond ONLY with this JSON object (no markdown, no extra text):
+{"howTo":{"en":"...","sl":"..."},"cues":{"en":"...","sl":"..."},"targets":{"en":"...","sl":"..."},"primary":{"en":"...","sl":"..."}}
+Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
+        const text = await callGemini([{ text: prompt }]);
+        if (text) {
+          const m = text.match(/\{[\s\S]*\}/);
+          if (m) {
+            const p = JSON.parse(m[0]);
+            if (p.howTo?.en) howTo = p.howTo;
+            if (p.cues?.en) cues = p.cues;
+            if (p.targets?.en) targets = p.targets;
+            if (p.primary?.en) primary = p.primary;
+          }
+        }
+      } catch { setAddExError(copy.customExError); setAddExLoading(false); return; }
+    }
+
+    const ex = { id: Date.now(), name, section: addExForm.section, howTo, cues, targets, primary };
+    const updated = [...customExercises, ex];
+    setCustomExercises(updated);
+    localStorage.setItem(getCustomExKey(currentUser), JSON.stringify(updated));
+    setAddExForm({ name: '', section: 'Back' });
+    setShowAddExercise(false);
+    setToast(copy.customExAdded);
+    setAddExLoading(false);
+  }
+
+  function deleteCustomExercise(id) {
+    const updated = customExercises.filter(e => e.id !== id);
+    setCustomExercises(updated);
+    localStorage.setItem(getCustomExKey(currentUser), JSON.stringify(updated));
+  }
+
   function saveBodyWeight(event) {
     event.preventDefault();
     if (!bwForm.weight || !bwForm.date) return;
@@ -2731,13 +2806,80 @@ Be concise. Use average homemade/generic values, not brand values.`;
               const matchedNames = names.filter(name => !q || getExerciseName(name, settings.language).toLowerCase().includes(q) || name.toLowerCase().includes(q));
               return [section, matchedNames];
             }).filter(([, names]) => names.length > 0);
-            if (filtered.length === 0) return <div className="empty-state"><p>{copy.noExerciseResults}</p></div>;
-            return filtered.map(([section, names]) => (
-              <div className="exercise-section-block" key={section}>
-                <div className="exercise-section-header"><h4>{sectionNames[section]}</h4><span className="exercise-badge">{names.length}</span></div>
-                <div className="exercise-grid">{names.map((name) => { const meta = getExerciseInfo(name); return <article className="exercise-card" key={name}><div className="exercise-top"><div><p className="exercise-category">{sectionNames[section]}</p><h4>{getExerciseName(name, settings.language)}</h4></div><span className="exercise-badge">{localize(meta.primary, settings.language)}</span></div><div className="exercise-copy"><p><strong>{copy.difficulty}:</strong> {localize(meta.difficulty, settings.language)}</p><p><strong>{copy.primary}:</strong> {localize(meta.primary, settings.language)}</p><p><strong>{copy.equipment}:</strong> {localize(meta.equipment, settings.language)}</p><p><strong>{copy.howTo}:</strong> {localize(meta.howTo, settings.language)}</p><p><strong>{copy.cues}:</strong> {localize(meta.cues, settings.language)}</p></div></article>; })}</div>
-              </div>
-            ));
+            const filteredCustom = customExercises.filter(ex => !q || ex.name.toLowerCase().includes(q));
+            if (filtered.length === 0 && filteredCustom.length === 0) return <div className="empty-state"><p>{copy.noExerciseResults}</p></div>;
+            return (
+              <>
+                {filtered.map(([section, names]) => (
+                  <div className="exercise-section-block" key={section}>
+                    <div className="exercise-section-header"><h4>{sectionNames[section]}</h4><span className="exercise-badge">{names.length}</span></div>
+                    <div className="exercise-grid">{names.map((name) => { const meta = getExerciseInfo(name); return <article className="exercise-card" key={name}><div className="exercise-top"><div><p className="exercise-category">{sectionNames[section]}</p><h4>{getExerciseName(name, settings.language)}</h4></div><span className="exercise-badge">{localize(meta.primary, settings.language)}</span></div><div className="exercise-copy"><p><strong>{copy.difficulty}:</strong> {localize(meta.difficulty, settings.language)}</p><p><strong>{copy.primary}:</strong> {localize(meta.primary, settings.language)}</p><p><strong>{copy.equipment}:</strong> {localize(meta.equipment, settings.language)}</p><p><strong>{copy.howTo}:</strong> {localize(meta.howTo, settings.language)}</p><p><strong>{copy.cues}:</strong> {localize(meta.cues, settings.language)}</p></div></article>; })}</div>
+                  </div>
+                ))}
+                <div className="exercise-section-block">
+                  <div className="exercise-section-header">
+                    <h4>🔧 {copy.myEquipmentTitle}</h4>
+                    <button className="action-btn-primary" type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem',marginLeft:'auto'}} onClick={() => { setShowAddExercise(v => !v); setAddExError(''); }}>
+                      {showAddExercise ? copy.cancel : `+ ${copy.addCustomExercise}`}
+                    </button>
+                  </div>
+                  {showAddExercise && (
+                    <div style={{marginBottom:'1rem',padding:'1rem',background:'var(--surface)',borderRadius:'0.5rem',display:'flex',flexDirection:'column',gap:'0.6rem'}}>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder={copy.customExName}
+                        value={addExForm.name}
+                        onChange={e => setAddExForm(f => ({...f, name: e.target.value}))}
+                        onKeyDown={e => { if (e.key === 'Enter' && !addExLoading) handleAddCustomExercise(); }}
+                      />
+                      <select
+                        className="form-input"
+                        value={addExForm.section}
+                        onChange={e => setAddExForm(f => ({...f, section: e.target.value}))}
+                      >
+                        {Object.keys(sections).map(s => (
+                          <option key={s} value={s}>{sectionNames[s]}</option>
+                        ))}
+                      </select>
+                      {addExError && <p style={{color:'var(--danger)',fontSize:'0.82rem',margin:0}}>{addExError}</p>}
+                      <button
+                        className="action-btn-primary"
+                        type="button"
+                        disabled={addExLoading || !addExForm.name.trim()}
+                        onClick={handleAddCustomExercise}
+                      >
+                        {addExLoading ? copy.customExAdding : copy.customExFetch}
+                      </button>
+                    </div>
+                  )}
+                  {filteredCustom.length === 0 && !showAddExercise && (
+                    <p className="settings-copy" style={{opacity:0.55,fontSize:'0.85rem'}}>{copy.customExEmpty}</p>
+                  )}
+                  {filteredCustom.length > 0 && (
+                    <div className="exercise-grid">
+                      {filteredCustom.map(ex => (
+                        <article className="exercise-card" key={ex.id}>
+                          <div className="exercise-top">
+                            <div>
+                              <p className="exercise-category">{sectionNames[ex.section] || ex.section}</p>
+                              <h4>{ex.name}</h4>
+                            </div>
+                            <button type="button" className="action-btn-outline" style={{fontSize:'0.7rem',padding:'0.15rem 0.4rem',color:'var(--danger)',borderColor:'var(--danger)',marginLeft:'auto',flexShrink:0}} onClick={() => deleteCustomExercise(ex.id)}>✕</button>
+                          </div>
+                          <div className="exercise-copy">
+                            {ex.primary?.en && <p><strong>{copy.primary}:</strong> {ex.primary[settings.language] || ex.primary.en}</p>}
+                            {ex.targets?.en && <p><strong>{copy.target}:</strong> {ex.targets[settings.language] || ex.targets.en}</p>}
+                            {ex.howTo?.en && <p><strong>{copy.howTo}:</strong> {ex.howTo[settings.language] || ex.howTo.en}</p>}
+                            {ex.cues?.en && <p><strong>{copy.cues}:</strong> {ex.cues[settings.language] || ex.cues.en}</p>}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            );
           })()}
         </section>}
 

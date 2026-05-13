@@ -675,6 +675,54 @@ const ui = {
     customExError: 'Napaka pri iskanju navodil. Poskusi znova.',
     customExEmpty: 'Dodaj svojo prvo vajo s klikom na + Dodaj vajo.',
     customExDelete: 'Odstrani',
+    muscleRankTitle: 'Rang po mišičnih skupinah',
+    muscleRankSelect: 'Klikni mišico na sliki ali izberi skupino',
+    muscleRankNoData: 'Začni trenirati to skupino za rang.',
+    muscleRankVolume: 'Skupni volumen',
+    muscleRankSessions: 'Treningi',
+    muscleRankPRs: 'Osebni rekordi',
+    waterTitle: 'Dnevna potreba po vodi',
+    waterLiters: 'Priporočen dnevni vnos',
+    waterDesc: 'Izračunano glede na težo, starost, spol in aktivnost.',
+    ingredientTracker: 'Sledilnik sestavin',
+    quickMode: 'Hitro',
+    preciseMode: 'Natančno',
+    addIngredient: 'Dodaj sestavino',
+    ingredientName: 'Sestavina (npr. piščanec)',
+    ingredientGrams: 'Gramov',
+    ingredientAnalyze: 'Analiziraj z AI',
+    ingredientAnalyzing: 'Analiziram…',
+    ingredientTotal: 'Skupaj',
+    ingredientNoKey: 'Za analizo potrebuješ Gemini API ključ.',
+    ingredientError: 'Napaka pri analizi. Poskusi znova.',
+    ingredientQuickPlaceholder: 'npr. kruh, 2 jajci, tuna, šparglji, riž',
+    ingredientQuickDesc: 'Napiši jedi in AI bo ocenil količine ter izračunal makre.',
+    bodyFatTitle: 'Ocena % telesne maščobe',
+    bodyFatDesc: 'Poslikaj se v 1–3 pozah. Več slik = bolj natančna ocena.',
+    bodyFatFront: 'Spredaj',
+    bodyFatSide: 'Stran',
+    bodyFatBack: 'Zadaj',
+    bodyFatAnalyze: 'Oceni % telesne maščobe',
+    bodyFatAnalyzing: 'Ocenjujem…',
+    bodyFatResultLabel: '% telesne maščobe',
+    bodyFatNoKey: 'Za oceno potrebuješ Gemini API ključ.',
+    bodyFatError: 'Napaka pri oceni. Poskusi znova.',
+    bodyFatAddPhoto: 'Dodaj fotografijo',
+    bodyFatRemove: 'Odstrani',
+    bodyFatConfidence: 'Zanesljivost',
+    bodyFatCategory: 'Kategorija',
+    reverseCalTitle: 'Čas do cilja',
+    reverseCalDailyKcal: 'Trenutni dnevni vnos (kcal)',
+    reverseCalCalc: 'Izračunaj čas',
+    reverseCalResult: 'Ocenjen čas do cilja',
+    reverseCalWeeks: 'tednov',
+    reverseCalGaining: 'pridobivanje mase',
+    reverseCalLosing: 'hujšanje',
+    setAsGoal: 'Nastavi kot cilj',
+    goalSet: 'Cilj nastavljen!',
+    genderSelect: 'Izberi spol',
+    genderTitle: 'Spol',
+    macrosWater: 'Voda / dan',
   },
   en: {
     app: 'PowerGraph',
@@ -1022,6 +1070,54 @@ const ui = {
     customExError: 'Failed to fetch instructions. Try again.',
     customExEmpty: 'Add your first exercise by clicking + Add exercise.',
     customExDelete: 'Remove',
+    muscleRankTitle: 'Muscle Group Rankings',
+    muscleRankSelect: 'Click a muscle on the body or select a group',
+    muscleRankNoData: 'Start training this group to earn a rank.',
+    muscleRankVolume: 'Total volume',
+    muscleRankSessions: 'Sessions',
+    muscleRankPRs: 'Personal records',
+    waterTitle: 'Daily Water Intake',
+    waterLiters: 'Recommended daily intake',
+    waterDesc: 'Calculated based on weight, age, gender, and activity.',
+    ingredientTracker: 'Ingredient Tracker',
+    quickMode: 'Quick',
+    preciseMode: 'Precise',
+    addIngredient: 'Add ingredient',
+    ingredientName: 'Ingredient (e.g. chicken)',
+    ingredientGrams: 'Grams',
+    ingredientAnalyze: 'Analyze with AI',
+    ingredientAnalyzing: 'Analyzing…',
+    ingredientTotal: 'Total',
+    ingredientNoKey: 'Gemini API key required for analysis.',
+    ingredientError: 'Analysis failed. Try again.',
+    ingredientQuickPlaceholder: 'e.g. bread, 2 eggs, tuna, asparagus, rice',
+    ingredientQuickDesc: 'Type any foods and AI will estimate portions and calculate macros.',
+    bodyFatTitle: 'Body Fat % Estimation',
+    bodyFatDesc: 'Take 1–3 photos in different poses. More photos = more accurate.',
+    bodyFatFront: 'Front',
+    bodyFatSide: 'Side',
+    bodyFatBack: 'Back',
+    bodyFatAnalyze: 'Estimate body fat %',
+    bodyFatAnalyzing: 'Estimating…',
+    bodyFatResultLabel: 'Body fat %',
+    bodyFatNoKey: 'Gemini API key required for estimation.',
+    bodyFatError: 'Estimation failed. Try again.',
+    bodyFatAddPhoto: 'Add photo',
+    bodyFatRemove: 'Remove',
+    bodyFatConfidence: 'Confidence',
+    bodyFatCategory: 'Category',
+    reverseCalTitle: 'Time to Goal',
+    reverseCalDailyKcal: 'Current daily intake (kcal)',
+    reverseCalCalc: 'Calculate time',
+    reverseCalResult: 'Estimated time to goal',
+    reverseCalWeeks: 'weeks',
+    reverseCalGaining: 'gaining mass',
+    reverseCalLosing: 'losing weight',
+    setAsGoal: 'Set as my goal',
+    goalSet: 'Goal set!',
+    genderSelect: 'Select gender',
+    genderTitle: 'Gender',
+    macrosWater: 'Water / day',
   },
 };
 
@@ -1397,6 +1493,24 @@ const RANKS = [
   { name: 'Legenda', nameEn: 'Legend', min: 15000, icon: '👑' },
 ];
 
+const MUSCLE_RANKS = [
+  { nameEn: 'Wood',     nameSl: 'Les',      min: 0,    color: '#a16207', bg: 'linear-gradient(135deg,#78350f,#b45309)' },
+  { nameEn: 'Bronze',   nameSl: 'Bron',     min: 60,   color: '#d97706', bg: 'linear-gradient(135deg,#92400e,#fbbf24)' },
+  { nameEn: 'Silver',   nameSl: 'Srebro',   min: 180,  color: '#94a3b8', bg: 'linear-gradient(135deg,#475569,#cbd5e1)' },
+  { nameEn: 'Gold',     nameSl: 'Zlato',    min: 400,  color: '#f59e0b', bg: 'linear-gradient(135deg,#b45309,#fde68a)' },
+  { nameEn: 'Platinum', nameSl: 'Platina',  min: 750,  color: '#67e8f9', bg: 'linear-gradient(135deg,#0e7490,#a5f3fc)' },
+  { nameEn: 'Diamond',  nameSl: 'Diamant',  min: 1300, color: '#a78bfa', bg: 'linear-gradient(135deg,#6d28d9,#ddd6fe)' },
+  { nameEn: 'Champion', nameSl: 'Prvak',    min: 2200, color: '#f472b6', bg: 'linear-gradient(135deg,#be185d,#fbcfe8)' },
+  { nameEn: 'Titan',    nameSl: 'Titan',    min: 3500, color: '#f87171', bg: 'linear-gradient(135deg,#7f1d1d,#fca5a5)' },
+  { nameEn: 'Olympian', nameSl: 'Olimpijec',min: 5500, color: '#fcd34d', bg: 'linear-gradient(135deg,#78350f,#fcd34d,#67e8f9)' },
+];
+const MUSCLE_RANK_ICONS = ['🪵','🥉','🥈','🥇','💠','💎','🏅','🔥','⚡'];
+const MUSCLE_COLORS = {
+  Chest: '#3b82f6', Back: '#6366f1', Shoulders: '#f59e0b',
+  Biceps: '#8b5cf6', Triceps: '#ec4899', Forearms: '#10b981',
+  Legs: '#f97316', Abs: '#06b6d4', 'Stamina/Cardio': '#ef4444',
+};
+
 function getRank(points, lang) {
   let rank = RANKS[0];
   for (let i = RANKS.length - 1; i >= 0; i--) {
@@ -1438,6 +1552,28 @@ function calculatePoints(workouts, calorieEntries, bodyWeightEntries, restDays, 
     }
   }
   return Math.max(0, pts);
+}
+
+function getMusclePoints(muscleKey, workouts) {
+  const muscleEx = new Set([...(sections[muscleKey] || []), ...(calisthenicsSections[muscleKey] || [])]);
+  const rel = workouts.filter(w => muscleEx.has(w.exercise));
+  let pts = rel.length * 5;
+  const totalVol = rel.reduce((s, w) => s + getVolume(w), 0);
+  pts += Math.floor(totalVol / 800);
+  const exMax = {};
+  [...rel].sort((a, b) => a.date.localeCompare(b.date)).forEach(w => {
+    if (exMax[w.exercise] !== undefined && w.weight > exMax[w.exercise]) pts += 15;
+    if (exMax[w.exercise] === undefined || w.weight > exMax[w.exercise]) exMax[w.exercise] = w.weight;
+  });
+  return { pts: Math.max(0, pts), sessions: rel.length, volume: Math.round(totalVol), prs: Object.keys(exMax).length };
+}
+
+function getMuscleRank(pts, lang) {
+  let rank = MUSCLE_RANKS[0];
+  for (let i = MUSCLE_RANKS.length - 1; i >= 0; i--) {
+    if (pts >= MUSCLE_RANKS[i].min) { rank = MUSCLE_RANKS[i]; break; }
+  }
+  return { ...rank, displayName: lang === 'en' ? rank.nameEn : rank.nameSl, idx: MUSCLE_RANKS.indexOf(rank) };
 }
 
 async function fetchLoginLogs() {
@@ -1631,6 +1767,55 @@ async function callGemini(parts) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
 }
 
+function MuscleSilhouette({ selected, onSelect }) {
+  const dim = 'rgba(148,163,184,0.14)';
+  const dimS = 'rgba(148,163,184,0.22)';
+  const f = (k) => selected === k ? (MUSCLE_COLORS[k] || '#60a5fa') : dim;
+  const s = (k) => selected === k ? 'rgba(255,255,255,0.5)' : dimS;
+  const p = (k) => ({ fill: f(k), stroke: s(k), strokeWidth: 0.9, onClick: () => onSelect(k), style: { cursor: 'pointer' } });
+  return (
+    <svg viewBox="0 0 110 248" style={{ width: '100%', maxWidth: '170px', filter: 'drop-shadow(0 2px 12px rgba(0,0,0,0.35))' }}>
+      {/* Base silhouette outline */}
+      <path d="M55,4 C65,4 67,12 67,12 C74,9 80,16 80,22 C84,23 86,28 86,33 C86,38 84,42 81,42 C88,44 91,51 91,56 C95,57 97,63 95,72 C91,85 88,96 85,102 C82,108 77,112 74,115 L74,122 L36,122 L36,115 C33,112 28,108 25,102 C22,96 19,85 15,72 C13,63 15,57 19,56 C19,51 22,44 29,42 C26,42 24,38 24,33 C24,28 26,23 30,22 C30,16 36,9 43,12 C43,12 45,4 55,4 Z M36,122 C32,124 28,130 28,133 L36,133 L36,216 C35,217 34,221 36,224 L44,224 C46,227 50,226 50,222 L50,133 L60,133 L60,222 C60,226 64,227 66,224 L74,224 C76,221 75,217 74,216 L74,133 L82,133 C82,130 78,124 74,122" fill="rgba(148,163,184,0.07)" stroke="rgba(148,163,184,0.18)" strokeWidth="0.5" />
+      {/* Neck */}
+      <path d="M49,31 L61,31 L59,46 L51,46 Z" fill="rgba(148,163,184,0.18)" />
+      {/* Traps / upper back (visible from front) */}
+      <path d="M51,33 Q40,36 27,47 L31,55 Q41,49 53,47 Z" {...p('Back')} />
+      <path d="M59,33 Q70,36 83,47 L79,55 Q69,49 57,47 Z" {...p('Back')} />
+      {/* Shoulders */}
+      <ellipse cx="21" cy="57" rx="11" ry="8" {...p('Shoulders')} />
+      <ellipse cx="89" cy="57" rx="11" ry="8" {...p('Shoulders')} />
+      {/* Chest left */}
+      <path d="M31,48 Q26,67 39,81 L54,79 L54,46 L35,46 Z" {...p('Chest')} />
+      {/* Chest right */}
+      <path d="M79,48 Q84,67 71,81 L56,79 L56,46 L75,46 Z" {...p('Chest')} />
+      {/* Cardio heart (on top of chest) */}
+      <path d="M55,60 C53,56 47,55 47,61 C47,66 55,74 55,74 C55,74 63,66 63,61 C63,55 57,56 55,60 Z" {...p('Stamina/Cardio')} />
+      {/* Abs */}
+      <path d="M43,81 L67,81 L65,122 L45,122 Z" {...p('Abs')} />
+      {/* Triceps (outer arm, behind biceps) */}
+      <path d="M9,52 Q3,67 5,85 Q9,92 13,89 Q9,81 11,57 Z" {...p('Triceps')} />
+      <path d="M101,52 Q107,67 105,85 Q101,92 97,89 Q101,81 99,57 Z" {...p('Triceps')} />
+      {/* Biceps */}
+      <path d="M13,52 Q7,67 9,85 Q15,93 23,90 Q29,82 27,57 Z" {...p('Biceps')} />
+      <path d="M97,52 Q103,67 101,85 Q95,93 87,90 Q81,82 83,57 Z" {...p('Biceps')} />
+      {/* Forearms */}
+      <path d="M9,85 Q4,108 7,123 Q13,130 19,127 Q25,114 23,90 Z" {...p('Forearms')} />
+      <path d="M101,85 Q106,108 103,123 Q97,130 91,127 Q85,114 87,90 Z" {...p('Forearms')} />
+      {/* Quads left */}
+      <path d="M37,124 Q30,158 28,171 Q36,180 48,175 Q54,160 54,124 Z" {...p('Legs')} />
+      {/* Quads right */}
+      <path d="M73,124 Q80,158 82,171 Q74,180 62,175 Q56,160 56,124 Z" {...p('Legs')} />
+      {/* Calves left */}
+      <path d="M28,171 Q23,196 27,214 Q36,220 44,216 Q48,198 48,175 Z" {...p('Legs')} />
+      {/* Calves right */}
+      <path d="M82,171 Q87,196 83,214 Q74,220 66,216 Q62,198 62,175 Z" {...p('Legs')} />
+      {/* Head */}
+      <circle cx="55" cy="18" r="14" fill="rgba(148,163,184,0.2)" stroke="rgba(148,163,184,0.3)" strokeWidth="0.5" />
+    </svg>
+  );
+}
+
 export default function App() {
   const fileInputRef = useRef(null);
   const calImageRef = useRef(null);
@@ -1641,6 +1826,9 @@ export default function App() {
   const notifTimerRef = useRef(null);
   const timerEndAtRef = useRef(null);
   const timerAlarmFnRef = useRef(null);
+  const bodyFatFrontRef = useRef(null);
+  const bodyFatSideRef = useRef(null);
+  const bodyFatBackRef = useRef(null);
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) ?? 'dark');
   const [currentUser, setCurrentUser] = useState(() => localStorage.getItem(SESSION_KEY) || '');
   const [workouts, setWorkouts] = useState(() => loadWorkouts(localStorage.getItem(SESSION_KEY) || ''));
@@ -1656,7 +1844,7 @@ export default function App() {
   const [analyticsRange, setAnalyticsRange] = useState('week');
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
   const [editingMealId, setEditingMealId] = useState(null);
-  const [authForm, setAuthForm] = useState({ email: '', password: '', confirmPassword: '' });
+  const [authForm, setAuthForm] = useState({ email: '', password: '', confirmPassword: '', gender: 'male' });
   const [formData, setFormData] = useState({ date: new Date().toISOString().slice(0, 10), exercise: 'Bench Press', weight: '', setDetails: ['12', '10', '8'], setWeights: ['', '', ''] });
   const [calorieForm, setCalorieForm] = useState({ date: new Date().toISOString().slice(0, 10), mealType: 'breakfast', name: '', calories: '', protein: '', carbs: '', fat: '' });
   const [calQuery, setCalQuery] = useState('');
@@ -1713,6 +1901,19 @@ export default function App() {
   const [addExForm, setAddExForm] = useState({ name: '', section: 'Back' });
   const [addExLoading, setAddExLoading] = useState(false);
   const [addExError, setAddExError] = useState('');
+  const [selectedRankMuscle, setSelectedRankMuscle] = useState('Chest');
+  const [ingredientMode, setIngredientMode] = useState('quick');
+  const [ingredientQuery, setIngredientQuery] = useState('');
+  const [ingredientItems, setIngredientItems] = useState([{ name: '', grams: '100' }]);
+  const [ingredientResults, setIngredientResults] = useState(null);
+  const [ingredientLoading, setIngredientLoading] = useState(false);
+  const [ingredientError, setIngredientError] = useState('');
+  const [bodyFatImages, setBodyFatImages] = useState({ front: null, side: null, back: null });
+  const [bodyFatResult, setBodyFatResult] = useState(null);
+  const [bodyFatLoading, setBodyFatLoading] = useState(false);
+  const [bodyFatError, setBodyFatError] = useState('');
+  const [reverseCalDailyKcal, setReverseCalDailyKcal] = useState('');
+  const [reverseCalResult, setReverseCalResult] = useState(null);
 
   const copy = ui[settings.language];
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -2058,7 +2259,7 @@ export default function App() {
         const nextUsers = [...users, { email, passwordHash, createdAt: new Date().toISOString() }];
         localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
         localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify([]));
-        localStorage.setItem(getSettingsStorageKey(email), JSON.stringify(defaultSettings));
+        localStorage.setItem(getSettingsStorageKey(email), JSON.stringify({ ...defaultSettings, gender: authForm.gender }));
         await pushLoginLog(email, 'signup');
         await applyGistData(email, await gistPullData(email));
         backendLogin(email, password).then(token => {
@@ -2102,7 +2303,7 @@ export default function App() {
         });
         setCurrentUser(email);
       }
-      setAuthForm({ email: '', password: '', confirmPassword: '' });
+      setAuthForm({ email: '', password: '', confirmPassword: '', gender: 'male' });
     } finally {
       setAuthLoading(false);
     }
@@ -2117,7 +2318,7 @@ export default function App() {
     setBodyWeightEntries([]);
     setSettings(defaultSettings);
     setAuthError('');
-    setAuthForm({ email: '', password: '', confirmPassword: '' });
+    setAuthForm({ email: '', password: '', confirmPassword: '', gender: 'male' });
     setShowRecap(false);
     setRecapData(null);
     setRestDays([]);
@@ -2445,6 +2646,114 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
     localStorage.setItem(getCustomExKey(currentUser), JSON.stringify(updated));
   }
 
+  async function analyzeIngredients(e) {
+    e.preventDefault();
+    if (!GEMINI_KEY) { setIngredientError('noKey'); return; }
+    setIngredientLoading(true);
+    setIngredientError('');
+    setIngredientResults(null);
+    try {
+      let prompt;
+      if (ingredientMode === 'quick') {
+        if (!ingredientQuery.trim()) { setIngredientLoading(false); return; }
+        prompt = `You are a nutritionist. Analyze these foods and estimate typical portions:\n"${ingredientQuery.trim()}"\n\nFor each item, estimate a reasonable typical serving and compute nutrition values.\nReturn ONLY this JSON object (no markdown, no extra text):\n{"total":{"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0},"items":[{"name":"...","grams":0,"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0}]}\nAll values are numbers. Protein/carbs/fat/fiber/sugar are grams for the estimated portion. Use average generic values.`;
+      } else {
+        const valid = ingredientItems.filter(i => i.name.trim() && Number(i.grams) > 0);
+        if (!valid.length) { setIngredientLoading(false); return; }
+        const list = valid.map(i => `- ${i.name.trim()} (${i.grams}g)`).join('\n');
+        prompt = `You are a nutritionist. Calculate exact nutrition for these ingredients:\n${list}\n\nReturn ONLY this JSON object (no markdown, no extra text):\n{"total":{"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0},"items":[{"name":"...","grams":0,"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0}]}\nAll values are numbers. Use average generic values per given grams.`;
+      }
+      const text = await callGemini([{ text: prompt }]);
+      if (text) {
+        const m = text.match(/\{[\s\S]*\}/);
+        if (m) {
+          const parsed = JSON.parse(m[0]);
+          if (parsed.total && Array.isArray(parsed.items)) {
+            setIngredientResults(parsed);
+            const totalKcal = Math.round(parsed.total.kcal);
+            const label = ingredientMode === 'quick' ? ingredientQuery.trim() : ingredientItems.filter(i => i.name.trim()).map(i => i.name.trim()).join(', ');
+            setCalHistory(prev => [{ id: Date.now(), name: label, grams: ingredientMode === 'quick' ? 0 : ingredientItems.reduce((s, i) => s + Number(i.grams || 0), 0), kcalPer100: 0, total: totalKcal, date: new Date().toISOString().slice(0, 10) }, ...prev]);
+            setToast(copy.calEstSaved);
+          } else { setIngredientError('error'); }
+        } else { setIngredientError('error'); }
+      } else { setIngredientError('error'); }
+    } catch { setIngredientError('error'); }
+    finally { setIngredientLoading(false); }
+  }
+
+  function handleBodyFatImage(pose, e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1280;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+        else { width = Math.round(width * MAX / height); height = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      setBodyFatImages(prev => ({ ...prev, [pose]: { base64: dataUrl.split(',')[1], mimeType: 'image/jpeg', preview: dataUrl } }));
+      setBodyFatResult(null); setBodyFatError('');
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); setBodyFatError('error'); };
+    img.src = url;
+  }
+
+  async function estimateBodyFat() {
+    const photos = Object.entries(bodyFatImages).filter(([, img]) => img !== null);
+    if (!photos.length) return;
+    if (!GEMINI_KEY) { setBodyFatError('noKey'); return; }
+    setBodyFatLoading(true); setBodyFatError(''); setBodyFatResult(null);
+    try {
+      const parts = [];
+      photos.forEach(([pose, img]) => {
+        parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } });
+        parts.push({ text: `This is the ${pose} view.` });
+      });
+      const lang = settings.language;
+      parts.push({ text: `You are a body composition expert. Estimate body fat percentage from the photo(s).\nReturn ONLY this JSON (no markdown):\n{"bodyFatPercent":15.5,"confidence":"moderate","category":"Fitness","description":"..."}\n"confidence" is "low", "moderate", or "high". "category" is one of: "Essential fat (<5%)", "Athletes (6-13%)", "Fitness (14-17%)", "Average (18-24%)", "Obese (25%+)" for males, or "Essential fat (<12%)", "Athletes (14-20%)", "Fitness (21-24%)", "Average (25-31%)", "Obese (32%+)" for females.\n"description" is 1-2 sentences in ${lang === 'sl' ? 'Slovenian' : 'English'}.` });
+      const text = await callGemini(parts);
+      if (text) {
+        const m = text.match(/\{[\s\S]*\}/);
+        if (m) {
+          const parsed = JSON.parse(m[0]);
+          if (typeof parsed.bodyFatPercent === 'number') setBodyFatResult(parsed);
+          else setBodyFatError('error');
+        } else setBodyFatError('error');
+      } else setBodyFatError('error');
+    } catch { setBodyFatError('error'); }
+    finally { setBodyFatLoading(false); }
+  }
+
+  function calculateReverseCal(e) {
+    e.preventDefault();
+    const dailyKcal = Number(reverseCalDailyKcal);
+    const goalWeight = Number(tdeeForm.goalWeight);
+    const currentWeight = Number(tdeeForm.currentWeight);
+    const age = Number(tdeeForm.age || settings.age);
+    const height = Number(tdeeForm.height || settings.height);
+    const gender = tdeeForm.gender || settings.gender || 'male';
+    const activity = tdeeForm.activityLevel;
+    if (!dailyKcal || !goalWeight || !currentWeight) return;
+    const mult = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, veryactive: 1.9 }[activity] || 1.55;
+    const bmr = (age && height)
+      ? (gender === 'female' ? 10 * currentWeight + 6.25 * height - 5 * age - 161 : 10 * currentWeight + 6.25 * height - 5 * age + 5)
+      : (gender === 'female' ? 10 * currentWeight + 6.25 * 168 - 5 * 28 - 161 : 10 * currentWeight + 6.25 * 176 - 5 * 28 + 5);
+    const tdee = Math.round(bmr * mult);
+    const dailyDiff = tdee - dailyKcal;
+    const totalKcalNeeded = (currentWeight - goalWeight) * 7700;
+    if (Math.abs(dailyDiff) < 10) { setReverseCalResult({ error: 'noDiff' }); return; }
+    const days = totalKcalNeeded / dailyDiff;
+    const weeks = Math.round(Math.abs(days) / 7);
+    setReverseCalResult({ weeks, tdee, dailyDiff, gaining: totalKcalNeeded < 0 });
+  }
+
   function saveBodyWeight(event) {
     event.preventDefault();
     if (!bwForm.weight || !bwForm.date) return;
@@ -2461,8 +2770,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
     const age = Number(tdeeForm.age);
     const height = Number(tdeeForm.height);
     if (!cw || !gw || !weeks) return;
-    const activityMultipliers = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, veryactive: 1.9 };
-    const mult = activityMultipliers[tdeeForm.activityLevel] || 1.55;
+    const mult = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, veryactive: 1.9 }[tdeeForm.activityLevel] || 1.55;
     let bmr;
     if (age && height) {
       bmr = tdeeForm.gender === 'female'
@@ -2470,15 +2778,25 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
         : 10 * cw + 6.25 * height - 5 * age + 5;
     } else {
       const legacyFactors = { sedentary: 26, light: 30, moderate: 33, active: 37, veryactive: 40 };
-      const tdeeSimple = cw * (legacyFactors[tdeeForm.activityLevel] || 33);
-      bmr = tdeeSimple / mult;
+      bmr = cw * (legacyFactors[tdeeForm.activityLevel] || 33) / mult;
     }
     const tdee = Math.round(bmr * mult);
     const totalKcal = (cw - gw) * 7700;
     const dailyAdjustment = Math.round(totalKcal / (weeks * 7));
     const target = tdee - dailyAdjustment;
+    // Macros based on goal
+    const goalType = gw < cw ? 'cut' : gw > cw ? 'bulk' : 'maintain';
+    const proteinG = Math.round(cw * (goalType === 'bulk' ? 2.2 : goalType === 'cut' ? 2.5 : 2.0));
+    const fatG = Math.round(target * 0.25 / 9);
+    const carbsG = Math.max(0, Math.round((target - proteinG * 4 - fatG * 9) / 4));
+    // Water (ml) — Mifflin formula adjusted for activity & gender
+    const waterBase = cw * 33;
+    const waterActivity = { sedentary: 0, light: 250, moderate: 500, active: 750, veryactive: 1000 }[tdeeForm.activityLevel] || 500;
+    const waterGender = tdeeForm.gender === 'male' ? 350 : 0;
+    const waterAge = age > 55 ? 200 : 0;
+    const waterMl = Math.round((waterBase + waterActivity + waterGender + waterAge) / 100) * 100;
     if (tdeeForm.age) setSettings(c => ({ ...c, gender: tdeeForm.gender, age: tdeeForm.age, height: tdeeForm.height }));
-    setTdeeResult({ tdee, target, dailyAdjustment });
+    setTdeeResult({ tdee, target, dailyAdjustment, protein: proteinG, carbs: carbsG, fat: fatG, waterMl, goalType });
   }
   function startTimer(seconds) {
     requestNotificationPermission();
@@ -2585,6 +2903,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
             <div className="input-group"><label htmlFor="auth-email">{copy.email}</label><input id="auth-email" type="email" value={authForm.email} onChange={(e) => setAuthForm((c) => ({ ...c, email: e.target.value }))} /></div>
             <div className="input-group"><label htmlFor="auth-password">{copy.password}</label><input id="auth-password" type="password" value={authForm.password} onChange={(e) => setAuthForm((c) => ({ ...c, password: e.target.value }))} /></div>
             {authMode === 'signup' ? <div className="input-group"><label htmlFor="auth-confirm">{copy.confirmPassword}</label><input id="auth-confirm" type="password" value={authForm.confirmPassword} onChange={(e) => setAuthForm((c) => ({ ...c, confirmPassword: e.target.value }))} /></div> : null}
+            {authMode === 'signup' ? <div className="input-group"><label>{copy.genderTitle}</label><div style={{display:'flex',gap:'1rem',marginTop:'0.25rem'}}><label style={{display:'flex',alignItems:'center',gap:'0.4rem',cursor:'pointer'}}><input type="radio" name="auth-gender" value="male" checked={authForm.gender === 'male'} onChange={() => setAuthForm(c => ({...c, gender:'male'}))} />{copy.tdeeMale}</label><label style={{display:'flex',alignItems:'center',gap:'0.4rem',cursor:'pointer'}}><input type="radio" name="auth-gender" value="female" checked={authForm.gender === 'female'} onChange={() => setAuthForm(c => ({...c, gender:'female'}))} />{copy.tdeeFemale}</label></div></div> : null}
             {authError ? <p className="auth-error">{authError}</p> : null}
             <button className="action-btn-primary full-width" type="submit" disabled={authLoading}>{authMode === 'signup' ? copy.authCreate : copy.authEnter}</button>
           </form>
@@ -3031,102 +3350,121 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
         </>}
 
         {activeSection === 'ocenjevalec' && (<>
+          {/* Ingredient Tracker */}
           <section className="glass-panel action-panel fade-in-up">
-            <div className="panel-header"><h3>{copy.calEstTitle}</h3></div>
-            <form className="premium-form" onSubmit={searchCalories}>
-              <div className="input-group">
-                <label>{copy.calEstFood}</label>
-                <input type="text" value={calQuery} onChange={e => setCalQuery(e.target.value)} placeholder={copy.calEstPlaceholder} />
+            <div className="panel-header"><h3>{copy.ingredientTracker}</h3>
+              <div style={{display:'flex',gap:'0.5rem'}}>
+                <button type="button" className={`action-btn-${ingredientMode === 'quick' ? 'primary' : 'outline'}`} style={{fontSize:'0.8rem',padding:'0.25rem 0.7rem'}} onClick={() => setIngredientMode('quick')}>{copy.quickMode}</button>
+                <button type="button" className={`action-btn-${ingredientMode === 'precise' ? 'primary' : 'outline'}`} style={{fontSize:'0.8rem',padding:'0.25rem 0.7rem'}} onClick={() => setIngredientMode('precise')}>{copy.preciseMode}</button>
               </div>
-              <div className="input-group">
-                <label>{copy.calEstGrams}</label>
-                <input type="number" min="1" value={calGrams} onChange={e => setCalGrams(e.target.value)} placeholder="100" />
-              </div>
-              <button className="action-btn-primary" type="submit" disabled={calLoading}>
-                {calLoading ? copy.calEstLoading : copy.calEstSearch}
+            </div>
+            <form className="premium-form" onSubmit={analyzeIngredients}>
+              {ingredientMode === 'quick' ? (
+                <div className="input-group">
+                  <label>{copy.ingredientName}</label>
+                  <p className="settings-copy" style={{marginBottom:'0.4rem',fontSize:'0.8rem'}}>{copy.ingredientQuickDesc}</p>
+                  <textarea rows={3} style={{width:'100%',resize:'vertical',padding:'0.6rem',borderRadius:'8px',background:'rgba(148,163,184,0.08)',border:'1px solid rgba(148,163,184,0.2)',color:'inherit',fontSize:'0.9rem'}} value={ingredientQuery} onChange={e => setIngredientQuery(e.target.value)} placeholder={copy.ingredientQuickPlaceholder} />
+                </div>
+              ) : (
+                <div>
+                  {ingredientItems.map((item, idx) => (
+                    <div key={idx} style={{display:'flex',gap:'0.5rem',alignItems:'flex-end',marginBottom:'0.5rem'}}>
+                      <div className="input-group" style={{flex:3,margin:0}}>
+                        {idx === 0 && <label>{copy.ingredientName}</label>}
+                        <input type="text" value={item.name} onChange={e => setIngredientItems(c => c.map((it,i) => i===idx ? {...it,name:e.target.value} : it))} placeholder={copy.ingredientName} />
+                      </div>
+                      <div className="input-group" style={{flex:1,margin:0}}>
+                        {idx === 0 && <label>{copy.ingredientGrams}</label>}
+                        <input type="number" min="1" value={item.grams} onChange={e => setIngredientItems(c => c.map((it,i) => i===idx ? {...it,grams:e.target.value} : it))} placeholder="100" />
+                      </div>
+                      {ingredientItems.length > 1 && <button type="button" className="action-btn-outline danger-button" style={{padding:'0.35rem 0.6rem',marginBottom:'0.1rem'}} onClick={() => setIngredientItems(c => c.filter((_,i) => i !== idx))}>✕</button>}
+                    </div>
+                  ))}
+                  <button type="button" className="action-btn-outline" style={{width:'100%',marginBottom:'0.75rem'}} onClick={() => setIngredientItems(c => [...c, {name:'',grams:'100'}])}>+ {copy.addIngredient}</button>
+                </div>
+              )}
+              <button className="action-btn-primary full-width" type="submit" disabled={ingredientLoading}>
+                {ingredientLoading ? copy.ingredientAnalyzing : copy.ingredientAnalyze}
               </button>
             </form>
-            {calError === 'noResult' && <p className="auth-error">{copy.calEstNoResult}</p>}
-            {calError === 'error' && <p className="auth-error">{copy.calEstError}</p>}
-            {calResult && (
+            {ingredientError === 'noKey' && <p className="auth-error">{copy.ingredientNoKey}</p>}
+            {ingredientError === 'error' && <p className="auth-error">{copy.ingredientError}</p>}
+            {ingredientResults && (
               <div style={{marginTop:'1.5rem'}}>
-                <div className="dashboard-grid">
-                  <article className="glass-panel stat-card fade-in-up">
-                    <div className="stat-icon blue-glow">📊</div>
-                    <div>
-                      <p className="stat-title">{calResult.name}</p>
-                      <h3 className="stat-value">{calResult.kcalPer100} <span style={{fontSize:'0.9rem',opacity:.7}}>{copy.calEstPer100}</span></h3>
-                    </div>
-                  </article>
-                  <article className="glass-panel stat-card fade-in-up">
-                    <div className="stat-icon green-glow">∑</div>
-                    <div>
-                      <p className="stat-title">{calGrams}g → {copy.calEstTotal}</p>
-                      <h3 className="stat-value">{calResult.total} kcal</h3>
-                    </div>
-                  </article>
-                </div>
-                {calResult.aiText && (
-                  <div className="glass-panel" style={{marginTop:'1rem',padding:'1rem'}}>
-                    <p className="settings-label" style={{marginBottom:'0.4rem'}}>{copy.calEstAiResponse}</p>
-                    <p style={{fontSize:'0.9rem',lineHeight:1.5,opacity:.85}}>{calResult.aiText}</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </section>
-          <section className="glass-panel action-panel fade-in-up">
-            <div className="panel-header"><h3>{copy.calPhotoTitle}</h3></div>
-            <p className="settings-copy" style={{marginBottom:'1rem'}}>{copy.calPhotoDesc}</p>
-            <input ref={calImageRef} type="file" accept="image/*" className="hidden-input" onChange={handleCalImage} />
-            {!calImage ? (
-              <button className="action-btn-outline" style={{width:'100%',padding:'1.5rem',fontSize:'1rem',borderStyle:'dashed'}} type="button" onClick={() => calImageRef.current?.click()}>
-                📷 {copy.calPhotoBtn}
-              </button>
-            ) : (
-              <div style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
-                <div style={{borderRadius:'12px',overflow:'hidden',maxHeight:'18rem',display:'flex',justifyContent:'center',background:'rgba(0,0,0,0.25)'}}>
-                  <img src={calImage.preview} alt="food" style={{maxHeight:'18rem',maxWidth:'100%',objectFit:'contain'}} />
-                </div>
-                <div style={{display:'flex',gap:'0.75rem'}}>
-                  <button className="action-btn-outline" type="button" style={{flex:1}} onClick={() => { setCalImage(null); setCalPhotoResult(null); setCalPhotoError(''); if (calImageRef.current) calImageRef.current.value = ''; }}>
-                    ↺ {copy.calPhotoChange}
-                  </button>
-                  <button className="action-btn-primary" type="button" style={{flex:2}} disabled={calImageLoading} onClick={analyzeImageCalories}>
-                    {calImageLoading ? copy.calEstLoading : `🔍 ${copy.calPhotoAnalyze}`}
-                  </button>
-                </div>
-                {calPhotoError === 'noKey' && <p className="auth-error">{copy.calPhotoNoKey}</p>}
-                {calPhotoError === 'error' && <p className="auth-error">{copy.calEstError}</p>}
-                {calPhotoResult && (
-                  <div>
-                    <div className="dashboard-grid" style={{marginTop:'0.5rem'}}>
-                      <article className="glass-panel stat-card fade-in-up">
-                        <div className="stat-icon blue-glow">📊</div>
-                        <div>
-                          <p className="stat-title">{calPhotoResult.name}</p>
-                          <h3 className="stat-value">{calPhotoResult.kcalPer100} <span style={{fontSize:'0.9rem',opacity:.7}}>{copy.calEstPer100}</span></h3>
-                        </div>
-                      </article>
-                      <article className="glass-panel stat-card fade-in-up">
-                        <div className="stat-icon green-glow">∑</div>
-                        <div>
-                          <p className="stat-title">{copy.calEstTotal}</p>
-                          <h3 className="stat-value">{calPhotoResult.total} kcal</h3>
-                        </div>
-                      </article>
-                    </div>
-                    {calPhotoResult.aiText && (
-                      <div className="glass-panel" style={{marginTop:'1rem',padding:'1rem'}}>
-                        <p className="settings-label" style={{marginBottom:'0.4rem'}}>{copy.calEstAiResponse}</p>
-                        <p style={{fontSize:'0.9rem',lineHeight:1.5,opacity:.85}}>{calPhotoResult.aiText}</p>
+                {/* Total summary */}
+                <div style={{padding:'1rem',borderRadius:'12px',background:'linear-gradient(135deg,rgba(99,102,241,0.18),rgba(139,92,246,0.12))',marginBottom:'1rem'}}>
+                  <h3 style={{margin:'0 0 0.6rem',fontSize:'1rem'}}>{copy.ingredientTotal}</h3>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))',gap:'0.5rem'}}>
+                    {[['kcal','🔥','#f59e0b'],['protein','💪','#60a5fa'],['carbs','🌾','#fb923c'],['fat','🫙','#34d399'],['fiber','🌿','#86efac'],['sugar','🍬','#f472b6']].map(([key,icon,color]) => (
+                      <div key={key} style={{textAlign:'center',padding:'0.4rem',borderRadius:'8px',background:'rgba(148,163,184,0.08)'}}>
+                        <div style={{fontSize:'1.1rem'}}>{icon}</div>
+                        <div style={{fontSize:'0.85rem',fontWeight:700,color}}>{ingredientResults.total[key]}{key==='kcal'?'':' g'}</div>
+                        <div style={{fontSize:'0.68rem',opacity:0.6}}>{key}</div>
                       </div>
-                    )}
+                    ))}
                   </div>
-                )}
+                </div>
+                {/* Per-ingredient breakdown */}
+                {ingredientResults.items?.map((item, i) => (
+                  <div key={i} style={{padding:'0.75rem 1rem',borderRadius:'10px',background:'rgba(148,163,184,0.05)',marginBottom:'0.5rem',borderLeft:`3px solid var(--primary-glow)`}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.35rem'}}>
+                      <strong style={{fontSize:'0.9rem'}}>{item.name}</strong>
+                      <span style={{fontSize:'0.8rem',opacity:0.6}}>{item.grams}g</span>
+                    </div>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:'0.4rem'}}>
+                      {[['kcal','#f59e0b'],['protein','#60a5fa'],['carbs','#fb923c'],['fat','#34d399'],['fiber','#86efac'],['sugar','#f472b6']].map(([key,color]) => (
+                        item[key] !== undefined && <span key={key} style={{fontSize:'0.75rem',padding:'0.15rem 0.45rem',borderRadius:'999px',background:'rgba(148,163,184,0.1)',color}}>{key}: {item[key]}{key==='kcal'?'':' g'}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </section>
+
+          {/* Body Fat Estimation */}
+          <section className="glass-panel action-panel fade-in-up">
+            <div className="panel-header"><h3>{copy.bodyFatTitle}</h3></div>
+            <p className="settings-copy" style={{marginBottom:'1rem'}}>{copy.bodyFatDesc}</p>
+            <div style={{display:'flex',gap:'0.75rem',marginBottom:'1rem',flexWrap:'wrap'}}>
+              {[['front', copy.bodyFatFront, bodyFatFrontRef], ['side', copy.bodyFatSide, bodyFatSideRef], ['back', copy.bodyFatBack, bodyFatBackRef]].map(([pose, label, ref]) => (
+                <div key={pose} style={{flex:1,minWidth:'100px'}}>
+                  <input ref={ref} type="file" accept="image/*" className="hidden-input" onChange={e => handleBodyFatImage(pose, e)} />
+                  {bodyFatImages[pose] ? (
+                    <div style={{position:'relative',borderRadius:'10px',overflow:'hidden',aspectRatio:'3/4',background:'rgba(0,0,0,0.25)'}}>
+                      <img src={bodyFatImages[pose].preview} alt={pose} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                      <button type="button" onClick={() => setBodyFatImages(c => ({...c,[pose]:null}))} style={{position:'absolute',top:'4px',right:'4px',background:'rgba(0,0,0,0.55)',border:'none',color:'#fff',borderRadius:'50%',width:'22px',height:'22px',cursor:'pointer',fontSize:'0.75rem',lineHeight:'22px',textAlign:'center'}}>✕</button>
+                      <div style={{position:'absolute',bottom:0,left:0,right:0,background:'rgba(0,0,0,0.45)',padding:'0.2rem',textAlign:'center',fontSize:'0.72rem',color:'#fff'}}>{label}</div>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => ref.current?.click()} style={{width:'100%',aspectRatio:'3/4',borderRadius:'10px',border:'2px dashed rgba(148,163,184,0.3)',background:'rgba(148,163,184,0.06)',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'0.3rem',color:'rgba(148,163,184,0.7)',fontSize:'0.8rem'}}>
+                      <span style={{fontSize:'1.4rem'}}>📷</span>{copy.bodyFatAddPhoto}<span style={{fontSize:'0.7rem',opacity:0.7}}>{label}</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button className="action-btn-primary full-width" type="button" disabled={bodyFatLoading || Object.values(bodyFatImages).every(v => v === null)} onClick={estimateBodyFat}>
+              {bodyFatLoading ? copy.bodyFatAnalyzing : copy.bodyFatAnalyze}
+            </button>
+            {bodyFatError === 'noKey' && <p className="auth-error">{copy.bodyFatNoKey}</p>}
+            {bodyFatError === 'error' && <p className="auth-error">{copy.bodyFatError}</p>}
+            {bodyFatResult && (
+              <div style={{marginTop:'1.5rem',padding:'1.25rem',borderRadius:'12px',background:'linear-gradient(135deg,rgba(99,102,241,0.15),rgba(236,72,153,0.1))'}}>
+                <div style={{display:'flex',alignItems:'center',gap:'1rem',marginBottom:'1rem'}}>
+                  <div style={{fontSize:'2.5rem',fontWeight:800,color:'var(--primary-glow)'}}>{bodyFatResult.bodyFatPercent}%</div>
+                  <div>
+                    <p style={{margin:0,fontWeight:700,fontSize:'1rem'}}>{copy.bodyFatResultLabel}</p>
+                    <p style={{margin:0,fontSize:'0.85rem',opacity:0.75}}>{copy.bodyFatCategory}: <strong>{bodyFatResult.category}</strong></p>
+                    <p style={{margin:0,fontSize:'0.82rem',opacity:0.65}}>{copy.bodyFatConfidence}: {bodyFatResult.confidence}</p>
+                  </div>
+                </div>
+                {bodyFatResult.description && <p style={{fontSize:'0.85rem',lineHeight:1.55,opacity:0.8,margin:0}}>{bodyFatResult.description}</p>}
+              </div>
+            )}
+          </section>
+
+          {/* Cal history */}
           <section className="glass-panel history-section fade-in-up">
             <div className="panel-header"><h3>{copy.calEstHistory}</h3><span className="history-count">{calHistory.length}</span></div>
             <div className="history-list">
@@ -3134,10 +3472,10 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                 <article className="history-item" key={entry.id}>
                   <div>
                     <h3>{entry.name}</h3>
-                    <p>{entry.date} · {entry.grams} g</p>
+                    <p>{entry.date} · {entry.grams !== undefined ? `${entry.grams} g` : ''}</p>
                   </div>
                   <div className="history-metrics">
-                    <span>{entry.kcalPer100} {copy.calEstPer100}</span>
+                    {entry.kcalPer100 !== undefined && <span>{entry.kcalPer100} {copy.calEstPer100}</span>}
                     <span style={{fontWeight:700}}>{entry.total} kcal</span>
                   </div>
                   <div className="settings-button-row">
@@ -3152,6 +3490,76 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
 
         {activeSection === 'rankings' && (
           <div className="dashboard-grid">
+            {/* Muscle-specific ranking section */}
+            <section className="glass-panel chart-panel fade-in-up" style={{gridColumn:'span 2'}}>
+              <div className="panel-header"><h3>{copy.muscleRankTitle}</h3></div>
+              <p className="settings-copy" style={{marginBottom:'1rem'}}>{copy.muscleRankSelect}</p>
+              <div style={{display:'flex',gap:'1.5rem',flexWrap:'wrap',alignItems:'flex-start'}}>
+                <div style={{flexShrink:0}}>
+                  <MuscleSilhouette selected={selectedRankMuscle} onSelect={setSelectedRankMuscle} />
+                </div>
+                <div style={{flex:1,minWidth:'200px'}}>
+                  {(() => {
+                    const muscleData = getMusclePoints(selectedRankMuscle, workouts);
+                    const rank = getMuscleRank(muscleData.pts, settings.language);
+                    const nextIdx = rank.idx + 1;
+                    const next = nextIdx < MUSCLE_RANKS.length ? MUSCLE_RANKS[nextIdx] : null;
+                    return muscleData.sessions === 0 ? (
+                      <div style={{padding:'1rem',opacity:0.6}}>
+                        <p>{copy.muscleRankNoData}</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <div style={{display:'flex',alignItems:'center',gap:'1rem',marginBottom:'1rem',padding:'1rem',borderRadius:'12px',background:rank.bg}}>
+                          <span style={{fontSize:'2rem'}}>{MUSCLE_RANK_ICONS[rank.idx]}</span>
+                          <div>
+                            <h2 style={{margin:0,fontSize:'1.6rem',fontWeight:700,color:'#fff'}}>{rank.displayName}</h2>
+                            <p style={{margin:0,opacity:0.85,color:'#fff',fontSize:'0.85rem'}}>{muscleData.pts} {copy.rankPoints}</p>
+                          </div>
+                        </div>
+                        {next && (
+                          <div style={{marginBottom:'1rem'}}>
+                            <p style={{fontSize:'0.82rem',opacity:0.7,marginBottom:'0.4rem'}}>{next.min - muscleData.pts} {copy.rankPoints} → {settings.language === 'en' ? next.nameEn : next.nameSl}</p>
+                            <div style={{background:'rgba(148,163,184,0.15)',borderRadius:'999px',height:'0.55rem',overflow:'hidden'}}>
+                              <div style={{background:rank.bg,height:'100%',borderRadius:'999px',width:`${Math.min(100,Math.round(((muscleData.pts - rank.min) / (next.min - rank.min)) * 100))}%`,transition:'width 0.6s ease'}} />
+                            </div>
+                          </div>
+                        )}
+                        <div className="stats-list">
+                          <div className="stats-row"><span>{copy.muscleRankVolume}</span><strong>{formatVolume(muscleData.volume, settings.units)}</strong></div>
+                          <div className="stats-row"><span>{copy.muscleRankSessions}</span><strong>{muscleData.sessions}</strong></div>
+                          <div className="stats-row"><span>{copy.muscleRankPRs}</span><strong>{muscleData.prs}</strong></div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <div style={{display:'flex',flexWrap:'wrap',gap:'0.4rem',marginTop:'1rem'}}>
+                    {Object.keys(MUSCLE_COLORS).map(k => (
+                      <button key={k} type="button" onClick={() => setSelectedRankMuscle(k)} style={{padding:'0.25rem 0.65rem',borderRadius:'999px',border:`2px solid ${selectedRankMuscle === k ? MUSCLE_COLORS[k] : 'transparent'}`,background:selectedRankMuscle === k ? `${MUSCLE_COLORS[k]}22` : 'rgba(148,163,184,0.1)',color:MUSCLE_COLORS[k],fontSize:'0.8rem',cursor:'pointer',fontWeight:selectedRankMuscle === k ? 700 : 400}}>
+                        {k}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {/* All-muscles overview */}
+              <div style={{marginTop:'1.5rem',display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))',gap:'0.6rem'}}>
+                {Object.keys(MUSCLE_COLORS).map(k => {
+                  const d = getMusclePoints(k, workouts);
+                  const r = getMuscleRank(d.pts, settings.language);
+                  return (
+                    <button key={k} type="button" onClick={() => setSelectedRankMuscle(k)} style={{padding:'0.6rem 0.8rem',borderRadius:'10px',border:`2px solid ${selectedRankMuscle === k ? MUSCLE_COLORS[k] : 'transparent'}`,background:selectedRankMuscle === k ? `${MUSCLE_COLORS[k]}18` : 'rgba(148,163,184,0.07)',cursor:'pointer',textAlign:'left'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.2rem'}}>
+                        <span style={{fontSize:'1rem'}}>{MUSCLE_RANK_ICONS[r.idx]}</span>
+                        <span style={{fontSize:'0.72rem',fontWeight:700,color:MUSCLE_COLORS[k]}}>{k}</span>
+                      </div>
+                      <span style={{fontSize:'0.78rem',opacity:0.75}}>{r.displayName}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
             <section className="glass-panel chart-panel fade-in-up" style={{gridColumn:'span 2'}}>
               <div className="panel-header"><h3>{copy.rankCurrentLabel}</h3></div>
               <div style={{padding:'1rem 0'}}>
@@ -3278,12 +3686,38 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                 <button className="action-btn-primary full-width" type="submit">{copy.tdeeCalculate}</button>
               </form>
               {tdeeResult && (
-                <div className="stats-list" style={{marginTop:'1rem'}}>
-                  <div className="stats-row"><span>{copy.tdeeTDEE}</span><strong>{tdeeResult.tdee} kcal</strong></div>
-                  <div className="stats-row"><span>{copy.tdeeAdjustment}</span><strong style={{color: tdeeResult.dailyAdjustment > 0 ? 'var(--error)' : 'var(--secondary-glow)'}}>{tdeeResult.dailyAdjustment > 0 ? '-' : '+'}{Math.abs(tdeeResult.dailyAdjustment)} kcal</strong></div>
-                  <div className="stats-row"><span>{copy.tdeeTarget}</span><strong style={{fontSize:'1.1rem'}}>{tdeeResult.target} kcal</strong></div>
+                <div style={{marginTop:'1rem'}}>
+                  <div className="stats-list">
+                    <div className="stats-row"><span>{copy.tdeeTDEE}</span><strong>{tdeeResult.tdee} kcal</strong></div>
+                    <div className="stats-row"><span>{copy.tdeeAdjustment}</span><strong style={{color: tdeeResult.dailyAdjustment > 0 ? 'var(--error)' : 'var(--secondary-glow)'}}>{tdeeResult.dailyAdjustment > 0 ? '-' : '+'}{Math.abs(tdeeResult.dailyAdjustment)} kcal</strong></div>
+                    <div className="stats-row"><span>{copy.tdeeTarget}</span><strong style={{fontSize:'1.1rem'}}>{tdeeResult.target} kcal</strong></div>
+                    {tdeeResult.protein && <div className="stats-row"><span>{copy.macrosProtein}</span><strong style={{color:'#60a5fa'}}>{tdeeResult.protein} g</strong></div>}
+                    {tdeeResult.carbs && <div className="stats-row"><span>{copy.macrosCarbs}</span><strong style={{color:'#fb923c'}}>{tdeeResult.carbs} g</strong></div>}
+                    {tdeeResult.fat && <div className="stats-row"><span>{copy.macrosFat}</span><strong style={{color:'#34d399'}}>{tdeeResult.fat} g</strong></div>}
+                    {tdeeResult.waterMl && <div className="stats-row"><span>{copy.macrosWater}</span><strong style={{color:'#38bdf8'}}>{(tdeeResult.waterMl/1000).toFixed(1)} L</strong></div>}
+                  </div>
+                  <button className="action-btn-outline full-width" style={{marginTop:'0.75rem',color:'var(--secondary-glow)',borderColor:'var(--secondary-glow)'}} type="button" onClick={() => { setSettings(c => ({...c, calorieGoal: String(tdeeResult.target)})); alert(copy.goalSet); }}>
+                    {copy.setAsGoal}
+                  </button>
                 </div>
               )}
+              {/* Reverse calorie calculator */}
+              <div style={{marginTop:'1.5rem',paddingTop:'1.2rem',borderTop:'1px solid rgba(148,163,184,0.15)'}}>
+                <h4 style={{margin:'0 0 0.75rem',fontSize:'0.95rem'}}>{copy.reverseCalTitle}</h4>
+                <form className="premium-form" onSubmit={calculateReverseCal}>
+                  <div className="input-group">
+                    <label>{copy.reverseCalDailyKcal}</label>
+                    <input type="number" min="500" value={reverseCalDailyKcal} onChange={e => setReverseCalDailyKcal(e.target.value)} placeholder="2000" />
+                  </div>
+                  <button className="action-btn-outline full-width" type="submit">{copy.reverseCalCalc}</button>
+                </form>
+                {reverseCalResult && !reverseCalResult.error && (
+                  <div style={{marginTop:'0.75rem',padding:'0.9rem',borderRadius:'10px',background:'rgba(99,102,241,0.1)'}}>
+                    <p style={{margin:'0 0 0.3rem',fontSize:'0.85rem',opacity:0.7}}>{copy.reverseCalResult}</p>
+                    <p style={{margin:0,fontSize:'1.1rem',fontWeight:700}}>{reverseCalResult.weeks} {copy.reverseCalWeeks} <span style={{fontSize:'0.85rem',fontWeight:400,opacity:0.7}}>({reverseCalResult.gaining ? copy.reverseCalGaining : copy.reverseCalLosing})</span></p>
+                  </div>
+                )}
+              </div>
             </section>
             <section className="glass-panel history-section fade-in-up">
               <div className="panel-header"><h3>{copy.bwTitle}</h3><span className="history-count">{bodyWeightEntries.length}</span></div>

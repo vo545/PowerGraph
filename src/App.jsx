@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarElement, CategoryScale, Chart as ChartJS, Filler, LinearScale, LineElement, PointElement, Tooltip } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
+import bodyMaleImg from './assets/body-male.png';
+import bodyFemaleImg from './assets/body-female.png';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler, BarElement);
 
@@ -1948,7 +1950,7 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male' }) {
     strokeWidth: 0.5,
     pointerEvents: 'none',
   });
-  const imgSrc = gender === 'female' ? '/body-female.png' : '/body-male.png';
+  const imgSrc = gender === 'female' ? bodyFemaleImg : bodyMaleImg;
   return (
     <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '170px' }}>
       <div style={{ position: 'relative', width: '100%', paddingBottom: '225.5%', overflow: 'hidden', borderRadius: '8px' }}>

@@ -1767,52 +1767,181 @@ async function callGemini(parts) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
 }
 
-function MuscleSilhouette({ selected, onSelect }) {
-  const dim = 'rgba(148,163,184,0.14)';
-  const dimS = 'rgba(148,163,184,0.22)';
-  const f = (k) => selected === k ? (MUSCLE_COLORS[k] || '#60a5fa') : dim;
-  const s = (k) => selected === k ? 'rgba(255,255,255,0.5)' : dimS;
-  const p = (k) => ({ fill: f(k), stroke: s(k), strokeWidth: 0.9, onClick: () => onSelect(k), style: { cursor: 'pointer' } });
+function MuscleSilhouetteFront({ pp, fp, gender }) {
+  const fem = gender === 'female';
   return (
-    <svg viewBox="0 0 110 248" style={{ width: '100%', maxWidth: '170px', filter: 'drop-shadow(0 2px 12px rgba(0,0,0,0.35))' }}>
-      {/* Base silhouette outline */}
-      <path d="M55,4 C65,4 67,12 67,12 C74,9 80,16 80,22 C84,23 86,28 86,33 C86,38 84,42 81,42 C88,44 91,51 91,56 C95,57 97,63 95,72 C91,85 88,96 85,102 C82,108 77,112 74,115 L74,122 L36,122 L36,115 C33,112 28,108 25,102 C22,96 19,85 15,72 C13,63 15,57 19,56 C19,51 22,44 29,42 C26,42 24,38 24,33 C24,28 26,23 30,22 C30,16 36,9 43,12 C43,12 45,4 55,4 Z M36,122 C32,124 28,130 28,133 L36,133 L36,216 C35,217 34,221 36,224 L44,224 C46,227 50,226 50,222 L50,133 L60,133 L60,222 C60,226 64,227 66,224 L74,224 C76,221 75,217 74,216 L74,133 L82,133 C82,130 78,124 74,122" fill="rgba(148,163,184,0.07)" stroke="rgba(148,163,184,0.18)" strokeWidth="0.5" />
-      {/* Neck */}
-      <path d="M49,31 L61,31 L59,46 L51,46 Z" fill="rgba(148,163,184,0.18)" />
-      {/* Traps / upper back (visible from front) */}
-      <path d="M51,33 Q40,36 27,47 L31,55 Q41,49 53,47 Z" {...p('Back')} />
-      <path d="M59,33 Q70,36 83,47 L79,55 Q69,49 57,47 Z" {...p('Back')} />
-      {/* Shoulders */}
-      <ellipse cx="21" cy="57" rx="11" ry="8" {...p('Shoulders')} />
-      <ellipse cx="89" cy="57" rx="11" ry="8" {...p('Shoulders')} />
-      {/* Chest left */}
-      <path d="M31,48 Q26,67 39,81 L54,79 L54,46 L35,46 Z" {...p('Chest')} />
-      {/* Chest right */}
-      <path d="M79,48 Q84,67 71,81 L56,79 L56,46 L75,46 Z" {...p('Chest')} />
-      {/* Cardio heart (on top of chest) */}
-      <path d="M55,60 C53,56 47,55 47,61 C47,66 55,74 55,74 C55,74 63,66 63,61 C63,55 57,56 55,60 Z" {...p('Stamina/Cardio')} />
-      {/* Abs */}
-      <path d="M43,81 L67,81 L65,122 L45,122 Z" {...p('Abs')} />
-      {/* Triceps (outer arm, behind biceps) */}
-      <path d="M9,52 Q3,67 5,85 Q9,92 13,89 Q9,81 11,57 Z" {...p('Triceps')} />
-      <path d="M101,52 Q107,67 105,85 Q101,92 97,89 Q101,81 99,57 Z" {...p('Triceps')} />
-      {/* Biceps */}
-      <path d="M13,52 Q7,67 9,85 Q15,93 23,90 Q29,82 27,57 Z" {...p('Biceps')} />
-      <path d="M97,52 Q103,67 101,85 Q95,93 87,90 Q81,82 83,57 Z" {...p('Biceps')} />
-      {/* Forearms */}
-      <path d="M9,85 Q4,108 7,123 Q13,130 19,127 Q25,114 23,90 Z" {...p('Forearms')} />
-      <path d="M101,85 Q106,108 103,123 Q97,130 91,127 Q85,114 87,90 Z" {...p('Forearms')} />
-      {/* Quads left */}
-      <path d="M37,124 Q30,158 28,171 Q36,180 48,175 Q54,160 54,124 Z" {...p('Legs')} />
-      {/* Quads right */}
-      <path d="M73,124 Q80,158 82,171 Q74,180 62,175 Q56,160 56,124 Z" {...p('Legs')} />
-      {/* Calves left */}
-      <path d="M28,171 Q23,196 27,214 Q36,220 44,216 Q48,198 48,175 Z" {...p('Legs')} />
-      {/* Calves right */}
-      <path d="M82,171 Q87,196 83,214 Q74,220 66,216 Q62,198 62,175 Z" {...p('Legs')} />
-      {/* Head */}
-      <circle cx="55" cy="18" r="14" fill="rgba(148,163,184,0.2)" stroke="rgba(148,163,184,0.3)" strokeWidth="0.5" />
-    </svg>
+    <g>
+      {fem ? (
+        <path d="M55,4 C63,4 68,10 68,18 C72,16 76,20 76,26 Q77,30 76,33 C79,34 82,38 82,44 Q88,46 91,54 C94,60 94,66 91,70 Q88,82 85,96 L82,110 L82,126 L80,132 L73,133 L73,218 Q73,222 70,224 L64,224 Q61,224 61,220 L61,133 L49,133 L49,220 Q49,224 46,224 L40,224 Q37,224 37,220 L37,133 L30,132 L28,126 L28,110 L25,96 Q22,82 19,70 C16,66 16,60 19,54 Q22,46 28,44 C28,38 31,34 34,33 Q33,30 34,26 Q38,20 42,18 C42,10 47,4 55,4 Z" fill="rgba(148,163,184,0.07)" stroke="rgba(148,163,184,0.18)" strokeWidth="0.5" />
+      ) : (
+        <path d="M55,4 C63,4 68,10 68,18 C72,16 77,21 77,26 Q78,30 77,33 C81,34 84,38 84,44 Q92,47 97,56 C100,62 100,68 97,72 Q93,86 89,100 L86,110 L84,126 L82,132 L74,133 L74,218 Q74,222 70,224 L64,224 Q60,224 60,220 L60,133 L50,133 L50,220 Q50,224 46,224 L40,224 Q36,224 36,220 L36,133 L28,132 L26,126 L24,110 L21,100 Q17,86 13,72 C10,68 10,62 13,56 Q18,47 26,44 C26,38 29,34 33,33 Q32,30 33,26 Q37,21 42,18 C42,10 47,4 55,4 Z" fill="rgba(148,163,184,0.07)" stroke="rgba(148,163,184,0.18)" strokeWidth="0.5" />
+      )}
+      <path d="M51,29 L59,29 L58,44 L52,44 Z" fill="rgba(148,163,184,0.18)" />
+      <path d="M52,32 Q42,37 29,47 Q26,51 24,56 L28,58 Q39,53 51,48 Z" {...pp('Back')} />
+      <path d="M58,32 Q68,37 81,47 Q84,51 86,56 L82,58 Q71,53 59,48 Z" {...pp('Back')} />
+      {fem ? (
+        <>
+          <path d="M17,48 Q10,55 11,67 Q13,76 20,76 Q27,74 30,64 Q31,53 24,48 Z" {...pp('Shoulders')} />
+          <path d="M93,48 Q100,55 99,67 Q97,76 90,76 Q83,74 80,64 Q79,53 86,48 Z" {...pp('Shoulders')} />
+        </>
+      ) : (
+        <>
+          <path d="M14,48 Q8,55 9,68 Q11,79 19,80 Q27,78 30,67 Q32,55 23,48 Z" {...pp('Shoulders')} />
+          <path d="M96,48 Q102,55 101,68 Q99,79 91,80 Q83,78 80,67 Q78,55 87,48 Z" {...pp('Shoulders')} />
+        </>
+      )}
+      {fem ? (
+        <>
+          <path d="M51,46 Q35,52 27,64 Q25,72 29,80 Q35,88 45,86 L51,82 Z" {...pp('Chest')} />
+          <path d="M59,46 Q75,52 83,64 Q85,72 81,80 Q75,88 65,86 L59,82 Z" {...pp('Chest')} />
+        </>
+      ) : (
+        <>
+          <path d="M50,46 Q36,51 28,62 Q24,70 27,80 Q32,87 43,86 L50,82 Z" {...pp('Chest')} />
+          <path d="M60,46 Q74,51 82,62 Q86,70 83,80 Q78,87 67,86 L60,82 Z" {...pp('Chest')} />
+          <path d="M50,52 Q38,55 30,63" {...fp('Chest')} />
+          <path d="M50,60 Q37,63 29,71" {...fp('Chest')} />
+          <path d="M50,68 Q37,71 30,77" {...fp('Chest')} />
+          <path d="M50,75 Q38,78 33,82" {...fp('Chest')} />
+        </>
+      )}
+      <path d="M55,62 C53,58 47,57 47,63 C47,68 55,76 55,76 C55,76 63,68 63,63 C63,57 57,58 55,62 Z" {...pp('Stamina/Cardio')} />
+      {fem ? (
+        <>
+          <path d="M45,82 Q43,100 44,118 L47,122 L55,122 L63,122 L66,118 Q67,100 65,82 Z" {...pp('Abs')} />
+          <path d="M55,85 L55,118" {...fp('Abs')} />
+          <path d="M33,80 Q36,97 37,115 L45,118 L45,82 Z" {...pp('Abs')} />
+          <path d="M77,80 Q74,97 73,115 L65,118 L65,82 Z" {...pp('Abs')} />
+        </>
+      ) : (
+        <>
+          <path d="M46,82 L64,82 Q66,100 65,118 L55,122 L45,118 Q44,100 46,82 Z" {...pp('Abs')} />
+          <path d="M55,82 L55,120" {...fp('Abs')} />
+          <path d="M46,93 Q55,92 64,93" {...fp('Abs')} />
+          <path d="M45,105 Q55,104 65,105" {...fp('Abs')} />
+          <path d="M32,80 Q36,97 37,114 L46,118 L46,82 Z" {...pp('Abs')} />
+          <path d="M78,80 Q74,97 73,114 L64,118 L64,82 Z" {...pp('Abs')} />
+        </>
+      )}
+      <path d="M22,57 Q14,68 13,86 Q14,96 22,97 Q30,95 34,85 Q36,70 30,57 Z" {...pp('Biceps')} />
+      <path d="M88,57 Q96,68 97,86 Q96,96 88,97 Q80,95 76,85 Q74,70 80,57 Z" {...pp('Biceps')} />
+      <path d="M26,62 Q19,75 18,87" {...fp('Biceps')} />
+      <path d="M84,62 Q91,75 92,87" {...fp('Biceps')} />
+      <path d="M16,52 Q8,66 9,84 Q11,92 16,90 Q18,80 18,56 Z" {...pp('Triceps')} />
+      <path d="M94,52 Q102,66 101,84 Q99,92 94,90 Q92,80 92,56 Z" {...pp('Triceps')} />
+      <path d="M11,96 Q5,112 8,126 Q14,132 22,129 Q28,118 23,97 Z" {...pp('Forearms')} />
+      <path d="M99,96 Q105,112 102,126 Q96,132 88,129 Q82,118 87,97 Z" {...pp('Forearms')} />
+      <path d="M14,100 Q9,114 10,126" {...fp('Forearms')} />
+      <path d="M96,100 Q101,114 100,126" {...fp('Forearms')} />
+      <path d="M38,126 Q30,160 29,174 Q36,184 48,180 Q54,162 54,126 Z" {...pp('Legs')} />
+      <path d="M72,126 Q80,160 81,174 Q74,184 62,180 Q56,162 56,126 Z" {...pp('Legs')} />
+      <path d="M40,169 Q36,178 40,184 Q46,184 48,178 Q48,170 42,169 Z" {...pp('Legs')} />
+      <path d="M70,169 Q74,178 70,184 Q64,184 62,178 Q62,170 68,169 Z" {...pp('Legs')} />
+      <path d="M46,130 Q42,158 40,172" {...fp('Legs')} />
+      <path d="M64,130 Q68,158 70,172" {...fp('Legs')} />
+      <path d="M29,174 Q23,196 27,218 Q35,224 44,220 Q48,202 48,180 Z" {...pp('Legs')} />
+      <path d="M81,174 Q87,196 83,218 Q75,224 66,220 Q62,202 62,180 Z" {...pp('Legs')} />
+      <path d="M33,176 Q30,196 32,216" {...fp('Legs')} />
+      <path d="M77,176 Q80,196 78,216" {...fp('Legs')} />
+      <circle cx="55" cy="17" r="13" fill="rgba(148,163,184,0.2)" stroke="rgba(148,163,184,0.3)" strokeWidth="0.5" />
+    </g>
+  );
+}
+
+function MuscleSilhouetteBack({ pp, fp, gender }) {
+  const fem = gender === 'female';
+  return (
+    <g>
+      {fem ? (
+        <path d="M55,4 C63,4 68,10 68,18 C72,16 76,20 76,26 Q77,30 76,33 C79,34 82,38 82,44 Q88,46 91,54 C94,60 94,66 91,70 Q88,82 85,96 L82,110 L82,126 L80,132 L73,133 L73,218 Q73,222 70,224 L64,224 Q61,224 61,220 L61,133 L49,133 L49,220 Q49,224 46,224 L40,224 Q37,224 37,220 L37,133 L30,132 L28,126 L28,110 L25,96 Q22,82 19,70 C16,66 16,60 19,54 Q22,46 28,44 C28,38 31,34 34,33 Q33,30 34,26 Q38,20 42,18 C42,10 47,4 55,4 Z" fill="rgba(148,163,184,0.07)" stroke="rgba(148,163,184,0.18)" strokeWidth="0.5" />
+      ) : (
+        <path d="M55,4 C63,4 68,10 68,18 C72,16 77,21 77,26 Q78,30 77,33 C81,34 84,38 84,44 Q92,47 97,56 C100,62 100,68 97,72 Q93,86 89,100 L86,110 L84,126 L82,132 L74,133 L74,218 Q74,222 70,224 L64,224 Q60,224 60,220 L60,133 L50,133 L50,220 Q50,224 46,224 L40,224 Q36,224 36,220 L36,133 L28,132 L26,126 L24,110 L21,100 Q17,86 13,72 C10,68 10,62 13,56 Q18,47 26,44 C26,38 29,34 33,33 Q32,30 33,26 Q37,21 42,18 C42,10 47,4 55,4 Z" fill="rgba(148,163,184,0.07)" stroke="rgba(148,163,184,0.18)" strokeWidth="0.5" />
+      )}
+      <circle cx="55" cy="17" r="13" fill="rgba(148,163,184,0.2)" stroke="rgba(148,163,184,0.3)" strokeWidth="0.5" />
+      <path d="M49,28 Q55,31 61,28" fill="none" stroke="rgba(148,163,184,0.15)" strokeWidth="0.7" />
+      <path d="M51,29 L59,29 L58,44 L52,44 Z" fill="rgba(148,163,184,0.18)" />
+      <path d="M55,36 Q54,68 55,124" fill="none" stroke="rgba(148,163,184,0.14)" strokeWidth="0.5" />
+      <path d="M52,33 Q40,39 26,52 L28,58 Q40,53 52,48 Z" {...pp('Back')} />
+      <path d="M58,33 Q70,39 84,52 L82,58 Q70,53 58,48 Z" {...pp('Back')} />
+      <path d="M52,48 L28,58 Q27,72 34,84 Q44,94 52,104 L58,104 Q66,94 76,84 Q83,72 82,58 L58,48 Z" {...pp('Back')} />
+      <path d="M55,36 Q44,48 34,58" {...fp('Back')} />
+      <path d="M55,36 Q66,48 76,58" {...fp('Back')} />
+      <path d="M38,62 Q46,82 52,102" {...fp('Back')} />
+      <path d="M72,62 Q64,82 58,102" {...fp('Back')} />
+      <path d="M26,56 Q18,80 20,108 Q28,120 44,122 L52,104 Q40,90 30,72 Q26,64 26,56 Z" {...pp('Back')} />
+      <path d="M84,56 Q92,80 90,108 Q82,120 66,122 L58,104 Q70,90 80,72 Q84,64 84,56 Z" {...pp('Back')} />
+      <path d="M27,62 Q23,84 22,104" {...fp('Back')} />
+      <path d="M83,62 Q87,84 88,104" {...fp('Back')} />
+      <path d="M36,58 Q38,70 40,80 L52,82 L52,48 Q44,54 36,58 Z" {...pp('Back')} />
+      <path d="M74,58 Q72,70 70,80 L58,82 L58,48 Q66,54 74,58 Z" {...pp('Back')} />
+      <path d="M50,102 Q47,114 48,124 L54,124 L54,102 Z" {...pp('Back')} />
+      <path d="M60,102 Q63,114 62,124 L56,124 L56,102 Z" {...pp('Back')} />
+      {fem ? (
+        <>
+          <path d="M16,50 Q11,56 11,67 Q13,76 19,76 Q25,74 29,65 Q30,54 22,50 Z" {...pp('Shoulders')} />
+          <path d="M94,50 Q99,56 99,67 Q97,76 91,76 Q85,74 81,65 Q80,54 88,50 Z" {...pp('Shoulders')} />
+        </>
+      ) : (
+        <>
+          <path d="M14,50 Q10,56 10,68 Q12,78 18,78 Q24,76 28,66 Q30,56 22,50 Z" {...pp('Shoulders')} />
+          <path d="M96,50 Q100,56 100,68 Q98,78 92,78 Q86,76 82,66 Q80,56 88,50 Z" {...pp('Shoulders')} />
+        </>
+      )}
+      <path d="M22,58 Q14,74 14,93 Q16,104 24,104 Q32,102 34,90 Q36,74 28,58 Z" {...pp('Triceps')} />
+      <path d="M88,58 Q96,74 96,93 Q94,104 86,104 Q78,102 76,90 Q74,74 82,58 Z" {...pp('Triceps')} />
+      <path d="M18,66 Q16,80 17,92" {...fp('Triceps')} />
+      <path d="M24,60 Q20,74 20,90" {...fp('Triceps')} />
+      <path d="M92,66 Q94,80 93,92" {...fp('Triceps')} />
+      <path d="M86,60 Q90,74 90,90" {...fp('Triceps')} />
+      <path d="M12,104 Q6,118 9,130 Q15,136 23,132 Q29,122 25,104 Z" {...pp('Forearms')} />
+      <path d="M98,104 Q104,118 101,130 Q95,136 87,132 Q81,122 85,104 Z" {...pp('Forearms')} />
+      <path d="M15,108 Q10,120 11,130" {...fp('Forearms')} />
+      <path d="M95,108 Q100,120 99,130" {...fp('Forearms')} />
+      {fem ? (
+        <>
+          <path d="M25,126 Q20,140 23,156 Q30,166 46,164 L52,154 L52,128 Q40,130 25,126 Z" {...pp('Legs')} />
+          <path d="M85,126 Q90,140 87,156 Q80,166 64,164 L58,154 L58,128 Q70,130 85,126 Z" {...pp('Legs')} />
+        </>
+      ) : (
+        <>
+          <path d="M27,126 Q22,138 24,154 Q30,164 44,162 L52,152 L52,128 Q40,130 27,126 Z" {...pp('Legs')} />
+          <path d="M83,126 Q88,138 86,154 Q80,164 66,162 L58,152 L58,128 Q70,130 83,126 Z" {...pp('Legs')} />
+        </>
+      )}
+      <path d="M27,158 Q36,163 44,160" {...fp('Legs')} />
+      <path d="M83,158 Q74,163 66,160" {...fp('Legs')} />
+      <path d="M26,160 Q21,182 25,200 Q33,208 46,204 Q52,190 52,158 Z" {...pp('Legs')} />
+      <path d="M84,160 Q89,182 85,200 Q77,208 64,204 Q58,190 58,158 Z" {...pp('Legs')} />
+      <path d="M28,162 Q24,180 26,198" {...fp('Legs')} />
+      <path d="M82,162 Q86,180 84,198" {...fp('Legs')} />
+      <path d="M25,200 Q20,220 26,232 Q35,238 44,234 Q48,218 46,204 Z" {...pp('Legs')} />
+      <path d="M85,200 Q90,220 84,232 Q75,238 66,234 Q62,218 64,204 Z" {...pp('Legs')} />
+      <path d="M35,202 Q33,218 34,230" {...fp('Legs')} />
+      <path d="M75,202 Q77,218 76,230" {...fp('Legs')} />
+    </g>
+  );
+}
+
+function MuscleSilhouette({ selected, onSelect, gender = 'male' }) {
+  const [showBack, setShowBack] = useState(false);
+  useEffect(() => { if (selected === 'Back') setShowBack(true); }, [selected]);
+  const handleSelect = (k) => {
+    if (k === 'Back') setShowBack(true);
+    else if (['Chest', 'Abs', 'Stamina/Cardio', 'Biceps'].includes(k)) setShowBack(false);
+    onSelect(k);
+  };
+  const col = MUSCLE_COLORS;
+  const pp = (k) => ({ fill: selected === k ? col[k] : 'rgba(148,163,184,0.13)', stroke: selected === k ? 'rgba(255,255,255,0.42)' : 'rgba(148,163,184,0.20)', strokeWidth: 0.78, onClick: () => handleSelect(k), style: { cursor: 'pointer', transition: 'fill 0.15s' } });
+  const fp = (k) => ({ fill: 'none', stroke: selected === k ? 'rgba(255,255,255,0.17)' : 'rgba(148,163,184,0.06)', strokeWidth: 0.42, pointerEvents: 'none' });
+  return (
+    <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '170px' }}>
+      <svg viewBox="0 0 110 248" style={{ width: '100%', filter: 'drop-shadow(0 2px 14px rgba(0,0,0,0.4))', display: 'block' }}>
+        {showBack ? <MuscleSilhouetteBack pp={pp} fp={fp} gender={gender} /> : <MuscleSilhouetteFront pp={pp} fp={fp} gender={gender} />}
+      </svg>
+      <button onClick={() => setShowBack(v => !v)} style={{ display: 'block', margin: '0.4rem auto 0', padding: '0.18rem 0.8rem', fontSize: '0.68rem', borderRadius: '999px', border: '1px solid rgba(148,163,184,0.28)', background: 'rgba(148,163,184,0.1)', cursor: 'pointer', color: 'inherit' }}>
+        {showBack ? '← Spredaj' : 'Zadaj →'}
+      </button>
+    </div>
   );
 }
 
@@ -3496,7 +3625,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
               <p className="settings-copy" style={{marginBottom:'1rem'}}>{copy.muscleRankSelect}</p>
               <div style={{display:'flex',gap:'1.5rem',flexWrap:'wrap',alignItems:'flex-start'}}>
                 <div style={{flexShrink:0}}>
-                  <MuscleSilhouette selected={selectedRankMuscle} onSelect={setSelectedRankMuscle} />
+                  <MuscleSilhouette selected={selectedRankMuscle} onSelect={setSelectedRankMuscle} gender={settings.gender || 'male'} />
                 </div>
                 <div style={{flex:1,minWidth:'200px'}}>
                   {(() => {

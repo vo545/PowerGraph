@@ -1785,12 +1785,6 @@ function MuscleSilhouetteFront({ pp, fp, gender }) {
   const fem = gender === 'female';
   return (
     <g>
-      {fem ? (
-        <path d="M55,4 C63,4 68,10 68,18 C72,16 76,20 76,26 Q77,30 76,33 C79,34 82,38 82,44 Q88,46 91,54 C94,60 94,66 91,70 Q88,82 85,96 L82,110 L82,126 L80,132 L73,133 L73,218 Q73,222 70,224 L64,224 Q61,224 61,220 L61,133 L49,133 L49,220 Q49,224 46,224 L40,224 Q37,224 37,220 L37,133 L30,132 L28,126 L28,110 L25,96 Q22,82 19,70 C16,66 16,60 19,54 Q22,46 28,44 C28,38 31,34 34,33 Q33,30 34,26 Q38,20 42,18 C42,10 47,4 55,4 Z" fill="rgba(62,82,102,0.92)" stroke="rgba(148,163,184,0.32)" strokeWidth="0.6" />
-      ) : (
-        <path d="M55,4 C63,4 68,10 68,18 C72,16 77,21 77,26 Q78,30 77,33 C81,34 84,38 84,44 Q92,47 97,56 C100,62 100,68 97,72 Q93,86 89,100 L86,110 L84,126 L82,132 L74,133 L74,218 Q74,222 70,224 L64,224 Q60,224 60,220 L60,133 L50,133 L50,220 Q50,224 46,224 L40,224 Q36,224 36,220 L36,133 L28,132 L26,126 L24,110 L21,100 Q17,86 13,72 C10,68 10,62 13,56 Q18,47 26,44 C26,38 29,34 33,33 Q32,30 33,26 Q37,21 42,18 C42,10 47,4 55,4 Z" fill="rgba(62,82,102,0.92)" stroke="rgba(148,163,184,0.32)" strokeWidth="0.6" />
-      )}
-      <path d="M51,29 L59,29 L58,44 L52,44 Z" fill="rgba(72,92,112,0.80)" />
       <path d="M52,32 Q42,37 29,47 Q26,51 24,56 L28,58 Q39,53 51,48 Z" {...pp('Back')} />
       <path d="M58,32 Q68,37 81,47 Q84,51 86,56 L82,58 Q71,53 59,48 Z" {...pp('Back')} />
       {fem ? (
@@ -1857,7 +1851,6 @@ function MuscleSilhouetteFront({ pp, fp, gender }) {
       <path d="M81,174 Q87,196 83,218 Q75,224 66,220 Q62,202 62,180 Z" {...pp('Legs')} />
       <path d="M33,176 Q30,196 32,216" {...fp('Legs')} />
       <path d="M77,176 Q80,196 78,216" {...fp('Legs')} />
-      <circle cx="55" cy="17" r="13" fill="rgba(62,82,102,0.92)" stroke="rgba(148,163,184,0.32)" strokeWidth="0.5" />
     </g>
   );
 }
@@ -1866,15 +1859,6 @@ function MuscleSilhouetteBack({ pp, fp, gender }) {
   const fem = gender === 'female';
   return (
     <g>
-      {fem ? (
-        <path d="M55,4 C63,4 68,10 68,18 C72,16 76,20 76,26 Q77,30 76,33 C79,34 82,38 82,44 Q88,46 91,54 C94,60 94,66 91,70 Q88,82 85,96 L82,110 L82,126 L80,132 L73,133 L73,218 Q73,222 70,224 L64,224 Q61,224 61,220 L61,133 L49,133 L49,220 Q49,224 46,224 L40,224 Q37,224 37,220 L37,133 L30,132 L28,126 L28,110 L25,96 Q22,82 19,70 C16,66 16,60 19,54 Q22,46 28,44 C28,38 31,34 34,33 Q33,30 34,26 Q38,20 42,18 C42,10 47,4 55,4 Z" fill="rgba(62,82,102,0.92)" stroke="rgba(148,163,184,0.32)" strokeWidth="0.6" />
-      ) : (
-        <path d="M55,4 C63,4 68,10 68,18 C72,16 77,21 77,26 Q78,30 77,33 C81,34 84,38 84,44 Q92,47 97,56 C100,62 100,68 97,72 Q93,86 89,100 L86,110 L84,126 L82,132 L74,133 L74,218 Q74,222 70,224 L64,224 Q60,224 60,220 L60,133 L50,133 L50,220 Q50,224 46,224 L40,224 Q36,224 36,220 L36,133 L28,132 L26,126 L24,110 L21,100 Q17,86 13,72 C10,68 10,62 13,56 Q18,47 26,44 C26,38 29,34 33,33 Q32,30 33,26 Q37,21 42,18 C42,10 47,4 55,4 Z" fill="rgba(62,82,102,0.92)" stroke="rgba(148,163,184,0.32)" strokeWidth="0.6" />
-      )}
-      <circle cx="55" cy="17" r="13" fill="rgba(62,82,102,0.92)" stroke="rgba(148,163,184,0.32)" strokeWidth="0.5" />
-      <path d="M49,28 Q55,31 61,28" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.7" />
-      <path d="M51,29 L59,29 L58,44 L52,44 Z" fill="rgba(72,92,112,0.80)" />
-      <path d="M55,36 Q54,68 55,124" fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="0.5" />
       <path d="M52,33 Q40,39 26,52 L28,58 Q40,53 52,48 Z" {...pp('Back')} />
       <path d="M58,33 Q70,39 84,52 L82,58 Q70,53 58,48 Z" {...pp('Back')} />
       <path d="M52,48 L28,58 Q27,72 34,84 Q44,94 52,104 L58,104 Q66,94 76,84 Q83,72 82,58 L58,48 Z" {...pp('Back')} />
@@ -1948,13 +1932,40 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male' }) {
     onSelect(k);
   };
   const col = MUSCLE_COLORS;
-  const pp = (k) => ({ fill: selected === k ? col[k] : 'rgba(255,255,255,0.07)', stroke: selected === k ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.14)', strokeWidth: 0.85, onClick: () => handleSelect(k), style: { cursor: 'pointer', transition: 'fill 0.18s' } });
-  const fp = (k) => ({ fill: 'none', stroke: selected === k ? 'rgba(255,255,255,0.24)' : 'rgba(255,255,255,0.09)', strokeWidth: 0.48, pointerEvents: 'none' });
+  const pp = (k) => ({
+    fill: col[k] || '#38bdf8',
+    fillOpacity: selected === k ? 0.45 : 0,
+    stroke: 'rgba(255,255,255,0.75)',
+    strokeOpacity: selected === k ? 1 : 0,
+    strokeWidth: 0.85,
+    onClick: () => handleSelect(k),
+    style: { cursor: 'pointer', transition: 'fill-opacity 0.18s, stroke-opacity 0.18s' },
+  });
+  const fp = (k) => ({
+    fill: 'none',
+    stroke: 'rgba(255,255,255,0.45)',
+    strokeOpacity: selected === k ? 1 : 0,
+    strokeWidth: 0.5,
+    pointerEvents: 'none',
+  });
+  const imgSrc = gender === 'female' ? '/body-female.png' : '/body-male.png';
   return (
     <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '170px' }}>
-      <svg viewBox="0 0 110 248" style={{ width: '100%', filter: 'drop-shadow(0 2px 14px rgba(0,0,0,0.4))', display: 'block' }}>
-        {showBack ? <MuscleSilhouetteBack pp={pp} fp={fp} gender={gender} /> : <MuscleSilhouetteFront pp={pp} fp={fp} gender={gender} />}
-      </svg>
+      <div style={{ position: 'relative', width: '100%', paddingBottom: '225.5%', overflow: 'hidden', borderRadius: '8px' }}>
+        <img
+          src={imgSrc}
+          alt=""
+          style={{
+            position: 'absolute', top: 0, left: 0,
+            width: '100%', height: '100%',
+            objectFit: 'cover',
+            objectPosition: showBack ? '75% center' : '25% center',
+          }}
+        />
+        <svg viewBox="0 0 110 248" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+          {showBack ? <MuscleSilhouetteBack pp={pp} fp={fp} gender={gender} /> : <MuscleSilhouetteFront pp={pp} fp={fp} gender={gender} />}
+        </svg>
+      </div>
       <button onClick={() => setShowBack(v => !v)} style={{ display: 'block', margin: '0.4rem auto 0', padding: '0.18rem 0.8rem', fontSize: '0.68rem', borderRadius: '999px', border: '1px solid rgba(148,163,184,0.28)', background: 'rgba(148,163,184,0.1)', cursor: 'pointer', color: 'inherit' }}>
         {showBack ? '← Spredaj' : 'Zadaj →'}
       </button>

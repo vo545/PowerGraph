@@ -48,6 +48,7 @@ const BODYWEIGHT_KEY_PREFIX = 'powergraph_bodyweight_';
 const RECAP_KEY_PREFIX = 'powergraph_recap_';
 const REST_KEY_PREFIX = 'powergraph_rest_';
 const CHEAT_KEY_PREFIX = 'powergraph_cheat_';
+const WATER_KEY_PREFIX = 'powergraph_water_';
 const THEME_KEY = 'powergraph_theme';
 const SETTINGS_KEY_PREFIX = 'powergraph_settings_';
 const USERS_KEY = 'powergraph_users';
@@ -307,6 +308,9 @@ function loadRestDays(email) { if (!email) return []; try { return JSON.parse(lo
 function loadCheatDays(email) { if (!email) return []; try { return JSON.parse(localStorage.getItem(getCheatKey(email)) || '[]'); } catch { return []; } }
 function getCustomExKey(email) { return `${CUSTOM_EX_KEY_PREFIX}${email}`; }
 function loadCustomExercises(email) { if (!email) return []; try { return JSON.parse(localStorage.getItem(getCustomExKey(email)) || '[]'); } catch { return []; } }
+function getWaterKey(email) { return `${WATER_KEY_PREFIX}${email}_${new Date().toISOString().slice(0, 10)}`; }
+function loadWaterMl(email) { if (!email) return 0; try { return Number(localStorage.getItem(getWaterKey(email)) || 0); } catch { return 0; } }
+function saveWaterMl(email, ml) { if (email) localStorage.setItem(getWaterKey(email), String(ml)); }
 function loadBodyWeight(email) {
   if (!email) return [];
   try {
@@ -723,6 +727,11 @@ const ui = {
     genderSelect: 'Izberi spol',
     genderTitle: 'Spol',
     macrosWater: 'Voda / dan',
+    waterAdd: 'Dodaj vodo',
+    waterDrank: 'Spito danes',
+    waterGoalLabel: 'Cilj',
+    waterReset: 'Ponastavi',
+    waterNoGoal: 'Izračunaj TDEE za priporočen cilj vode.',
   },
   en: {
     app: 'PowerGraph',
@@ -1118,6 +1127,11 @@ const ui = {
     genderSelect: 'Select gender',
     genderTitle: 'Gender',
     macrosWater: 'Water / day',
+    waterAdd: 'Add water',
+    waterDrank: 'Drunk today',
+    waterGoalLabel: 'Goal',
+    waterReset: 'Reset',
+    waterNoGoal: 'Calculate TDEE to get a recommended water goal.',
   },
 };
 
@@ -2015,8 +2029,8 @@ export default function App() {
   const [advisorMode, setAdvisorMode] = useState('gym');
   const [advisorSplitId, setAdvisorSplitId] = useState('auto');
   const [customSplitSections, setCustomSplitSections] = useState([]);
-  const [macroForm, setMacroForm] = useState({ weight: '', goal: 'maintain', activity: 'moderate' });
-  const [macroResult, setMacroResult] = useState(null);
+  const [waterToday, setWaterToday] = useState(() => loadWaterMl(localStorage.getItem(SESSION_KEY) || ''));
+  const [waterCustomMl, setWaterCustomMl] = useState('');
   const [bannedUsers, setBannedUsers] = useState(() => loadBanned());
   const [modUsers, setModUsers] = useState(() => loadMods());
   const [timerCustomInput, setTimerCustomInput] = useState('');
@@ -2511,19 +2525,16 @@ export default function App() {
   }
 
 
-  function calculateMacros(e) {
-    e.preventDefault();
-    const w = Number(macroForm.weight);
-    if (!w || w < 20) return;
-    const activityMult = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, veryactive: 1.9 }[macroForm.activity] || 1.55;
-    const bmr = settings.gender === 'female' ? 10 * w + 6.25 * Number(settings.height || 170) - 5 * Number(settings.age || 25) - 161 : 10 * w + 6.25 * Number(settings.height || 170) - 5 * Number(settings.age || 25) + 5;
-    const tdee = Math.round(bmr * activityMult);
-    const adj = macroForm.goal === 'bulk' ? 300 : macroForm.goal === 'cut' ? -500 : 0;
-    const targetCal = tdee + adj;
-    const protein = Math.round(w * 2.2);
-    const fat = Math.round(targetCal * 0.25 / 9);
-    const carbs = Math.round((targetCal - protein * 4 - fat * 9) / 4);
-    setMacroResult({ calories: targetCal, protein, carbs, fat });
+  function addWater(ml) {
+    const user = localStorage.getItem(SESSION_KEY) || '';
+    const next = waterToday + ml;
+    setWaterToday(next);
+    saveWaterMl(user, next);
+  }
+  function resetWater() {
+    const user = localStorage.getItem(SESSION_KEY) || '';
+    setWaterToday(0);
+    saveWaterMl(user, 0);
   }
 
   function banUser(email) {
@@ -3784,21 +3795,34 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
           </div>
           <div className="dashboard-grid">
             <section className="glass-panel action-panel fade-in-up">
-              <div className="panel-header"><h3>{copy.macrosTitle}</h3></div>
-              <form className="premium-form" onSubmit={calculateMacros}>
-                <div className="input-group"><label>{copy.macrosWeight}</label><input type="number" step="0.1" min="20" value={macroForm.weight} onChange={e => setMacroForm(c => ({...c, weight: e.target.value}))} placeholder="75" /></div>
-                <div className="input-group"><label>{copy.macrosGoal}</label><select className="premium-select" value={macroForm.goal} onChange={e => setMacroForm(c => ({...c, goal: e.target.value}))}><option value="bulk">{copy.macrosBulk}</option><option value="maintain">{copy.macrosMaintain}</option><option value="cut">{copy.macrosCut}</option></select></div>
-                <div className="input-group"><label>{copy.tdeeActivity}</label><select className="premium-select" value={macroForm.activity} onChange={e => setMacroForm(c => ({...c, activity: e.target.value}))}><option value="sedentary">{copy.tdeeSedentary}</option><option value="light">{copy.tdeeLight}</option><option value="moderate">{copy.tdeeModerate}</option><option value="active">{copy.tdeeActive}</option><option value="veryactive">{copy.tdeeVeryActive}</option></select></div>
-                <button className="action-btn-primary full-width" type="submit">{copy.macrosCalculate}</button>
-              </form>
-              {macroResult && (
-                <div className="stats-list" style={{marginTop:'1rem'}}>
-                  <div className="stats-row"><span>{copy.macrosCalories}</span><strong style={{fontSize:'1.1rem'}}>{macroResult.calories} kcal</strong></div>
-                  <div className="stats-row"><span>{copy.macrosProtein}</span><strong style={{color:'#60a5fa'}}>{macroResult.protein} g</strong></div>
-                  <div className="stats-row"><span>{copy.macrosCarbs}</span><strong style={{color:'#fb923c'}}>{macroResult.carbs} g</strong></div>
-                  <div className="stats-row"><span>{copy.macrosFat}</span><strong style={{color:'#34d399'}}>{macroResult.fat} g</strong></div>
-                </div>
-              )}
+              <div className="panel-header"><h3>{copy.waterTitle}</h3></div>
+              {(() => {
+                const waterGoal = tdeeResult?.waterMl || 2500;
+                const pct = Math.min(100, Math.round(waterToday / waterGoal * 100));
+                return (
+                  <>
+                    <div style={{textAlign:'center', margin:'0.75rem 0 1rem'}}>
+                      <div style={{fontSize:'2.2rem', fontWeight:700, color:'#38bdf8', lineHeight:1}}>{(waterToday / 1000).toFixed(2).replace(/\.?0+$/, v => v === '' ? '' : v)} L</div>
+                      <div style={{fontSize:'0.78rem', opacity:0.55, marginTop:'0.2rem'}}>{copy.waterDrank}</div>
+                      <div style={{height:'8px', borderRadius:'4px', background:'rgba(148,163,184,0.15)', margin:'0.7rem 0 0.3rem', overflow:'hidden'}}>
+                        <div style={{height:'100%', borderRadius:'4px', background: pct >= 100 ? '#34d399' : '#38bdf8', width:`${pct}%`, transition:'width 0.3s'}} />
+                      </div>
+                      <div style={{fontSize:'0.75rem', opacity:0.45}}>{copy.waterGoalLabel}: {(waterGoal / 1000).toFixed(1)} L {pct >= 100 ? '✓' : `(${pct}%)`}</div>
+                    </div>
+                    <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.45rem', marginBottom:'0.6rem'}}>
+                      {[250, 500, 750, 1000].map(ml => (
+                        <button key={ml} className="action-btn-outline" type="button" onClick={() => addWater(ml)}>+{ml} ml</button>
+                      ))}
+                    </div>
+                    <div style={{display:'flex', gap:'0.4rem', marginBottom:'0.6rem'}}>
+                      <input type="number" className="full-width" style={{flex:1}} value={waterCustomMl} onChange={e => setWaterCustomMl(e.target.value)} placeholder="ml" min="50" step="50" />
+                      <button className="action-btn-outline" type="button" style={{flexShrink:0}} onClick={() => { const ml = Number(waterCustomMl); if (ml > 0) { addWater(ml); setWaterCustomMl(''); } }}>+</button>
+                    </div>
+                    <button className="action-btn-outline danger-button full-width" type="button" onClick={resetWater}>{copy.waterReset}</button>
+                    {!tdeeResult && <p style={{fontSize:'0.72rem', opacity:0.45, marginTop:'0.6rem', textAlign:'center'}}>{copy.waterNoGoal}</p>}
+                  </>
+                );
+              })()}
             </section>
             <section className="glass-panel action-panel fade-in-up">
               <div className="panel-header"><h3>{copy.tdeeTitle}</h3></div>

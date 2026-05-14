@@ -1804,17 +1804,17 @@ function MuscleSilhouetteFront({ pp, fp, gender }) {
       )}
       {fem ? (
         <>
-          <path d="M51,46 Q35,52 27,64 Q25,72 29,80 Q35,88 45,86 L51,82 Z" {...pp('Chest')} />
-          <path d="M59,46 Q75,52 83,64 Q85,72 81,80 Q75,88 65,86 L59,82 Z" {...pp('Chest')} />
+          <path d="M51,46 Q38,52 33,64 Q31,72 34,80 Q39,88 46,86 L51,82 Z" {...pp('Chest')} />
+          <path d="M59,46 Q72,52 77,64 Q79,72 76,80 Q71,88 64,86 L59,82 Z" {...pp('Chest')} />
         </>
       ) : (
         <>
-          <path d="M50,46 Q36,51 28,62 Q24,70 27,80 Q32,87 43,86 L50,82 Z" {...pp('Chest')} />
-          <path d="M60,46 Q74,51 82,62 Q86,70 83,80 Q78,87 67,86 L60,82 Z" {...pp('Chest')} />
-          <path d="M50,52 Q38,55 30,63" {...fp('Chest')} />
-          <path d="M50,60 Q37,63 29,71" {...fp('Chest')} />
-          <path d="M50,68 Q37,71 30,77" {...fp('Chest')} />
-          <path d="M50,75 Q38,78 33,82" {...fp('Chest')} />
+          <path d="M50,46 Q38,51 32,62 Q30,70 32,80 Q37,87 45,86 L50,82 Z" {...pp('Chest')} />
+          <path d="M60,46 Q72,51 78,62 Q80,70 78,80 Q73,87 65,86 L60,82 Z" {...pp('Chest')} />
+          <path d="M50,52 Q40,55 34,63" {...fp('Chest')} />
+          <path d="M50,60 Q39,63 33,71" {...fp('Chest')} />
+          <path d="M50,68 Q39,71 34,77" {...fp('Chest')} />
+          <path d="M50,75 Q40,78 37,82" {...fp('Chest')} />
         </>
       )}
       <path d="M55,62 C53,58 47,57 47,63 C47,68 55,76 55,76 C55,76 63,68 63,63 C63,57 57,58 55,62 Z" {...pp('Stamina/Cardio')} />
@@ -1969,7 +1969,7 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male' }) {
           }}
         />
         <svg
-          viewBox="0 0 110 248"
+          viewBox="0 -8 110 248"
           style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', mixBlendMode: 'color' }}
         >
           {showBack ? <MuscleSilhouetteBack pp={pp} fp={fp} gender={gender} /> : <MuscleSilhouetteFront pp={pp} fp={fp} gender={gender} />}

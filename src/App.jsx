@@ -3658,7 +3658,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
               <div className="panel-header"><h3>{copy.muscleRankTitle}</h3></div>
               <p className="settings-copy" style={{marginBottom:'1rem'}}>{copy.muscleRankSelect}</p>
               <div style={{display:'flex',gap:'1.5rem',flexWrap:'wrap',alignItems:'flex-start'}}>
-                <div style={{flexShrink:0}}>
+                <div style={{flexShrink:0, width:'240px'}}>
                   <MuscleSilhouette selected={selectedRankMuscle} onSelect={setSelectedRankMuscle} gender={settings.gender || 'male'} />
                 </div>
                 <div style={{flex:1,minWidth:'200px'}}>

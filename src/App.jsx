@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarElement, CategoryScale, Chart as ChartJS, Filler, LinearScale, LineElement, PointElement, Tooltip } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
-import bodyMaleImg from './assets/body-male.png';
-import bodyFemaleImg from './assets/body-female.png';
+import bodyMaleFrontImg from './assets/body-male-front.png';
+import bodyMaleBackImg from './assets/body-male-back.png';
+import bodyFemaleFrontImg from './assets/body-female-front.png';
+import bodyFemaleBackImg from './assets/body-female-back.png';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler, BarElement);
 
@@ -1950,18 +1952,19 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male' }) {
     strokeWidth: 0.5,
     pointerEvents: 'none',
   });
-  const imgSrc = gender === 'female' ? bodyFemaleImg : bodyMaleImg;
+  const imgSrc = showBack
+    ? (gender === 'female' ? bodyFemaleBackImg : bodyMaleBackImg)
+    : (gender === 'female' ? bodyFemaleFrontImg : bodyMaleFrontImg);
   return (
     <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '260px' }}>
-      <div style={{ position: 'relative', width: '100%', paddingBottom: '225.5%', overflow: 'hidden', borderRadius: '8px' }}>
+      <div style={{ position: 'relative', width: '100%', paddingBottom: '150%', overflow: 'hidden', borderRadius: '8px' }}>
         <img
           src={imgSrc}
           alt=""
           style={{
             position: 'absolute', top: 0, left: 0,
             width: '100%', height: '100%',
-            objectFit: 'cover',
-            objectPosition: showBack ? '87.5% center' : '12.5% center',
+            objectFit: 'contain',
           }}
         />
         <svg

@@ -1936,23 +1936,23 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male' }) {
   const col = MUSCLE_COLORS;
   const pp = (k) => ({
     fill: col[k] || '#38bdf8',
-    fillOpacity: selected === k ? 0.45 : 0,
-    stroke: 'rgba(255,255,255,0.75)',
-    strokeOpacity: selected === k ? 1 : 0,
+    fillOpacity: selected === k ? 0.72 : 0,
+    stroke: col[k] || '#38bdf8',
+    strokeOpacity: selected === k ? 0.9 : 0,
     strokeWidth: 0.85,
     onClick: () => handleSelect(k),
     style: { cursor: 'pointer', transition: 'fill-opacity 0.18s, stroke-opacity 0.18s' },
   });
   const fp = (k) => ({
     fill: 'none',
-    stroke: 'rgba(255,255,255,0.45)',
-    strokeOpacity: selected === k ? 1 : 0,
+    stroke: col[k] || '#38bdf8',
+    strokeOpacity: selected === k ? 0.5 : 0,
     strokeWidth: 0.5,
     pointerEvents: 'none',
   });
   const imgSrc = gender === 'female' ? bodyFemaleImg : bodyMaleImg;
   return (
-    <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '170px' }}>
+    <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '260px' }}>
       <div style={{ position: 'relative', width: '100%', paddingBottom: '225.5%', overflow: 'hidden', borderRadius: '8px' }}>
         <img
           src={imgSrc}
@@ -1961,10 +1961,13 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male' }) {
             position: 'absolute', top: 0, left: 0,
             width: '100%', height: '100%',
             objectFit: 'cover',
-            objectPosition: showBack ? '75% center' : '25% center',
+            objectPosition: showBack ? '87.5% center' : '12.5% center',
           }}
         />
-        <svg viewBox="0 0 110 248" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+        <svg
+          viewBox="0 0 110 248"
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', mixBlendMode: 'multiply' }}
+        >
           {showBack ? <MuscleSilhouetteBack pp={pp} fp={fp} gender={gender} /> : <MuscleSilhouetteFront pp={pp} fp={fp} gender={gender} />}
         </svg>
       </div>

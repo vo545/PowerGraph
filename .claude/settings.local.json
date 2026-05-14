@@ -33,7 +33,14 @@
       "Bash(xargs grep *)",
       "Bash(git commit -m ' *)",
       "Bash(git commit *)",
-      "Bash(grep -o \"showFeedbackBtn.*$\" \"c:/Users/vidor/PowerGraph/src/App.jsx\")"
+      "Bash(grep -o \"showFeedbackBtn.*$\" \"c:/Users/vidor/PowerGraph/src/App.jsx\")",
+      "Bash(dir \"C:\\\\Users\\\\vidor\\\\PowerGraph\\\\src\\\\\")",
+      "Bash(find /c/Users/vidor -name \"21_20*\" 2>/dev/null | head -10)",
+      "Read(//c/Users/vidor/**)",
+      "Bash(cp \"/c/Users/vidor/Downloads/ChatGPT Image 13. maj 2026, 21_20_24.png\" \"/c/Users/vidor/PowerGraph/public/body-female.png\")",
+      "Bash(cp \"/c/Users/vidor/Downloads/ChatGPT Image 13. maj 2026, 21_20_33.png\" \"/c/Users/vidor/PowerGraph/public/body-male.png\")",
+      "Bash(python -c ' *)",
+      "Bash(node -e ' *)"
     ]
   }
 }

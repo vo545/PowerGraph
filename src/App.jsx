@@ -1938,10 +1938,10 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male' }) {
   const col = MUSCLE_COLORS;
   const pp = (k) => ({
     fill: col[k] || '#38bdf8',
-    fillOpacity: selected === k ? 0.72 : 0,
+    fillOpacity: selected === k ? 1 : 0,
     stroke: col[k] || '#38bdf8',
-    strokeOpacity: selected === k ? 0.9 : 0,
-    strokeWidth: 0.85,
+    strokeOpacity: selected === k ? 1 : 0,
+    strokeWidth: 1,
     onClick: () => handleSelect(k),
     style: { cursor: 'pointer', transition: 'fill-opacity 0.18s, stroke-opacity 0.18s' },
   });
@@ -1956,7 +1956,7 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male' }) {
     ? (gender === 'female' ? bodyFemaleBackImg : bodyMaleBackImg)
     : (gender === 'female' ? bodyFemaleFrontImg : bodyMaleFrontImg);
   return (
-    <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '260px' }}>
+    <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '420px' }}>
       <div style={{ position: 'relative', width: '100%', paddingBottom: '150%', overflow: 'hidden', borderRadius: '8px' }}>
         <img
           src={imgSrc}
@@ -1964,12 +1964,13 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male' }) {
           style={{
             position: 'absolute', top: 0, left: 0,
             width: '100%', height: '100%',
-            objectFit: 'contain',
+            objectFit: 'cover',
+            objectPosition: 'center',
           }}
         />
         <svg
           viewBox="0 0 110 248"
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', mixBlendMode: 'multiply' }}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', mixBlendMode: 'color' }}
         >
           {showBack ? <MuscleSilhouetteBack pp={pp} fp={fp} gender={gender} /> : <MuscleSilhouetteFront pp={pp} fp={fp} gender={gender} />}
         </svg>

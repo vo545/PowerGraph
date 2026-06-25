@@ -2432,11 +2432,52 @@ function AtlasBaseBody({ gender, view }) {
         : 'M162 292 C147 300 132 297 120 288 C124 342 128 426 141 491 C154 497 164 489 164 463 C162 410 171 344 162 292 Z'} />
       <path className="atlas-skin atlas-foot-left" style={{ fill: `url(#${gradientId})` }} d={female ? 'M78 486 C86 497 98 498 105 490 C108 500 99 506 83 505 C72 504 70 496 78 486 Z' : 'M77 486 C86 498 99 499 106 490 C111 501 100 507 82 506 C70 505 68 495 77 486 Z'} />
       <path className="atlas-skin atlas-foot-right" style={{ fill: `url(#${gradientId})` }} d={female ? 'M135 490 C142 498 154 497 162 486 C170 496 168 504 157 505 C141 506 132 500 135 490 Z' : 'M134 490 C141 499 154 498 163 486 C172 495 170 505 158 506 C140 507 129 501 134 490 Z'} />
-      <path className="atlas-hair" d={female
-        ? (back ? 'M96 38 C99 14 141 14 144 38 C146 62 139 83 130 92 C131 70 109 70 110 92 C101 83 94 62 96 38 Z' : 'M98 36 C101 16 139 15 142 36 C133 28 107 28 98 36 Z M98 37 C90 51 93 73 105 85 C101 69 101 54 107 42 Z M142 37 C150 51 147 73 135 85 C139 69 139 54 133 42 Z')
-        : (back
-          ? 'M98 32 C101 17 111 12 120 13 C130 12 139 17 142 32 C136 26 128 25 120 27 C112 25 104 26 98 32 Z'
-          : 'M95 35 C98 17 111 10 121 14 C130 9 142 19 145 35 C137 30 132 34 127 37 C123 29 115 29 111 38 C106 32 101 32 95 35 Z')} />
+      <g className={`atlas-hair ${female ? 'atlas-hair-female' : 'atlas-hair-male'}`}>
+        {female ? (
+          back ? (
+            <>
+              <path className="atlas-hair-bun" d="M86 37 C83 25 91 17 102 19 C113 21 116 35 108 43 C100 51 89 48 86 37 Z" />
+              <path className="atlas-hair-bun" d="M154 37 C157 25 149 17 138 19 C127 21 124 35 132 43 C140 51 151 48 154 37 Z" />
+              <path className="atlas-hair-main" d="M98 38 C98 17 142 17 142 38 C143 62 133 78 120 80 C107 78 97 62 98 38 Z" />
+              <path className="atlas-hair-lock" d="M101 53 C96 68 95 84 101 100 C91 87 88 68 95 49 Z" />
+              <path className="atlas-hair-lock" d="M139 53 C144 68 145 84 139 100 C149 87 152 68 145 49 Z" />
+            </>
+          ) : (
+            <>
+              <path className="atlas-hair-loop" d="M113 20 C112 8 118 7 120 22 C122 7 128 8 127 20" />
+              <path className="atlas-hair-bun" d="M84 39 C80 27 88 17 100 18 C112 19 116 34 108 43 C99 52 87 49 84 39 Z" />
+              <path className="atlas-hair-bun" d="M156 39 C160 27 152 17 140 18 C128 19 124 34 132 43 C141 52 153 49 156 39 Z" />
+              <path className="atlas-hair-main" d="M98 36 C101 17 139 17 142 36 C137 32 132 35 127 39 C124 29 116 29 113 39 C108 34 103 33 98 36 Z" />
+              <path className="atlas-hair-bang" d="M101 34 C107 24 116 22 120 31 C114 34 109 40 108 50 C104 44 101 39 101 34 Z" />
+              <path className="atlas-hair-bang" d="M120 31 C124 22 133 24 139 34 C139 39 136 44 132 50 C131 40 126 34 120 31 Z" />
+              <path className="atlas-hair-lock" d="M101 45 C96 64 95 88 91 111 C99 102 106 72 107 44 Z" />
+              <path className="atlas-hair-lock" d="M139 45 C144 64 145 88 149 111 C141 102 134 72 133 44 Z" />
+            </>
+          )
+        ) : (
+          back ? (
+            <>
+              <path className="atlas-hair-main" d="M92 36 C96 16 109 9 120 12 C132 9 144 17 148 36 C138 28 129 29 120 33 C111 29 102 28 92 36 Z" />
+              <path className="atlas-hair-spike" d="M98 29 L86 23 L95 37 Z" />
+              <path className="atlas-hair-spike" d="M108 18 L103 6 L116 18 Z" />
+              <path className="atlas-hair-spike" d="M128 18 L137 6 L134 23 Z" />
+              <path className="atlas-hair-spike" d="M142 29 L156 24 L145 38 Z" />
+            </>
+          ) : (
+            <>
+              <path className="atlas-hair-main" d="M91 37 C95 17 110 9 121 13 C132 8 146 18 149 37 C139 32 133 36 127 42 C124 31 115 31 110 43 C104 36 99 34 91 37 Z" />
+              <path className="atlas-hair-spike" d="M96 31 L80 24 L92 42 Z" />
+              <path className="atlas-hair-spike" d="M105 20 L100 5 L115 18 Z" />
+              <path className="atlas-hair-spike" d="M119 15 L121 0 L127 18 Z" />
+              <path className="atlas-hair-spike" d="M134 20 L145 6 L140 27 Z" />
+              <path className="atlas-hair-spike" d="M145 31 L162 25 L149 43 Z" />
+              <path className="atlas-hair-bang" d="M98 38 C105 27 113 27 115 46 C109 42 103 40 98 38 Z" />
+              <path className="atlas-hair-bang" d="M112 36 C118 25 126 26 127 47 C122 41 117 39 112 36 Z" />
+              <path className="atlas-hair-bang" d="M126 38 C133 28 141 30 144 44 C138 41 132 40 126 38 Z" />
+            </>
+          )
+        )}
+      </g>
       <g className="atlas-hands" style={{ '--atlas-skin-fill': `url(#${gradientId})` }}>
         <path className="atlas-skin atlas-hand-palm" d={female
           ? 'M39 324 C35 331 36 341 43 347 C49 346 53 337 51 329 C48 324 43 322 39 324 Z'

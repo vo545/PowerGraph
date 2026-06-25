@@ -2316,10 +2316,45 @@ p {
 }
 
 .atlas-hair {
-  fill: rgba(30, 41, 59, 0.78);
-  stroke: rgba(15, 23, 42, 0.5);
+  stroke-linecap: round;
+  stroke-linejoin: round;
   stroke-width: 0.9;
   vector-effect: non-scaling-stroke;
+}
+
+.atlas-hair-male {
+  fill: #e8edf7;
+  stroke: rgba(100, 116, 139, 0.86);
+}
+
+.atlas-hair-male .atlas-hair-spike,
+.atlas-hair-male .atlas-hair-bang {
+  fill: #f8fafc;
+}
+
+.atlas-hair-male .atlas-hair-main {
+  filter: drop-shadow(0 3px 4px rgba(15, 23, 42, 0.18));
+}
+
+.atlas-hair-female {
+  fill: #8b5a3c;
+  stroke: rgba(76, 45, 26, 0.82);
+}
+
+.atlas-hair-female .atlas-hair-main,
+.atlas-hair-female .atlas-hair-bang {
+  fill: #b9825d;
+}
+
+.atlas-hair-female .atlas-hair-bun,
+.atlas-hair-female .atlas-hair-lock {
+  fill: #8a5435;
+}
+
+.atlas-hair-female .atlas-hair-loop {
+  fill: none;
+  stroke: #8a5435;
+  stroke-width: 1.25;
 }
 
 .atlas-torso,

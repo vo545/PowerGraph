@@ -2273,7 +2273,7 @@ p {
 
 .muscle-map-svg .muscle-zone:hover,
 .muscle-map-svg .muscle-zone:focus {
-  fill-opacity: 0.32;
+  fill-opacity: 0.24;
   stroke-opacity: 0.95;
   outline: none;
 }

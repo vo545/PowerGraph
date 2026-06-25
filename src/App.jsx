@@ -2,14 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarElement, CategoryScale, Chart as ChartJS, Filler, LinearScale, LineElement, PointElement, Tooltip } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
 import { ClipboardList, Dumbbell, Flame, Home, Lightbulb, Scale, Search, Settings, Shield, Target, Trophy, Utensils } from 'lucide-react';
-import bodyMaleFrontImg from './assets/body-male-front.png';
-import bodyMaleBackImg from './assets/body-male-back.png';
-import bodyFemaleFrontImg from './assets/body-female-front.png';
-import bodyFemaleBackImg from './assets/body-female-back.png';
-import bodyMaleFrontMaskImg from './assets/body-male-front-mask.png';
-import bodyMaleBackMaskImg from './assets/body-male-back-mask.png';
-import bodyFemaleFrontMaskImg from './assets/body-female-front-mask.png';
-import bodyFemaleBackMaskImg from './assets/body-female-back-mask.png';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler, BarElement);
 
@@ -1984,10 +1976,6 @@ function calculatePoints(workouts, calorieEntries, bodyWeightEntries, restDays, 
   return Math.max(0, pts);
 }
 
-function getMusclePoints(muscleKey, workouts) {
-  return getMuscleVolumeData(muscleKey, workouts);
-}
-
 function getMuscleRank(pts, lang) {
   let rank = MUSCLE_RANKS[0];
   for (let i = MUSCLE_RANKS.length - 1; i >= 0; i--) {
@@ -2265,113 +2253,218 @@ const MUSCLE_PREFERRED_VIEW = {
   'Stamina/Cardio': 'front',
 };
 
-const ANATOMY_ZONES = {
+
+const VECTOR_ATLAS_ZONES = {
   front: {
     Chest: {
       paths: {
         male: [
-          'M50,44 C41,45 33,50 31,59 C30,66 35,73 45,72 C50,68 53,58 52,47 Z',
-          'M60,44 C69,45 77,50 79,59 C80,66 75,73 65,72 C60,68 57,58 58,47 Z',
+          'M82 118 C91 101 113 99 120 116 L120 149 C108 157 88 152 82 139 C78 131 78 124 82 118 Z',
+          'M158 118 C149 101 127 99 120 116 L120 149 C132 157 152 152 158 139 C162 131 162 124 158 118 Z',
         ],
         female: [
-          'M51,44 C42,45 34,51 32,60 C31,66 36,73 46,72 C50,68 53,59 52,47 Z',
-          'M59,44 C68,45 76,51 78,60 C79,66 74,73 64,72 C60,68 57,59 58,47 Z',
+          'M86 120 C95 104 113 105 120 121 L120 147 C108 154 91 151 86 139 C82 131 82 125 86 120 Z',
+          'M154 120 C145 104 127 105 120 121 L120 147 C132 154 149 151 154 139 C158 131 158 125 154 120 Z',
         ],
       },
-      fibers: ['M50,50 C43,52 36,55 32,61', 'M50,57 C42,59 35,62 32,67', 'M50,65 C43,67 38,69 35,72'],
+      fibers: ['M86 132 C97 126 109 123 119 124', 'M154 132 C143 126 131 123 121 124', 'M88 145 C101 148 111 148 120 145', 'M152 145 C139 148 129 148 120 145'],
     },
     Shoulders: {
       paths: {
-        male: ['M14,48 Q8,55 9,68 Q11,79 19,80 Q27,78 30,67 Q32,55 23,48 Z', 'M96,48 Q102,55 101,68 Q99,79 91,80 Q83,78 80,67 Q78,55 87,48 Z'],
-        female: ['M17,48 Q10,55 11,67 Q13,76 20,76 Q27,74 30,64 Q31,53 24,48 Z', 'M93,48 Q100,55 99,67 Q97,76 90,76 Q83,74 80,64 Q79,53 86,48 Z'],
+        male: ['M55 103 C63 89 78 88 88 103 C86 126 78 146 62 150 C52 142 48 119 55 103 Z', 'M185 103 C177 89 162 88 152 103 C154 126 162 146 178 150 C188 142 192 119 185 103 Z'],
+        female: ['M61 105 C69 93 81 93 89 106 C87 125 80 142 66 146 C56 139 54 118 61 105 Z', 'M179 105 C171 93 159 93 151 106 C153 125 160 142 174 146 C184 139 186 118 179 105 Z'],
       },
     },
     Biceps: {
-      paths: ['M22,57 Q14,68 13,86 Q14,96 22,97 Q30,95 34,85 Q36,70 30,57 Z', 'M88,57 Q96,68 97,86 Q96,96 88,97 Q80,95 76,85 Q74,70 80,57 Z'],
-      fibers: ['M26,62 Q19,75 18,87', 'M84,62 Q91,75 92,87'],
+      paths: {
+        male: ['M50 151 C60 149 69 158 68 178 C67 204 61 225 49 234 C39 218 40 171 50 151 Z', 'M190 151 C180 149 171 158 172 178 C173 204 179 225 191 234 C201 218 200 171 190 151 Z'],
+        female: ['M56 148 C64 148 70 158 69 177 C68 202 62 220 53 228 C45 214 46 166 56 148 Z', 'M184 148 C176 148 170 158 171 177 C172 202 178 220 187 228 C195 214 194 166 184 148 Z'],
+      },
+      fibers: ['M55 162 C49 180 49 207 54 224', 'M185 162 C191 180 191 207 186 224'],
     },
     Forearms: {
-      paths: ['M14,88 C8,101 7,116 11,127 C17,131 24,126 26,117 C25,104 22,94 18,88 Z', 'M96,88 C102,101 103,116 99,127 C93,131 86,126 84,117 C85,104 88,94 92,88 Z'],
-      fibers: ['M16,92 C12,106 11,119 13,127', 'M94,92 C98,106 99,119 97,127'],
-    },
-    Legs: {
-      paths: [
-        'M31,124 C25,142 24,163 29,178 C35,188 51,186 56,171 C57,153 56,137 52,124 Z',
-        'M58,124 C54,137 53,153 54,171 C59,186 75,188 81,178 C86,163 85,142 79,124 Z',
-        'M28,172 C22,190 23,213 29,228 C36,234 50,228 52,211 C52,195 53,182 57,171 Z',
-        'M82,172 C88,190 87,213 81,228 C74,234 60,228 58,211 C58,195 57,182 53,171 Z',
-      ],
-      fibers: ['M35,126 C38,143 37,160 32,177', 'M47,126 C51,143 51,160 47,181', 'M75,126 C72,143 73,160 78,177', 'M63,126 C59,143 59,160 63,181', 'M31,176 C27,192 28,212 33,227', 'M79,176 C83,192 82,212 77,227'],
+      paths: {
+        male: ['M45 235 C55 235 61 248 59 272 C57 303 50 329 38 338 C29 316 34 260 45 235 Z', 'M195 235 C185 235 179 248 181 272 C183 303 190 329 202 338 C211 316 206 260 195 235 Z'],
+        female: ['M50 229 C58 230 63 244 60 269 C58 299 52 320 42 328 C34 308 39 252 50 229 Z', 'M190 229 C182 230 177 244 180 269 C182 299 188 320 198 328 C206 308 201 252 190 229 Z'],
+      },
+      fibers: ['M47 244 C42 274 41 305 43 326', 'M193 244 C198 274 199 305 197 326'],
     },
     Abs: {
       paths: {
         male: [
-          'M46,72 C44,76 44,81 46,84 C49,85 53,84 54,80 L54,73 C51,72 48,71 46,72 Z',
-          'M56,73 L56,80 C57,84 61,85 64,84 C66,81 66,76 64,72 C62,71 59,72 56,73 Z',
-          'M45,85 C44,89 44,95 47,98 C50,99 53,98 54,94 L54,86 C51,85 48,85 45,85 Z',
-          'M56,86 L56,94 C57,98 60,99 63,98 C66,95 66,89 65,85 C62,85 59,85 56,86 Z',
-          'M47,97 C47,99 50,100 55,100 L55,97 Z',
-          'M55,97 L55,100 C60,100 63,99 63,97 Z',
-          'M35,72 C36,83 39,94 45,100 C45,92 44,82 46,72 C41,73 38,73 35,72 Z',
-          'M75,72 C74,83 71,94 65,100 C65,92 66,82 64,72 C69,73 72,73 75,72 Z',
+          'M100 157 C106 153 115 154 119 160 L119 184 C114 188 105 188 100 184 Z',
+          'M121 160 C125 154 134 153 140 157 L140 184 C135 188 126 188 121 184 Z',
+          'M99 188 C105 185 115 185 119 189 L119 215 C114 219 105 219 99 215 Z',
+          'M121 189 C125 185 135 185 141 188 L141 215 C135 219 126 219 121 215 Z',
+          'M101 219 C108 217 115 217 120 221 L120 241 C113 244 106 242 101 237 Z',
+          'M120 221 C125 217 132 217 139 219 L139 237 C134 242 127 244 120 241 Z',
+          'M86 158 C94 172 98 200 96 232 C88 224 82 197 82 174 C82 166 83 161 86 158 Z',
+          'M154 158 C146 172 142 200 144 232 C152 224 158 197 158 174 C158 166 157 161 154 158 Z',
         ],
         female: [
-          'M47,72 C45,76 45,81 47,84 C50,85 53,84 54,80 L54,73 C52,72 49,71 47,72 Z',
-          'M56,73 L56,80 C57,84 60,85 63,84 C65,81 65,76 63,72 C61,71 58,72 56,73 Z',
-          'M46,85 C45,89 45,94 47,97 C50,98 53,97 54,94 L54,86 C51,85 48,85 46,85 Z',
-          'M56,86 L56,94 C57,97 60,98 63,97 C65,94 65,89 64,85 C62,85 59,85 56,86 Z',
-          'M48,97 C48,99 51,100 55,100 L55,97 Z',
-          'M55,97 L55,100 C59,100 62,99 62,97 Z',
-          'M38,73 C39,83 41,93 45,100 C45,92 45,82 47,72 C43,73 40,73 38,73 Z',
-          'M72,73 C71,83 69,93 65,100 C65,92 65,82 63,72 C67,73 70,73 72,73 Z',
+          'M102 158 C108 155 115 155 119 161 L119 184 C114 187 107 187 102 184 Z',
+          'M121 161 C125 155 132 155 138 158 L138 184 C133 187 126 187 121 184 Z',
+          'M101 188 C107 185 115 185 119 190 L119 214 C114 218 107 218 101 214 Z',
+          'M121 190 C125 185 133 185 139 188 L139 214 C133 218 126 218 121 214 Z',
+          'M103 218 C109 217 115 217 120 221 L120 238 C114 241 108 240 103 236 Z',
+          'M120 221 C125 217 131 217 137 218 L137 236 C132 240 126 241 120 238 Z',
+          'M90 160 C96 174 100 198 98 227 C91 219 87 196 87 175 C87 167 88 162 90 160 Z',
+          'M150 160 C144 174 140 198 142 227 C149 219 153 196 153 175 C153 167 152 162 150 160 Z',
         ],
       },
-      fibers: ['M55,73 L55,100', 'M46,84 C51,85 59,85 64,84', 'M45,98 C51,99 59,99 65,98'],
+      fibers: ['M120 158 L120 241', 'M100 185 C110 188 130 188 140 185', 'M99 216 C110 219 130 219 141 216'],
+    },
+    Legs: {
+      paths: {
+        male: [
+          'M78 271 C90 261 107 264 113 282 C116 316 110 352 101 381 C90 386 80 381 75 368 C74 333 73 298 78 271 Z',
+          'M162 271 C150 261 133 264 127 282 C124 316 130 352 139 381 C150 386 160 381 165 368 C166 333 167 298 162 271 Z',
+          'M78 379 C91 387 101 386 108 376 C111 410 108 455 99 486 C87 491 76 482 77 459 C78 429 73 405 78 379 Z',
+          'M162 379 C149 387 139 386 132 376 C129 410 132 455 141 486 C153 491 164 482 163 459 C162 429 167 405 162 379 Z',
+        ],
+        female: [
+          'M75 273 C88 263 107 266 113 286 C116 319 111 351 101 379 C88 386 77 380 72 365 C71 333 70 299 75 273 Z',
+          'M165 273 C152 263 133 266 127 286 C124 319 129 351 139 379 C152 386 163 380 168 365 C169 333 170 299 165 273 Z',
+          'M78 377 C91 386 101 384 107 375 C110 410 106 452 97 482 C85 487 76 479 77 456 C78 426 74 404 78 377 Z',
+          'M162 377 C149 386 139 384 133 375 C130 410 134 452 143 482 C155 487 164 479 163 456 C162 426 166 404 162 377 Z',
+        ],
+      },
+      fibers: ['M92 276 C96 309 94 345 83 374', 'M148 276 C144 309 146 345 157 374', 'M91 390 C94 421 92 456 87 484', 'M149 390 C146 421 148 456 153 484'],
     },
     'Stamina/Cardio': {
-      paths: ['M55,58 C53,55 48,55 48,60 C48,65 55,71 55,71 C55,71 62,65 62,60 C62,55 57,55 55,58 Z'],
+      paths: ['M120 130 C116 122 104 122 104 133 C104 143 120 155 120 155 C120 155 136 143 136 133 C136 122 124 122 120 130 Z'],
+      fibers: ['M111 139 L118 139 L122 131 L127 145 L131 139'],
     },
   },
   back: {
     Back: {
-      paths: [
-        'M52,34 C45,38 39,45 33,55 C40,54 47,51 52,47 Z',
-        'M58,34 C65,38 71,45 77,55 C70,54 63,51 58,47 Z',
-        'M52,49 C45,52 39,59 36,70 C40,77 47,83 53,91 L55,63 Z',
-        'M58,49 C65,52 71,59 74,70 C70,77 63,83 57,91 L55,63 Z',
-        'M34,61 C28,72 27,84 30,94 C33,99 38,100 43,96 C40,88 39,77 40,66 C38,63 36,62 34,61 Z',
-        'M76,61 C82,72 83,84 80,94 C77,99 72,100 67,96 C70,88 71,77 70,66 C72,63 74,62 76,61 Z',
-      ],
-      fibers: ['M55,36 L55,88', 'M52,40 C46,49 40,56 34,60', 'M58,40 C64,49 70,56 76,60', 'M39,64 C42,76 47,84 53,90', 'M71,64 C68,76 63,84 57,90'],
+      paths: {
+        male: [
+          'M88 95 C98 82 142 82 152 95 C168 122 167 163 158 198 C151 224 139 246 127 255 L120 239 L113 255 C101 246 89 224 82 198 C73 163 72 122 88 95 Z',
+          'M84 143 C90 163 98 190 111 229 C99 225 82 211 75 188 C70 168 73 151 84 143 Z',
+          'M156 143 C150 163 142 190 129 229 C141 225 158 211 165 188 C170 168 167 151 156 143 Z',
+        ],
+        female: [
+          'M91 96 C101 84 139 84 149 96 C162 121 162 158 154 193 C148 218 137 239 127 249 L120 234 L113 249 C103 239 92 218 86 193 C78 158 78 121 91 96 Z',
+          'M87 144 C93 164 101 187 112 219 C101 216 86 204 80 185 C75 166 78 151 87 144 Z',
+          'M153 144 C147 164 139 187 128 219 C139 216 154 204 160 185 C165 166 162 151 153 144 Z',
+        ],
+      },
+      fibers: ['M120 91 L120 239', 'M96 104 C104 121 113 132 120 137', 'M144 104 C136 121 127 132 120 137', 'M89 151 C98 177 107 203 116 229', 'M151 151 C142 177 133 203 124 229'],
     },
     Shoulders: {
       paths: {
-        male: ['M14,50 Q10,56 10,68 Q12,78 18,78 Q24,76 28,66 Q30,56 22,50 Z', 'M96,50 Q100,56 100,68 Q98,78 92,78 Q86,76 82,66 Q80,56 88,50 Z'],
-        female: ['M16,50 Q11,56 11,67 Q13,76 19,76 Q25,74 29,65 Q30,54 22,50 Z', 'M94,50 Q99,56 99,67 Q97,76 91,76 Q85,74 81,65 Q80,54 88,50 Z'],
+        male: ['M55 104 C63 90 79 90 88 105 C86 126 78 144 63 148 C53 141 49 119 55 104 Z', 'M185 104 C177 90 161 90 152 105 C154 126 162 144 177 148 C187 141 191 119 185 104 Z'],
+        female: ['M61 106 C69 94 81 94 89 107 C87 125 80 141 66 145 C57 139 54 119 61 106 Z', 'M179 106 C171 94 159 94 151 107 C153 125 160 141 174 145 C183 139 186 119 179 106 Z'],
       },
     },
     Triceps: {
-      paths: ['M22,58 Q14,74 14,93 Q16,104 24,104 Q32,102 34,90 Q36,74 28,58 Z', 'M88,58 Q96,74 96,93 Q94,104 86,104 Q78,102 76,90 Q74,74 82,58 Z'],
-      fibers: ['M18,66 Q16,80 17,92', 'M24,60 Q20,74 20,90', 'M92,66 Q94,80 93,92', 'M86,60 Q90,74 90,90'],
+      paths: {
+        male: ['M51 150 C62 151 69 163 69 185 C68 212 61 239 50 250 C38 231 40 171 51 150 Z', 'M189 150 C178 151 171 163 171 185 C172 212 179 239 190 250 C202 231 200 171 189 150 Z'],
+        female: ['M56 149 C65 150 70 163 70 184 C69 208 63 232 53 242 C44 226 46 169 56 149 Z', 'M184 149 C175 150 170 163 170 184 C171 208 177 232 187 242 C196 226 194 169 184 149 Z'],
+      },
+      fibers: ['M57 160 C53 184 53 217 56 241', 'M183 160 C187 184 187 217 184 241'],
     },
     Forearms: {
-      paths: ['M13,92 C7,105 8,120 12,128 C18,131 25,126 27,118 C26,105 22,96 18,92 Z', 'M97,92 C103,105 102,120 98,128 C92,131 85,126 83,118 C84,105 88,96 92,92 Z'],
-      fibers: ['M16,96 C12,110 12,121 14,128', 'M94,96 C98,110 98,121 96,128'],
+      paths: {
+        male: ['M47 246 C57 247 62 260 59 284 C56 314 49 337 37 346 C30 321 35 267 47 246 Z', 'M193 246 C183 247 178 260 181 284 C184 314 191 337 203 346 C210 321 205 267 193 246 Z'],
+        female: ['M51 239 C59 240 63 254 60 278 C57 306 52 328 42 336 C35 314 40 260 51 239 Z', 'M189 239 C181 240 177 254 180 278 C183 306 188 328 198 336 C205 314 200 260 189 239 Z'],
+      },
     },
     Legs: {
       paths: {
-        male: ['M27,126 C24,135 24,149 29,158 C34,165 44,164 50,154 C51,144 52,135 52,128 C43,130 35,130 27,126 Z', 'M83,126 C86,135 86,149 81,158 C76,165 66,164 60,154 C59,144 58,135 58,128 C67,130 75,130 83,126 Z'],
-        female: ['M25,126 C22,135 22,149 27,158 C32,165 42,166 48,158 C49,147 50,136 52,128 C42,130 34,130 25,126 Z', 'M85,126 C88,135 88,149 83,158 C78,165 68,166 62,158 C61,147 60,136 58,128 C68,130 76,130 85,126 Z'],
+        male: [
+          'M78 270 C90 262 107 265 113 285 C115 319 111 352 101 379 C89 384 80 378 76 365 C74 331 73 295 78 270 Z',
+          'M162 270 C150 262 133 265 127 285 C125 319 129 352 139 379 C151 384 160 378 164 365 C166 331 167 295 162 270 Z',
+          'M78 378 C91 386 101 384 108 374 C111 407 107 454 98 487 C86 491 76 481 77 458 C78 428 73 403 78 378 Z',
+          'M162 378 C149 386 139 384 132 374 C129 407 133 454 142 487 C154 491 164 481 163 458 C162 428 167 403 162 378 Z',
+        ],
+        female: [
+          'M75 271 C88 263 107 267 113 287 C115 319 110 350 100 377 C88 384 77 377 73 364 C71 331 70 296 75 271 Z',
+          'M165 271 C152 263 133 267 127 287 C125 319 130 350 140 377 C152 384 163 377 167 364 C169 331 170 296 165 271 Z',
+          'M78 377 C90 386 101 384 107 374 C110 408 106 452 97 482 C85 487 76 479 77 456 C78 426 74 404 78 377 Z',
+          'M162 377 C150 386 139 384 133 374 C130 408 134 452 143 482 C155 487 164 479 163 456 C162 426 166 404 162 377 Z',
+        ],
       },
-      extraPaths: ['M28,160 C24,176 25,194 31,203 C36,209 43,206 45,194 C43,179 45,168 49,158 C41,164 34,164 28,160 Z', 'M46,161 C51,177 51,195 45,205 C40,211 33,206 32,194 C35,180 35,169 32,161 C37,164 42,164 46,161 Z', 'M82,160 C86,176 85,194 79,203 C74,209 67,206 65,194 C67,179 65,168 61,158 C69,164 76,164 82,160 Z', 'M64,161 C59,177 59,195 65,205 C70,211 77,206 78,194 C75,180 75,169 78,161 C73,164 68,164 64,161 Z', 'M31,202 C26,215 26,229 32,235 C39,239 45,232 44,218 C43,210 45,204 49,198 C42,204 36,206 31,202 Z', 'M79,202 C84,215 84,229 78,235 C71,239 65,232 66,218 C67,210 65,204 61,198 C68,204 74,206 79,202 Z'],
-      fibers: ['M31,164 C29,178 30,191 32,203', 'M45,164 C43,178 42,191 43,205', 'M79,164 C81,178 80,191 78,203', 'M65,164 C67,178 68,191 67,205'],
+      fibers: ['M91 284 C95 315 94 346 84 373', 'M149 284 C145 315 146 346 156 373', 'M91 390 C94 421 92 456 87 484', 'M149 390 C146 421 148 456 153 484'],
     },
   },
 };
 
-function getAnatomyPaths(zone, gender) {
-  const base = Array.isArray(zone.paths) ? zone.paths : (zone.paths?.[gender] || zone.paths?.male || []);
-  return [...base, ...(zone.extraPaths || [])];
+function getVectorZonePaths(zone, gender) {
+  return Array.isArray(zone.paths) ? zone.paths : (zone.paths?.[gender] || zone.paths?.male || []);
+}
+
+function AtlasBaseBody({ gender, view }) {
+  const female = gender === 'female';
+  const back = view === 'back';
+  const gradientId = `atlasSkin${female ? 'Female' : 'Male'}${back ? 'Back' : 'Front'}`;
+  return (
+    <g className="atlas-base-body">
+      <defs>
+        <linearGradient id={gradientId} x1="54" x2="186" y1="28" y2="500" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#f8fafc" stopOpacity="0.95" />
+          <stop offset="0.48" stopColor="#cbd5e1" stopOpacity="0.86" />
+          <stop offset="1" stopColor="#94a3b8" stopOpacity="0.9" />
+        </linearGradient>
+      </defs>
+      <ellipse className="atlas-skin atlas-head" style={{ fill: `url(#${gradientId})` }} cx="120" cy="42" rx={female ? 20 : 22} ry={female ? 26 : 27} />
+      <path className="atlas-skin atlas-neck" style={{ fill: `url(#${gradientId})` }} d={female ? 'M105 66 C110 76 130 76 135 66 L136 91 C128 96 112 96 104 91 Z' : 'M103 66 C109 78 131 78 137 66 L139 92 C130 99 110 99 101 92 Z'} />
+      <path className="atlas-skin atlas-torso" style={{ fill: `url(#${gradientId})` }} d={female
+        ? 'M63 103 C76 84 100 85 120 91 C140 85 164 84 177 103 C164 126 160 174 154 224 C150 253 90 253 86 224 C80 174 76 126 63 103 Z'
+        : 'M55 101 C72 78 99 84 120 90 C141 84 168 78 185 101 C169 127 162 176 154 225 C150 252 90 252 86 225 C78 176 71 127 55 101 Z'} />
+      <path className="atlas-skin atlas-pelvis" style={{ fill: `url(#${gradientId})` }} d={female
+        ? 'M91 229 C105 246 135 246 149 229 C161 251 169 275 167 298 C154 309 136 305 120 295 C104 305 86 309 73 298 C71 275 79 251 91 229 Z'
+        : 'M90 229 C104 244 136 244 150 229 C158 250 164 271 162 292 C148 301 132 298 120 289 C108 298 92 301 78 292 C76 271 82 250 90 229 Z'} />
+      <path className="atlas-skin atlas-arm-left" style={{ fill: `url(#${gradientId})` }} d={female
+        ? 'M63 114 C47 137 40 179 42 224 C44 249 48 289 40 333 C58 329 65 293 68 256 C71 213 76 163 86 124 Z'
+        : 'M56 115 C39 139 33 178 36 224 C38 251 43 293 36 342 C55 337 64 301 67 260 C70 215 77 164 88 123 Z'} />
+      <path className="atlas-skin atlas-arm-right" style={{ fill: `url(#${gradientId})` }} d={female
+        ? 'M177 114 C193 137 200 179 198 224 C196 249 192 289 200 333 C182 329 175 293 172 256 C169 213 164 163 154 124 Z'
+        : 'M184 115 C201 139 207 178 204 224 C202 251 197 293 204 342 C185 337 176 301 173 260 C170 215 163 164 152 123 Z'} />
+      <path className="atlas-skin atlas-leg-left" style={{ fill: `url(#${gradientId})` }} d={female
+        ? 'M75 298 C90 304 107 301 120 291 C115 343 112 424 99 491 C87 497 76 489 76 464 C77 411 67 349 75 298 Z'
+        : 'M78 292 C93 300 108 297 120 288 C116 342 112 426 99 491 C86 497 76 489 76 463 C78 410 69 344 78 292 Z'} />
+      <path className="atlas-skin atlas-leg-right" style={{ fill: `url(#${gradientId})` }} d={female
+        ? 'M165 298 C150 304 133 301 120 291 C125 343 128 424 141 491 C153 497 164 489 164 464 C163 411 173 349 165 298 Z'
+        : 'M162 292 C147 300 132 297 120 288 C124 342 128 426 141 491 C154 497 164 489 164 463 C162 410 171 344 162 292 Z'} />
+      <path className="atlas-skin atlas-foot-left" style={{ fill: `url(#${gradientId})` }} d={female ? 'M78 486 C86 497 98 498 105 490 C108 500 99 506 83 505 C72 504 70 496 78 486 Z' : 'M77 486 C86 498 99 499 106 490 C111 501 100 507 82 506 C70 505 68 495 77 486 Z'} />
+      <path className="atlas-skin atlas-foot-right" style={{ fill: `url(#${gradientId})` }} d={female ? 'M135 490 C142 498 154 497 162 486 C170 496 168 504 157 505 C141 506 132 500 135 490 Z' : 'M134 490 C141 499 154 498 163 486 C172 495 170 505 158 506 C140 507 129 501 134 490 Z'} />
+      <g className="atlas-body-lines">
+        <path d={back ? 'M120 88 L120 250' : 'M120 92 L120 247'} />
+        <path d={female ? 'M82 228 C102 236 138 236 158 228' : 'M84 226 C103 235 137 235 156 226'} />
+        <path d="M78 292 C94 304 108 298 120 288 C132 298 146 304 162 292" />
+        <path d="M95 304 C96 356 91 425 87 487" />
+        <path d="M145 304 C144 356 149 425 153 487" />
+        {back ? (
+          <>
+            <path d="M92 106 C104 121 113 133 120 141 C127 133 136 121 148 106" />
+            <path d="M91 129 C104 139 111 150 117 178" />
+            <path d="M149 129 C136 139 129 150 123 178" />
+            <path d="M88 171 C100 196 108 218 114 242" />
+            <path d="M152 171 C140 196 132 218 126 242" />
+          </>
+        ) : (
+          <>
+            <path d="M84 124 C99 111 112 113 120 126 C128 113 141 111 156 124" />
+            <path d="M86 150 C104 157 136 157 154 150" />
+            <path d="M101 160 C109 166 113 180 113 238" />
+            <path d="M139 160 C131 166 127 180 127 238" />
+            <path d="M96 187 C108 191 132 191 144 187" />
+            <path d="M98 218 C110 222 130 222 142 218" />
+          </>
+        )}
+        <path d="M67 153 C58 181 56 207 61 235" />
+        <path d="M173 153 C182 181 184 207 179 235" />
+        <path d="M48 248 C45 278 44 309 41 335" />
+        <path d="M192 248 C195 278 196 309 199 335" />
+        <path d="M88 306 C101 329 104 355 98 383" />
+        <path d="M152 306 C139 329 136 355 142 383" />
+        <path d="M91 389 C95 419 94 453 89 486" />
+        <path d="M149 389 C145 419 146 453 151 486" />
+      </g>
+    </g>
+  );
 }
 
 function AnatomyRankModel({ selected, onSelect, gender = 'male', language = 'en', muscleStats = {}, sectionNames = {} }) {
@@ -2380,14 +2473,7 @@ function AnatomyRankModel({ selected, onSelect, gender = 'male', language = 'en'
   useEffect(() => { setView(preferredView); }, [preferredView]);
 
   const showBack = view === 'back';
-  const imgSrc = showBack
-    ? (gender === 'female' ? bodyFemaleBackImg : bodyMaleBackImg)
-    : (gender === 'female' ? bodyFemaleFrontImg : bodyMaleFrontImg);
-  const maskSrc = showBack
-    ? (gender === 'female' ? bodyFemaleBackMaskImg : bodyMaleBackMaskImg)
-    : (gender === 'female' ? bodyFemaleFrontMaskImg : bodyMaleFrontMaskImg);
-  const maskId = `anatomy-rank-mask-${gender}-${view}`;
-  const zones = ANATOMY_ZONES[view] || {};
+  const zones = VECTOR_ATLAS_ZONES[view] || {};
   const modelLabel = gender === 'female'
     ? (language === 'sl' ? 'Zenski model' : 'Female model')
     : (language === 'sl' ? 'Moski model' : 'Male model');
@@ -2410,6 +2496,7 @@ function AnatomyRankModel({ selected, onSelect, gender = 'male', language = 'en'
       strokeOpacity: active ? 0.96 : 0,
       strokeWidth: active ? 1.25 : 0.85,
       vectorEffect: 'non-scaling-stroke',
+      pointerEvents: 'all',
       className: `muscle-zone ${active ? 'selected' : ''}`,
       style: { '--muscle-color': color, cursor: 'pointer' },
     };
@@ -2435,35 +2522,28 @@ function AnatomyRankModel({ selected, onSelect, gender = 'male', language = 'en'
         <strong>{viewLabel}</strong>
       </div>
       <div className="anatomy-stage">
-        <img src={imgSrc} alt="" className="anatomy-body-img" />
-        <svg className="muscle-map-svg anatomy-overlay-svg" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden="false">
-          <defs>
-            <mask id={maskId} className="muscle-body-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="1536" height="1024">
-              <image href={maskSrc} x="0" y="0" width="1536" height="1024" preserveAspectRatio="none" />
-            </mask>
-          </defs>
-          <g mask={`url(#${maskId})`}>
-            <g transform="translate(540.925 33.032) scale(4.129)">
-              {Object.entries(zones).map(([muscleKey, zone]) => (
-                <g
-                  key={muscleKey}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={sectionNames[muscleKey] || muscleKey}
-                  data-muscle={muscleKey}
-                  onClick={() => selectMuscle(muscleKey)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      selectMuscle(muscleKey);
-                    }
-                  }}
-                >
-                  {getAnatomyPaths(zone, gender).map((d, index) => <path key={`${muscleKey}-p-${index}`} d={d} {...zoneProps(muscleKey)} />)}
-                  {(zone.fibers || []).map((d, index) => <path key={`${muscleKey}-f-${index}`} d={d} {...fiberProps(muscleKey)} />)}
-                </g>
-              ))}
-            </g>
+        <svg className="muscle-map-svg anatomy-atlas-svg" viewBox="0 0 240 520" role="img" aria-label={`${modelLabel} ${viewLabel}`}>
+          <AtlasBaseBody gender={gender} view={view} />
+          <g className="atlas-muscle-zones">
+            {Object.entries(zones).map(([muscleKey, zone]) => (
+              <g
+                key={muscleKey}
+                role="button"
+                tabIndex={0}
+                aria-label={sectionNames[muscleKey] || muscleKey}
+                data-muscle={muscleKey}
+                onClick={() => selectMuscle(muscleKey)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    selectMuscle(muscleKey);
+                  }
+                }}
+              >
+                {getVectorZonePaths(zone, gender).map((d, index) => <path key={`${muscleKey}-p-${index}`} d={d} {...zoneProps(muscleKey)} />)}
+                {(zone.fibers || []).map((d, index) => <path key={`${muscleKey}-f-${index}`} d={d} {...fiberProps(muscleKey)} />)}
+              </g>
+            ))}
           </g>
         </svg>
       </div>

@@ -6,6 +6,10 @@ import bodyMaleFrontImg from './assets/body-male-front.png';
 import bodyMaleBackImg from './assets/body-male-back.png';
 import bodyFemaleFrontImg from './assets/body-female-front.png';
 import bodyFemaleBackImg from './assets/body-female-back.png';
+import bodyMaleFrontMaskImg from './assets/body-male-front-mask.png';
+import bodyMaleBackMaskImg from './assets/body-male-back-mask.png';
+import bodyFemaleFrontMaskImg from './assets/body-female-front-mask.png';
+import bodyFemaleBackMaskImg from './assets/body-female-back-mask.png';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler, BarElement);
 
@@ -2128,30 +2132,24 @@ function MuscleSilhouetteFront({ pp, fp, gender }) {
       <path d="M84,62 Q91,75 92,87" {...fp('Biceps')} />
       <path d="M16,52 Q8,66 9,84 Q11,92 16,90 Q18,80 18,56 Z" {...pp('Triceps')} />
       <path d="M94,52 Q102,66 101,84 Q99,92 94,90 Q92,80 92,56 Z" {...pp('Triceps')} />
-      <path d="M11,96 Q5,112 8,126 Q14,132 22,129 Q28,118 23,97 Z" {...pp('Forearms')} />
-      <path d="M99,96 Q105,112 102,126 Q96,132 88,129 Q82,118 87,97 Z" {...pp('Forearms')} />
-      <path d="M14,100 Q9,114 10,126" {...fp('Forearms')} />
-      <path d="M96,100 Q101,114 100,126" {...fp('Forearms')} />
-      <path d="M36,126 C32,137 32,153 35,166 C37,173 42,174 45,166 C44,151 44,138 46,128 C42,126 39,126 36,126 Z" {...pp('Legs')} />
-      <path d="M46,128 C51,141 52,158 49,172 C47,180 41,181 38,172 C42,159 43,142 44,129 Z" {...pp('Legs')} />
-      <path d="M39,164 C43,160 49,164 50,171 C49,177 44,180 39,176 C37,172 37,168 39,164 Z" {...pp('Legs')} />
-      <path d="M74,126 C78,137 78,153 75,166 C73,173 68,174 65,166 C66,151 66,138 64,128 C68,126 71,126 74,126 Z" {...pp('Legs')} />
-      <path d="M64,128 C59,141 58,158 61,172 C63,180 69,181 72,172 C68,159 67,142 66,129 Z" {...pp('Legs')} />
-      <path d="M71,164 C67,160 61,164 60,171 C61,177 66,180 71,176 C73,172 73,168 71,164 Z" {...pp('Legs')} />
-      <path d="M34,174 C31,187 31,207 34,221 C37,226 42,224 42,213 C40,199 41,185 45,176 C41,174 37,173 34,174 Z" {...pp('Legs')} />
-      <path d="M44,175 C50,189 49,209 44,222 C41,228 36,225 37,214 C39,200 39,187 42,176 Z" {...pp('Legs')} />
-      <path d="M76,174 C79,187 79,207 76,221 C73,226 68,224 68,213 C70,199 69,185 65,176 C69,174 73,173 76,174 Z" {...pp('Legs')} />
-      <path d="M66,175 C60,189 61,209 66,222 C69,228 74,225 73,214 C71,200 71,187 68,176 Z" {...pp('Legs')} />
-      <path d="M37,129 C39,143 38,156 35,166" {...fp('Legs')} />
-      <path d="M46,130 C47,145 47,160 44,176" {...fp('Legs')} />
-      <path d="M39,165 C43,168 46,171 47,176" {...fp('Legs')} />
-      <path d="M73,129 C71,143 72,156 75,166" {...fp('Legs')} />
-      <path d="M64,130 C63,145 63,160 66,176" {...fp('Legs')} />
-      <path d="M71,165 C67,168 64,171 63,176" {...fp('Legs')} />
-      <path d="M36,177 C34,190 34,207 36,220" {...fp('Legs')} />
-      <path d="M44,178 C45,194 45,209 42,222" {...fp('Legs')} />
-      <path d="M74,177 C76,190 76,207 74,220" {...fp('Legs')} />
-      <path d="M66,178 C65,194 65,209 68,222" {...fp('Legs')} />
+      <path d="M14,88 C8,101 7,116 11,127 C17,131 24,126 26,117 C25,104 22,94 18,88 Z" {...pp('Forearms')} />
+      <path d="M96,88 C102,101 103,116 99,127 C93,131 86,126 84,117 C85,104 88,94 92,88 Z" {...pp('Forearms')} />
+      <path d="M16,92 C12,106 11,119 13,127" {...fp('Forearms')} />
+      <path d="M94,92 C98,106 99,119 97,127" {...fp('Forearms')} />
+      <path d="M31,124 C25,142 24,163 29,178 C35,188 51,186 56,171 C57,153 56,137 52,124 Z" {...pp('Legs')} />
+      <path d="M58,124 C54,137 53,153 54,171 C59,186 75,188 81,178 C86,163 85,142 79,124 Z" {...pp('Legs')} />
+      <path d="M28,172 C22,190 23,213 29,228 C36,234 50,228 52,211 C52,195 53,182 57,171 Z" {...pp('Legs')} />
+      <path d="M82,172 C88,190 87,213 81,228 C74,234 60,228 58,211 C58,195 57,182 53,171 Z" {...pp('Legs')} />
+      <path d="M35,126 C38,143 37,160 32,177" {...fp('Legs')} />
+      <path d="M47,126 C51,143 51,160 47,181" {...fp('Legs')} />
+      <path d="M32,176 C40,181 50,178 55,170" {...fp('Legs')} />
+      <path d="M75,126 C72,143 73,160 78,177" {...fp('Legs')} />
+      <path d="M63,126 C59,143 59,160 63,181" {...fp('Legs')} />
+      <path d="M78,176 C70,181 60,178 55,170" {...fp('Legs')} />
+      <path d="M31,176 C27,192 28,212 33,227" {...fp('Legs')} />
+      <path d="M47,178 C50,196 48,213 43,229" {...fp('Legs')} />
+      <path d="M79,176 C83,192 82,212 77,227" {...fp('Legs')} />
+      <path d="M63,178 C60,196 62,213 67,229" {...fp('Legs')} />
     </g>
   );
 }
@@ -2192,10 +2190,10 @@ function MuscleSilhouetteBack({ pp, fp, gender }) {
       <path d="M24,60 Q20,74 20,90" {...fp('Triceps')} />
       <path d="M92,66 Q94,80 93,92" {...fp('Triceps')} />
       <path d="M86,60 Q90,74 90,90" {...fp('Triceps')} />
-      <path d="M12,104 Q6,118 9,130 Q15,136 23,132 Q29,122 25,104 Z" {...pp('Forearms')} />
-      <path d="M98,104 Q104,118 101,130 Q95,136 87,132 Q81,122 85,104 Z" {...pp('Forearms')} />
-      <path d="M15,108 Q10,120 11,130" {...fp('Forearms')} />
-      <path d="M95,108 Q100,120 99,130" {...fp('Forearms')} />
+      <path d="M13,92 C7,105 8,120 12,128 C18,131 25,126 27,118 C26,105 22,96 18,92 Z" {...pp('Forearms')} />
+      <path d="M97,92 C103,105 102,120 98,128 C92,131 85,126 83,118 C84,105 88,96 92,92 Z" {...pp('Forearms')} />
+      <path d="M16,96 C12,110 12,121 14,128" {...fp('Forearms')} />
+      <path d="M94,96 C98,110 98,121 96,128" {...fp('Forearms')} />
       {fem ? (
         <>
           <path d="M25,126 C22,135 22,149 27,158 C32,165 42,166 48,158 C49,147 50,136 52,128 C42,130 34,130 25,126 Z" {...pp('Legs')} />
@@ -2229,11 +2227,11 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male', language = 'en'
   const [showBack, setShowBack] = useState(false);
   useEffect(() => {
     if (['Back', 'Triceps'].includes(selected)) setShowBack(true);
-    else if (['Chest', 'Abs', 'Stamina/Cardio', 'Biceps'].includes(selected)) setShowBack(false);
+    else if (['Chest', 'Abs', 'Stamina/Cardio', 'Biceps', 'Forearms'].includes(selected)) setShowBack(false);
   }, [selected]);
   const handleSelect = (k) => {
     if (['Back', 'Triceps'].includes(k)) setShowBack(true);
-    else if (['Chest', 'Abs', 'Stamina/Cardio', 'Biceps'].includes(k)) setShowBack(false);
+    else if (['Chest', 'Abs', 'Stamina/Cardio', 'Biceps', 'Forearms'].includes(k)) setShowBack(false);
     onSelect(k);
   };
   const col = MUSCLE_COLORS;
@@ -2241,7 +2239,7 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male', language = 'en'
     fill: col[k] || '#38bdf8',
     fillOpacity: selected === k ? 0.4 : 0,
     stroke: col[k] || '#38bdf8',
-    strokeOpacity: selected === k ? 0.95 : 0,
+    strokeOpacity: selected === k ? 0.18 : 0,
     strokeWidth: selected === k ? 1.05 : 0.8,
     className: `muscle-zone ${selected === k ? 'selected' : ''}`,
     'data-muscle': k,
@@ -2262,6 +2260,10 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male', language = 'en'
   const imgSrc = showBack
     ? (gender === 'female' ? bodyFemaleBackImg : bodyMaleBackImg)
     : (gender === 'female' ? bodyFemaleFrontImg : bodyMaleFrontImg);
+  const maskSrc = showBack
+    ? (gender === 'female' ? bodyFemaleBackMaskImg : bodyMaleBackMaskImg)
+    : (gender === 'female' ? bodyFemaleFrontMaskImg : bodyMaleFrontMaskImg);
+  const maskId = `muscle-body-mask-${gender}-${showBack ? 'back' : 'front'}`;
   return (
     <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '420px' }}>
       <div style={{ position: 'relative', width: '100%', paddingBottom: '150%', overflow: 'hidden', borderRadius: '8px' }}>
@@ -2277,10 +2279,20 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male', language = 'en'
         />
         <svg
           className="muscle-map-svg"
-          viewBox="0 -8 110 248"
+          viewBox="0 0 1536 1024"
+          preserveAspectRatio="xMidYMid slice"
           style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', mixBlendMode: 'normal' }}
         >
-          {showBack ? <MuscleSilhouetteBack pp={pp} fp={fp} gender={gender} /> : <MuscleSilhouetteFront pp={pp} fp={fp} gender={gender} />}
+          <defs>
+            <mask id={maskId} className="muscle-body-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="1536" height="1024">
+              <image href={maskSrc} x="0" y="0" width="1536" height="1024" preserveAspectRatio="none" />
+            </mask>
+          </defs>
+          <g mask={`url(#${maskId})`}>
+            <g transform="translate(540.925 33.032) scale(4.129)">
+              {showBack ? <MuscleSilhouetteBack pp={pp} fp={fp} gender={gender} /> : <MuscleSilhouetteFront pp={pp} fp={fp} gender={gender} />}
+            </g>
+          </g>
         </svg>
       </div>
       <button onClick={() => setShowBack(v => !v)} aria-label={showBack ? (language === 'sl' ? 'Prikazi sprednji pogled' : 'Show front body view') : (language === 'sl' ? 'Prikazi zadnji pogled' : 'Show back body view')} style={{ display: 'block', margin: '0.4rem auto 0', padding: '0.18rem 0.8rem', fontSize: '0.68rem', borderRadius: '999px', border: '1px solid rgba(148,163,184,0.28)', background: 'rgba(148,163,184,0.1)', cursor: 'pointer', color: 'inherit' }}>

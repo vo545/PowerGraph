@@ -2267,6 +2267,10 @@ p {
   overflow: visible;
 }
 
+.muscle-body-mask {
+  mask-type: alpha;
+}
+
 .muscle-map-svg .muscle-zone {
   filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.18));
 }

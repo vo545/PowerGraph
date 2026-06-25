@@ -2120,16 +2120,26 @@ function MuscleSilhouetteFront({ pp, fp, gender }) {
       <path d="M99,96 Q105,112 102,126 Q96,132 88,129 Q82,118 87,97 Z" {...pp('Forearms')} />
       <path d="M14,100 Q9,114 10,126" {...fp('Forearms')} />
       <path d="M96,100 Q101,114 100,126" {...fp('Forearms')} />
-      <path d="M38,126 Q30,160 29,174 Q36,184 48,180 Q54,162 54,126 Z" {...pp('Legs')} />
-      <path d="M72,126 Q80,160 81,174 Q74,184 62,180 Q56,162 56,126 Z" {...pp('Legs')} />
-      <path d="M40,169 Q36,178 40,184 Q46,184 48,178 Q48,170 42,169 Z" {...pp('Legs')} />
-      <path d="M70,169 Q74,178 70,184 Q64,184 62,178 Q62,170 68,169 Z" {...pp('Legs')} />
-      <path d="M46,130 Q42,158 40,172" {...fp('Legs')} />
-      <path d="M64,130 Q68,158 70,172" {...fp('Legs')} />
-      <path d="M29,174 Q23,196 27,218 Q35,224 44,220 Q48,202 48,180 Z" {...pp('Legs')} />
-      <path d="M81,174 Q87,196 83,218 Q75,224 66,220 Q62,202 62,180 Z" {...pp('Legs')} />
-      <path d="M33,176 Q30,196 32,216" {...fp('Legs')} />
-      <path d="M77,176 Q80,196 78,216" {...fp('Legs')} />
+      <path d="M36,126 C32,137 32,153 35,166 C37,173 42,174 45,166 C44,151 44,138 46,128 C42,126 39,126 36,126 Z" {...pp('Legs')} />
+      <path d="M46,128 C51,141 52,158 49,172 C47,180 41,181 38,172 C42,159 43,142 44,129 Z" {...pp('Legs')} />
+      <path d="M39,164 C43,160 49,164 50,171 C49,177 44,180 39,176 C37,172 37,168 39,164 Z" {...pp('Legs')} />
+      <path d="M74,126 C78,137 78,153 75,166 C73,173 68,174 65,166 C66,151 66,138 64,128 C68,126 71,126 74,126 Z" {...pp('Legs')} />
+      <path d="M64,128 C59,141 58,158 61,172 C63,180 69,181 72,172 C68,159 67,142 66,129 Z" {...pp('Legs')} />
+      <path d="M71,164 C67,160 61,164 60,171 C61,177 66,180 71,176 C73,172 73,168 71,164 Z" {...pp('Legs')} />
+      <path d="M34,174 C31,187 31,207 34,221 C37,226 42,224 42,213 C40,199 41,185 45,176 C41,174 37,173 34,174 Z" {...pp('Legs')} />
+      <path d="M44,175 C50,189 49,209 44,222 C41,228 36,225 37,214 C39,200 39,187 42,176 Z" {...pp('Legs')} />
+      <path d="M76,174 C79,187 79,207 76,221 C73,226 68,224 68,213 C70,199 69,185 65,176 C69,174 73,173 76,174 Z" {...pp('Legs')} />
+      <path d="M66,175 C60,189 61,209 66,222 C69,228 74,225 73,214 C71,200 71,187 68,176 Z" {...pp('Legs')} />
+      <path d="M37,129 C39,143 38,156 35,166" {...fp('Legs')} />
+      <path d="M46,130 C47,145 47,160 44,176" {...fp('Legs')} />
+      <path d="M39,165 C43,168 46,171 47,176" {...fp('Legs')} />
+      <path d="M73,129 C71,143 72,156 75,166" {...fp('Legs')} />
+      <path d="M64,130 C63,145 63,160 66,176" {...fp('Legs')} />
+      <path d="M71,165 C67,168 64,171 63,176" {...fp('Legs')} />
+      <path d="M36,177 C34,190 34,207 36,220" {...fp('Legs')} />
+      <path d="M44,178 C45,194 45,209 42,222" {...fp('Legs')} />
+      <path d="M74,177 C76,190 76,207 74,220" {...fp('Legs')} />
+      <path d="M66,178 C65,194 65,209 68,222" {...fp('Legs')} />
     </g>
   );
 }
@@ -2176,30 +2186,34 @@ function MuscleSilhouetteBack({ pp, fp, gender }) {
       <path d="M95,108 Q100,120 99,130" {...fp('Forearms')} />
       {fem ? (
         <>
-          <path d="M25,126 Q20,140 23,156 Q30,166 46,164 L52,154 L52,128 Q40,130 25,126 Z" {...pp('Legs')} />
-          <path d="M85,126 Q90,140 87,156 Q80,166 64,164 L58,154 L58,128 Q70,130 85,126 Z" {...pp('Legs')} />
+          <path d="M25,126 C22,135 22,149 27,158 C32,165 42,166 48,158 C49,147 50,136 52,128 C42,130 34,130 25,126 Z" {...pp('Legs')} />
+          <path d="M85,126 C88,135 88,149 83,158 C78,165 68,166 62,158 C61,147 60,136 58,128 C68,130 76,130 85,126 Z" {...pp('Legs')} />
         </>
       ) : (
         <>
-          <path d="M27,126 Q22,138 24,154 Q30,164 44,162 L52,152 L52,128 Q40,130 27,126 Z" {...pp('Legs')} />
-          <path d="M83,126 Q88,138 86,154 Q80,164 66,162 L58,152 L58,128 Q70,130 83,126 Z" {...pp('Legs')} />
+          <path d="M27,126 C24,135 24,149 29,158 C34,165 44,164 50,154 C51,144 52,135 52,128 C43,130 35,130 27,126 Z" {...pp('Legs')} />
+          <path d="M83,126 C86,135 86,149 81,158 C76,165 66,164 60,154 C59,144 58,135 58,128 C67,130 75,130 83,126 Z" {...pp('Legs')} />
         </>
       )}
-      <path d="M27,158 Q36,163 44,160" {...fp('Legs')} />
-      <path d="M83,158 Q74,163 66,160" {...fp('Legs')} />
-      <path d="M26,160 Q21,182 25,200 Q33,208 46,204 Q52,190 52,158 Z" {...pp('Legs')} />
-      <path d="M84,160 Q89,182 85,200 Q77,208 64,204 Q58,190 58,158 Z" {...pp('Legs')} />
-      <path d="M28,162 Q24,180 26,198" {...fp('Legs')} />
-      <path d="M82,162 Q86,180 84,198" {...fp('Legs')} />
-      <path d="M25,200 Q20,220 26,232 Q35,238 44,234 Q48,218 46,204 Z" {...pp('Legs')} />
-      <path d="M85,200 Q90,220 84,232 Q75,238 66,234 Q62,218 64,204 Z" {...pp('Legs')} />
-      <path d="M35,202 Q33,218 34,230" {...fp('Legs')} />
-      <path d="M75,202 Q77,218 76,230" {...fp('Legs')} />
+      <path d="M29,158 C34,162 42,162 49,157" {...fp('Legs')} />
+      <path d="M81,158 C76,162 68,162 61,157" {...fp('Legs')} />
+      <path d="M28,160 C24,176 25,194 31,203 C36,209 43,206 45,194 C43,179 45,168 49,158 C41,164 34,164 28,160 Z" {...pp('Legs')} />
+      <path d="M46,161 C51,177 51,195 45,205 C40,211 33,206 32,194 C35,180 35,169 32,161 C37,164 42,164 46,161 Z" {...pp('Legs')} />
+      <path d="M82,160 C86,176 85,194 79,203 C74,209 67,206 65,194 C67,179 65,168 61,158 C69,164 76,164 82,160 Z" {...pp('Legs')} />
+      <path d="M64,161 C59,177 59,195 65,205 C70,211 77,206 78,194 C75,180 75,169 78,161 C73,164 68,164 64,161 Z" {...pp('Legs')} />
+      <path d="M31,202 C26,215 26,229 32,235 C39,239 45,232 44,218 C43,210 45,204 49,198 C42,204 36,206 31,202 Z" {...pp('Legs')} />
+      <path d="M79,202 C84,215 84,229 78,235 C71,239 65,232 66,218 C67,210 65,204 61,198 C68,204 74,206 79,202 Z" {...pp('Legs')} />
+      <path d="M31,164 C29,178 30,191 32,203" {...fp('Legs')} />
+      <path d="M45,164 C43,178 42,191 43,205" {...fp('Legs')} />
+      <path d="M79,164 C81,178 80,191 78,203" {...fp('Legs')} />
+      <path d="M65,164 C67,178 68,191 67,205" {...fp('Legs')} />
+      <path d="M35,204 C33,216 34,228 36,235" {...fp('Legs')} />
+      <path d="M75,204 C77,216 76,228 74,235" {...fp('Legs')} />
     </g>
   );
 }
 
-function MuscleSilhouette({ selected, onSelect, gender = 'male' }) {
+function MuscleSilhouette({ selected, onSelect, gender = 'male', language = 'en' }) {
   const [showBack, setShowBack] = useState(false);
   useEffect(() => {
     if (['Back', 'Triceps'].includes(selected)) setShowBack(true);
@@ -2213,18 +2227,24 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male' }) {
   const col = MUSCLE_COLORS;
   const pp = (k) => ({
     fill: col[k] || '#38bdf8',
-    fillOpacity: selected === k ? 1 : 0,
+    fillOpacity: selected === k ? 0.58 : 0,
     stroke: col[k] || '#38bdf8',
-    strokeOpacity: selected === k ? 1 : 0,
-    strokeWidth: 1,
+    strokeOpacity: selected === k ? 0.95 : 0,
+    strokeWidth: selected === k ? 1.05 : 0.8,
+    className: `muscle-zone ${selected === k ? 'selected' : ''}`,
+    'data-muscle': k,
+    pointerEvents: 'all',
+    vectorEffect: 'non-scaling-stroke',
     onClick: () => handleSelect(k),
-    style: { cursor: 'pointer', transition: 'fill-opacity 0.18s, stroke-opacity 0.18s' },
+    style: { '--muscle-color': col[k] || '#38bdf8', color: col[k] || '#38bdf8', cursor: 'pointer', transition: 'fill-opacity 0.18s, stroke-opacity 0.18s, filter 0.18s ease' },
   });
   const fp = (k) => ({
     fill: 'none',
     stroke: col[k] || '#38bdf8',
-    strokeOpacity: selected === k ? 0.5 : 0,
-    strokeWidth: 0.5,
+    strokeOpacity: selected === k ? 0.72 : 0,
+    strokeWidth: 0.7,
+    className: 'muscle-fiber-line',
+    vectorEffect: 'non-scaling-stroke',
     pointerEvents: 'none',
   });
   const imgSrc = showBack
@@ -2244,14 +2264,15 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male' }) {
           }}
         />
         <svg
+          className="muscle-map-svg"
           viewBox="0 -8 110 248"
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', mixBlendMode: 'color' }}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', mixBlendMode: 'normal' }}
         >
           {showBack ? <MuscleSilhouetteBack pp={pp} fp={fp} gender={gender} /> : <MuscleSilhouetteFront pp={pp} fp={fp} gender={gender} />}
         </svg>
       </div>
-      <button onClick={() => setShowBack(v => !v)} style={{ display: 'block', margin: '0.4rem auto 0', padding: '0.18rem 0.8rem', fontSize: '0.68rem', borderRadius: '999px', border: '1px solid rgba(148,163,184,0.28)', background: 'rgba(148,163,184,0.1)', cursor: 'pointer', color: 'inherit' }}>
-        {showBack ? '← Spredaj' : 'Zadaj →'}
+      <button onClick={() => setShowBack(v => !v)} aria-label={showBack ? (language === 'sl' ? 'Prikazi sprednji pogled' : 'Show front body view') : (language === 'sl' ? 'Prikazi zadnji pogled' : 'Show back body view')} style={{ display: 'block', margin: '0.4rem auto 0', padding: '0.18rem 0.8rem', fontSize: '0.68rem', borderRadius: '999px', border: '1px solid rgba(148,163,184,0.28)', background: 'rgba(148,163,184,0.1)', cursor: 'pointer', color: 'inherit' }}>
+        {showBack ? (language === 'sl' ? '<- Spredaj' : '<- Front') : (language === 'sl' ? 'Zadaj ->' : 'Back ->')}
       </button>
     </div>
   );
@@ -4082,75 +4103,72 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
         {activeSection === 'rankings' && (
           <div className="dashboard-grid">
             {/* Muscle-specific ranking section */}
-            <section className="glass-panel chart-panel fade-in-up" style={{gridColumn:'span 2'}}>
+            <section className="glass-panel chart-panel fade-in-up muscle-rank-section" style={{gridColumn:'span 2'}}>
               <div className="panel-header"><h3>{copy.muscleRankTitle}</h3></div>
               <p className="settings-copy" style={{marginBottom:'1rem'}}>{copy.muscleRankSelect}</p>
-              <div style={{display:'flex',gap:'1.5rem',flexWrap:'wrap',alignItems:'flex-start'}}>
-                <div style={{flexShrink:0, width:'240px'}}>
-                  <MuscleSilhouette selected={selectedRankMuscle} onSelect={setSelectedRankMuscle} gender={settings.gender || 'male'} />
-                </div>
-                <div style={{flex:1,minWidth:'200px'}}>
-                  {(() => {
-                    const muscleData = getMusclePoints(selectedRankMuscle, workouts);
-                    const rank = getMuscleRank(muscleData.pts, settings.language);
-                    const nextIdx = rank.idx + 1;
-                    const next = nextIdx < MUSCLE_RANKS.length ? MUSCLE_RANKS[nextIdx] : null;
-                    return muscleData.sessions === 0 ? (
-                      <div style={{padding:'1rem',opacity:0.6}}>
-                        <p>{copy.muscleRankNoData}</p>
-                      </div>
-                    ) : (
-                      <div>
-                        <div style={{display:'flex',alignItems:'center',gap:'1rem',marginBottom:'1rem',padding:'1rem',borderRadius:'12px',background:rank.bg}}>
-                          <span style={{fontSize:'2rem'}}>{MUSCLE_RANK_ICONS[rank.idx]}</span>
-                          <div>
-                            <h2 style={{margin:0,fontSize:'1.6rem',fontWeight:700,color:'#fff'}}>{rank.displayName}</h2>
-                            <p style={{margin:0,opacity:0.85,color:'#fff',fontSize:'0.85rem'}}>{muscleData.pts} {copy.rankPoints}</p>
-                          </div>
+              {(() => {
+                const muscleData = getMusclePoints(selectedRankMuscle, workouts);
+                const rank = getMuscleRank(muscleData.pts, settings.language);
+                const nextIdx = rank.idx + 1;
+                const next = nextIdx < MUSCLE_RANKS.length ? MUSCLE_RANKS[nextIdx] : null;
+                const selectedColor = MUSCLE_COLORS[selectedRankMuscle];
+                const selectedLabel = sectionNames[selectedRankMuscle] || selectedRankMuscle;
+                const progressPct = next ? Math.min(100, Math.max(0, Math.round(((muscleData.pts - rank.min) / (next.min - rank.min)) * 100))) : 100;
+                const nextLabel = next ? (settings.language === 'sl' ? next.nameSl : next.nameEn) : '';
+                return (
+                  <div className="muscle-rank-layout">
+                    <div className="muscle-map-shell">
+                      <MuscleSilhouette selected={selectedRankMuscle} onSelect={setSelectedRankMuscle} gender={settings.gender || 'male'} language={settings.language || 'en'} />
+                    </div>
+                    <div className="muscle-rank-detail" style={{'--muscle-color': selectedColor}}>
+                      <div className="muscle-rank-head">
+                        <div className="muscle-rank-icon" style={{background: rank.bg}}>{MUSCLE_RANK_ICONS[rank.idx]}</div>
+                        <div>
+                          <p className="exercise-category">{selectedLabel}</p>
+                          <h2>{rank.displayName}</h2>
+                          <p>{muscleData.pts} {copy.rankPoints}</p>
                         </div>
-                        {next && (
-                          <div style={{marginBottom:'1rem'}}>
-                            <p style={{fontSize:'0.82rem',opacity:0.7,marginBottom:'0.4rem'}}>{next.min - muscleData.pts} {copy.rankPoints} → {settings.language === 'sl' ? next.nameSl : next.nameEn}</p>
-                            <div style={{background:'rgba(148,163,184,0.15)',borderRadius:'999px',height:'0.55rem',overflow:'hidden'}}>
-                              <div style={{background:rank.bg,height:'100%',borderRadius:'999px',width:`${Math.min(100,Math.round(((muscleData.pts - rank.min) / (next.min - rank.min)) * 100))}%`,transition:'width 0.6s ease'}} />
+                      </div>
+                      <div className="muscle-progress-copy">
+                        <span>{next ? `${Math.max(0, next.min - muscleData.pts)} ${copy.rankPoints} ${settings.language === 'sl' ? 'do' : 'to'} ${nextLabel}` : copy.rankMax}</span>
+                        {next ? <strong>{progressPct}%</strong> : null}
+                      </div>
+                      <div className="muscle-progress-rail"><span style={{width:`${progressPct}%`, background: rank.bg}} /></div>
+                      {muscleData.sessions === 0 ? <p className="muscle-empty-note">{copy.muscleRankNoData}</p> : null}
+                      <div className="muscle-stat-grid">
+                        <div><span>{copy.muscleRankVolume}</span><strong>{formatVolume(muscleData.volume, settings.units)}</strong></div>
+                        <div><span>{copy.muscleRankSessions}</span><strong>{muscleData.sessions}</strong></div>
+                        <div><span>{copy.muscleRankPRs}</span><strong>{muscleData.prs}</strong></div>
+                      </div>
+                      <div className="muscle-chip-row">
+                        {Object.keys(MUSCLE_COLORS).map(k => (
+                          <button key={k} className={`muscle-chip ${selectedRankMuscle === k ? 'active' : ''}`} style={{'--muscle-color': MUSCLE_COLORS[k]}} type="button" onClick={() => setSelectedRankMuscle(k)}>
+                            {sectionNames[k] || k}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="muscle-overview-grid">
+                      {Object.keys(MUSCLE_COLORS).map(k => {
+                        const d = getMusclePoints(k, workouts);
+                        const r = getMuscleRank(d.pts, settings.language);
+                        const isSelected = selectedRankMuscle === k;
+                        return (
+                          <button key={k} className={`muscle-overview-card ${isSelected ? 'active' : ''}`} style={{'--muscle-color': MUSCLE_COLORS[k]}} type="button" onClick={() => setSelectedRankMuscle(k)}>
+                            <div>
+                              <span className="muscle-overview-icon">{MUSCLE_RANK_ICONS[r.idx]}</span>
+                              <strong>{sectionNames[k] || k}</strong>
                             </div>
-                          </div>
-                        )}
-                        <div className="stats-list">
-                          <div className="stats-row"><span>{copy.muscleRankVolume}</span><strong>{formatVolume(muscleData.volume, settings.units)}</strong></div>
-                          <div className="stats-row"><span>{copy.muscleRankSessions}</span><strong>{muscleData.sessions}</strong></div>
-                          <div className="stats-row"><span>{copy.muscleRankPRs}</span><strong>{muscleData.prs}</strong></div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                  <div style={{display:'flex',flexWrap:'wrap',gap:'0.4rem',marginTop:'1rem'}}>
-                    {Object.keys(MUSCLE_COLORS).map(k => (
-                      <button key={k} type="button" onClick={() => setSelectedRankMuscle(k)} style={{padding:'0.25rem 0.65rem',borderRadius:'999px',border:`2px solid ${selectedRankMuscle === k ? MUSCLE_COLORS[k] : 'transparent'}`,background:selectedRankMuscle === k ? `${MUSCLE_COLORS[k]}22` : 'rgba(148,163,184,0.1)',color:MUSCLE_COLORS[k],fontSize:'0.8rem',cursor:'pointer',fontWeight:selectedRankMuscle === k ? 700 : 400}}>
-                        {k}
-                      </button>
-                    ))}
+                            <span>{r.displayName}</span>
+                            <small>{d.pts} {copy.rankPoints}</small>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              </div>
-              {/* All-muscles overview */}
-              <div style={{marginTop:'1.5rem',display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))',gap:'0.6rem'}}>
-                {Object.keys(MUSCLE_COLORS).map(k => {
-                  const d = getMusclePoints(k, workouts);
-                  const r = getMuscleRank(d.pts, settings.language);
-                  return (
-                    <button key={k} type="button" onClick={() => setSelectedRankMuscle(k)} style={{padding:'0.6rem 0.8rem',borderRadius:'10px',border:`2px solid ${selectedRankMuscle === k ? MUSCLE_COLORS[k] : 'transparent'}`,background:selectedRankMuscle === k ? `${MUSCLE_COLORS[k]}18` : 'rgba(148,163,184,0.07)',cursor:'pointer',textAlign:'left'}}>
-                      <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.2rem'}}>
-                        <span style={{fontSize:'1rem'}}>{MUSCLE_RANK_ICONS[r.idx]}</span>
-                        <span style={{fontSize:'0.72rem',fontWeight:700,color:MUSCLE_COLORS[k]}}>{k}</span>
-                      </div>
-                      <span style={{fontSize:'0.78rem',opacity:0.75}}>{r.displayName}</span>
-                    </button>
-                  );
-                })}
-              </div>
+                );
+              })()}
             </section>
-
             <section className="glass-panel chart-panel fade-in-up" style={{gridColumn:'span 2'}}>
               <div className="panel-header"><h3>{copy.rankCurrentLabel}</h3></div>
               <div style={{padding:'1rem 0'}}>
@@ -4601,10 +4619,3 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
     </div>
   );
 }
-
-
-
-
-
-
-

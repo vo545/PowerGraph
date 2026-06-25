@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarElement, CategoryScale, Chart as ChartJS, Filler, LinearScale, LineElement, PointElement, Tooltip } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
+import { ClipboardList, Dumbbell, Flame, Home, Lightbulb, Scale, Search, Settings, Shield, Target, Trophy, Utensils } from 'lucide-react';
 import bodyMaleFrontImg from './assets/body-male-front.png';
 import bodyMaleBackImg from './assets/body-male-back.png';
 import bodyFemaleFrontImg from './assets/body-female-front.png';
@@ -59,6 +60,10 @@ const USERS_KEY = 'powergraph_users';
 const SESSION_KEY = 'powergraph_session';
 const ADMIN_EMAIL = 'vid.oreskovic@gmail.com';
 const LOGINS_KEY = 'powergraph_logins';
+const AUTH_THROTTLE_KEY_PREFIX = 'powergraph_auth_throttle_';
+const AUTH_MAX_ATTEMPTS = 5;
+const AUTH_LOCK_MS = 15 * 60 * 1000;
+const PBKDF2_ITERATIONS = 210000;
 
 const BAR_OPTS = {
   responsive: true,
@@ -440,22 +445,48 @@ const ui = {
     login: 'Prijava',
     signup: 'Registracija',
     logout: 'Odjava',
-    email: 'Gmail',
+    email: 'Email',
     password: 'Geslo',
     confirmPassword: 'Potrdi geslo',
-    authTitle: 'Prijava v lokalni profil',
-    authSubtitle: 'Ra\u010dun deluje samo v tem brskalniku. Vsak profil ima svoje treninge in nastavitve.',
+    authTitle: 'Vstopi v PowerGraph',
+    authSubtitle: 'Tvoj trening, prehrana in napredek so ločeni po profilu ter pripravljeni za lokalno rabo ali backend sync.',
     authSwitchLogin: '\u017de ima\u0161 ra\u010dun?',
     authSwitchSignup: '\u0160e nima\u0161 ra\u010duna?',
     authCreate: 'Ustvari ra\u010dun',
-    authEnter: 'Prijavi se',
+    authEnter: 'Nadaljuj',
     authPasswordsNoMatch: 'Gesli se ne ujemata.',
     authInvalidEmail: 'Vpi\u0161i veljaven email.',
-    authShortPassword: 'Geslo naj ima vsaj 6 znakov.',
-    authExists: 'Uporabnik s tem emailom \u017ee obstaja.',
-    authNotFound: 'Uporabnik ne obstaja.',
-    authWrongPassword: 'Napa\u010dno geslo.',
+    authPasswordRequired: 'Vpiši geslo.',
+    authShortPassword: 'Geslo naj ima vsaj 10 znakov.',
+    authExists: 'Računa s temi podatki ni bilo mogoče ustvariti.',
+    authNotFound: 'Email ali geslo ni pravilno.',
+    authWrongPassword: 'Email ali geslo ni pravilno.',
     authLocalOnly: 'Podatki se shranijo lokalno; backend sync je uporabljen samo, ce je nastavljen.',
+    authEyebrow: 'Lokalno-prvi dostop',
+    authLoginTitle: 'Dobrodošel nazaj',
+    authSignupTitle: 'Ustvari varen profil',
+    authLoginSubtitle: 'Nadaljuj tam, kjer si končal. Brez nepotrebnih korakov.',
+    authSignupSubtitle: 'Nastavi profil za treninge, kalorije, težo in prihodnji sync.',
+    authShowPassword: 'Pokaži geslo',
+    authHidePassword: 'Skrij geslo',
+    authShowShort: 'Pokaži',
+    authHideShort: 'Skrij',
+    authPasswordHint: 'Uporabi daljše geslo ali frazo. Kopiranje iz password managerja je podprto.',
+    authStrength: 'Moč gesla',
+    authStrengthWeak: 'Šibko',
+    authStrengthOk: 'V redu',
+    authStrengthGood: 'Dobro',
+    authStrengthStrong: 'Močno',
+    authRuleLength: 'Vsaj 10 znakov',
+    authRuleVariety: 'Več vrst znakov ali vsaj 14 znakov',
+    authRuleNoEmail: 'Ne vsebuje emaila',
+    authRuleCommon: 'Ni pogosto geslo',
+    authWeakPassword: 'Izberi močnejše geslo.',
+    authLoginFailed: 'Email ali geslo ni pravilno.',
+    authLocked: 'Preveč poskusov. Poskusi znova čez {time}.',
+    authSecurityLocal: 'Lokalni vault',
+    authSecurityHash: 'PBKDF2 zaščita gesel',
+    authSecuritySync: 'Backend sync pripravljen',
     caloriesTitle: 'Dnevni vnos kalorij',
     caloriesSubtitle: 'Bele\u017ei obroke, dnevni cilj in osnovne makre.',
     addMeal: 'Dodaj obrok',
@@ -840,22 +871,48 @@ const ui = {
     login: 'Log in',
     signup: 'Sign up',
     logout: 'Log out',
-    email: 'Gmail',
+    email: 'Email',
     password: 'Password',
     confirmPassword: 'Confirm password',
-    authTitle: 'Sign in to your local profile',
-    authSubtitle: 'This account works only in this browser. Each profile has separate workouts and settings.',
+    authTitle: 'Enter PowerGraph',
+    authSubtitle: 'Your training, nutrition, and progress stay separated by profile and are ready for local use or backend sync.',
     authSwitchLogin: 'Already have an account?',
     authSwitchSignup: "Don't have an account yet?",
     authCreate: 'Create account',
-    authEnter: 'Sign in',
+    authEnter: 'Continue',
     authPasswordsNoMatch: 'Passwords do not match.',
     authInvalidEmail: 'Enter a valid email address.',
-    authShortPassword: 'Password must be at least 6 characters.',
-    authExists: 'A user with this email already exists.',
-    authNotFound: 'User not found.',
-    authWrongPassword: 'Wrong password.',
+    authPasswordRequired: 'Enter your password.',
+    authShortPassword: 'Password must be at least 10 characters.',
+    authExists: 'An account could not be created with these details.',
+    authNotFound: 'Email or password is incorrect.',
+    authWrongPassword: 'Email or password is incorrect.',
     authLocalOnly: 'Data is stored locally; backend sync is used only when configured.',
+    authEyebrow: 'Local-first access',
+    authLoginTitle: 'Welcome back',
+    authSignupTitle: 'Create a secure profile',
+    authLoginSubtitle: 'Continue where you left off. No unnecessary steps.',
+    authSignupSubtitle: 'Set up a profile for workouts, calories, weight, and future sync.',
+    authShowPassword: 'Show password',
+    authHidePassword: 'Hide password',
+    authShowShort: 'Show',
+    authHideShort: 'Hide',
+    authPasswordHint: 'Use a longer password or passphrase. Password-manager paste is supported.',
+    authStrength: 'Password strength',
+    authStrengthWeak: 'Weak',
+    authStrengthOk: 'Okay',
+    authStrengthGood: 'Good',
+    authStrengthStrong: 'Strong',
+    authRuleLength: 'At least 10 characters',
+    authRuleVariety: 'Mixed characters or at least 14 characters',
+    authRuleNoEmail: 'Does not include your email',
+    authRuleCommon: 'Not a common password',
+    authWeakPassword: 'Choose a stronger password.',
+    authLoginFailed: 'Email or password is incorrect.',
+    authLocked: 'Too many attempts. Try again in {time}.',
+    authSecurityLocal: 'Local vault',
+    authSecurityHash: 'PBKDF2 password protection',
+    authSecuritySync: 'Backend sync ready',
     caloriesTitle: 'Daily calorie intake',
     caloriesSubtitle: 'Track meals, your daily target, and basic macros.',
     addMeal: 'Add meal',
@@ -1481,6 +1538,14 @@ function loadUsers() {
   }
 }
 
+function updateStoredUserPassword(email, passwordHash) {
+  const users = loadUsers();
+  const nextUsers = users.map((user) => (
+    user.email === email ? { ...user, passwordHash } : user
+  ));
+  localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
+}
+
 function getAdminBonusKey(email) { return `powergraph_adminbonus_${email}`; }
 function loadAdminBonus(email) { if (!email) return 0; try { return Number(localStorage.getItem(getAdminBonusKey(email)) || 0); } catch { return 0; } }
 function saveAdminBonus(email, pts) { localStorage.setItem(getAdminBonusKey(email), String(pts)); }
@@ -1683,9 +1748,135 @@ async function applyRemoteData(email, remoteData) {
   if (mcalh.length > lcalh.length) localStorage.setItem(getCalHistoryKey(email), JSON.stringify(mcalh));
 }
 
-async function hashPassword(value) {
+function bytesToBase64(bytes) {
+  return btoa(String.fromCharCode(...bytes));
+}
+
+function base64ToBytes(value) {
+  return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+}
+
+function bytesToHex(bytes) {
+  return Array.from(bytes).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function constantTimeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  let diff = a.length ^ b.length;
+  const len = Math.max(a.length, b.length);
+  for (let i = 0; i < len; i += 1) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
+async function legacySha256(value) {
   const hashBuffer = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
-  return Array.from(new Uint8Array(hashBuffer)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  return bytesToHex(new Uint8Array(hashBuffer));
+}
+
+async function hashPassword(value) {
+  const salt = window.crypto.getRandomValues(new Uint8Array(16));
+  const key = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(value), 'PBKDF2', false, ['deriveBits']);
+  const bits = await window.crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+    key,
+    256
+  );
+  return `pbkdf2$${PBKDF2_ITERATIONS}$${bytesToBase64(salt)}$${bytesToBase64(new Uint8Array(bits))}`;
+}
+
+async function verifyPassword(value, storedHash) {
+  if (typeof storedHash !== 'string') return false;
+  if (!storedHash.startsWith('pbkdf2$')) {
+    return constantTimeEqual(await legacySha256(value), storedHash);
+  }
+  const [, iterationsRaw, saltRaw, expectedRaw] = storedHash.split('$');
+  const iterations = Number(iterationsRaw);
+  if (!iterations || !saltRaw || !expectedRaw) return false;
+  try {
+    const salt = base64ToBytes(saltRaw);
+    const key = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(value), 'PBKDF2', false, ['deriveBits']);
+    const bits = await window.crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+      key,
+      256
+    );
+    return constantTimeEqual(bytesToBase64(new Uint8Array(bits)), expectedRaw);
+  } catch {
+    return false;
+  }
+}
+
+function shouldUpgradePasswordHash(storedHash) {
+  if (typeof storedHash !== 'string') return true;
+  if (!storedHash.startsWith('pbkdf2$')) return true;
+  const iterations = Number(storedHash.split('$')[1]);
+  return !iterations || iterations < PBKDF2_ITERATIONS;
+}
+
+const COMMON_PASSWORDS = new Set([
+  'password', 'password1', 'password123', '123456', '12345678', '123456789',
+  'qwerty', 'qwerty123', 'letmein', 'welcome', 'admin', 'iloveyou',
+  'powergraph', 'fitness', 'workout', 'slovenia', 'geslo', 'geslo123',
+]);
+
+function getPasswordChecks(password, email) {
+  const value = password || '';
+  const emailLocal = (email || '').split('@')[0].toLowerCase();
+  const lower = value.toLowerCase();
+  const hasLower = /[a-z]/.test(value);
+  const hasUpper = /[A-Z]/.test(value);
+  const hasNumber = /\d/.test(value);
+  const hasSymbol = /[^A-Za-z0-9]/.test(value);
+  const varietyCount = [hasLower, hasUpper, hasNumber, hasSymbol].filter(Boolean).length;
+  return {
+    length: value.length >= 10,
+    variety: value.length >= 14 || varietyCount >= 3,
+    noEmail: !emailLocal || emailLocal.length < 3 || !lower.includes(emailLocal),
+    common: value.length > 0 && !COMMON_PASSWORDS.has(lower) && !/(.)\1{5,}/.test(value) && !/^(123|abc|qwe|asd)/i.test(value),
+  };
+}
+
+function getPasswordScore(password, email) {
+  const checks = getPasswordChecks(password, email);
+  const score = Object.values(checks).filter(Boolean).length;
+  return { checks, score, ok: checks.length && checks.noEmail && checks.common && score >= 3 };
+}
+
+function formatAuthWait(ms, lang) {
+  const minutes = Math.max(1, Math.ceil(ms / 60000));
+  return lang === 'sl' ? `${minutes} min` : `${minutes} min`;
+}
+
+function getAuthThrottleKey(email) { return `${AUTH_THROTTLE_KEY_PREFIX}${email || 'unknown'}`; }
+
+function loadAuthThrottle(email) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(getAuthThrottleKey(email)) || '{}');
+    return {
+      attempts: Number(parsed.attempts) || 0,
+      lockedUntil: Number(parsed.lockedUntil) || 0,
+    };
+  } catch {
+    return { attempts: 0, lockedUntil: 0 };
+  }
+}
+
+function getAuthLockRemaining(email) {
+  const throttle = loadAuthThrottle(email);
+  return Math.max(0, throttle.lockedUntil - Date.now());
+}
+
+function recordAuthFailure(email) {
+  const throttle = loadAuthThrottle(email);
+  const attempts = throttle.lockedUntil > Date.now() ? throttle.attempts : throttle.attempts + 1;
+  const lockedUntil = attempts >= AUTH_MAX_ATTEMPTS ? Date.now() + AUTH_LOCK_MS : 0;
+  localStorage.setItem(getAuthThrottleKey(email), JSON.stringify({ attempts, lockedUntil }));
+}
+
+function clearAuthThrottle(email) {
+  localStorage.removeItem(getAuthThrottleKey(email));
 }
 
 function formatDateValue(dateString, format) {
@@ -1978,6 +2169,9 @@ export default function App() {
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
   const [editingMealId, setEditingMealId] = useState(null);
   const [authForm, setAuthForm] = useState({ email: '', password: '', confirmPassword: '', gender: 'male' });
+  const [showAuthPassword, setShowAuthPassword] = useState(false);
+  const [showAuthConfirm, setShowAuthConfirm] = useState(false);
+  const [authTouched, setAuthTouched] = useState({ email: false, password: false, confirmPassword: false });
   const [formData, setFormData] = useState({ date: new Date().toISOString().slice(0, 10), exercise: 'Bench Press', weight: '', setDetails: ['12', '10', '8'], setWeights: ['', '', ''] });
   const [calorieForm, setCalorieForm] = useState({ date: new Date().toISOString().slice(0, 10), mealType: 'breakfast', name: '', calories: '', protein: '', carbs: '', fat: '' });
   const [calQuery, setCalQuery] = useState('');
@@ -2360,36 +2554,49 @@ export default function App() {
     event.preventDefault();
     const email = authForm.email.trim().toLowerCase();
     const password = authForm.password;
+    const passwordScore = getPasswordScore(password, email);
     setAuthError('');
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setAuthError(copy.authInvalidEmail);
       return;
     }
-    if (password.length < 6) {
-      setAuthError(copy.authShortPassword);
+    if (!password) {
+      setAuthError(copy.authPasswordRequired);
+      return;
+    }
+    if (authMode === 'signup' && !passwordScore.ok) {
+      setAuthError(password.length < 10 ? copy.authShortPassword : copy.authWeakPassword);
       return;
     }
     if (authMode === 'signup' && password !== authForm.confirmPassword) {
       setAuthError(copy.authPasswordsNoMatch);
       return;
     }
+    if (authMode === 'login') {
+      const lockedFor = getAuthLockRemaining(email);
+      if (lockedFor > 0) {
+        setAuthError(copy.authLocked.replace('{time}', formatAuthWait(lockedFor, settings.language)));
+        return;
+      }
+    }
 
     setAuthLoading(true);
     try {
       const users = loadUsers();
       const existing = users.find((user) => user.email === email);
-      const passwordHash = await hashPassword(password);
 
       if (authMode === 'signup') {
         if (existing) {
           setAuthError(copy.authExists);
           return;
         }
+        const passwordHash = await hashPassword(password);
         const nextUsers = [...users, { email, passwordHash, createdAt: new Date().toISOString() }];
         localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
         localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify([]));
         localStorage.setItem(getSettingsStorageKey(email), JSON.stringify({ ...defaultSettings, gender: authForm.gender }));
+        clearAuthThrottle(email);
         await pushLoginLog(email, 'signup');
         await hydrateFromBackend(email, password);
         setCurrentUser(email);
@@ -2397,23 +2604,22 @@ export default function App() {
         setShowTutorial(true);
       } else {
         const banned = loadBanned();
-        if (banned.includes(email)) {
-          setAuthError(settings.language === 'sl' ? 'Ta ra\u010dun je blokiran.' : 'This account has been banned.');
+        const isValidPassword = existing ? await verifyPassword(password, existing.passwordHash) : false;
+        if (!existing || banned.includes(email) || !isValidPassword) {
+          recordAuthFailure(email);
+          setAuthError(copy.authLoginFailed);
           return;
         }
-        if (!existing) {
-          setAuthError(copy.authNotFound);
-          return;
-        }
-        if (existing.passwordHash !== passwordHash) {
-          setAuthError(copy.authWrongPassword);
-          return;
+        clearAuthThrottle(email);
+        if (shouldUpgradePasswordHash(existing.passwordHash)) {
+          updateStoredUserPassword(email, await hashPassword(password));
         }
         await pushLoginLog(email, 'login');
         await hydrateFromBackend(email, password);
         setCurrentUser(email);
       }
       setAuthForm({ email: '', password: '', confirmPassword: '', gender: 'male' });
+      setAuthTouched({ email: false, password: false, confirmPassword: false });
     } finally {
       setAuthLoading(false);
     }
@@ -2429,6 +2635,9 @@ export default function App() {
     setSettings(defaultSettings);
     setAuthError('');
     setAuthForm({ email: '', password: '', confirmPassword: '', gender: 'male' });
+    setShowAuthPassword(false);
+    setShowAuthConfirm(false);
+    setAuthTouched({ email: false, password: false, confirmPassword: false });
     setShowRecap(false);
     setRecapData(null);
     setRestDays([]);
@@ -3034,35 +3243,131 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
     setTimeout(() => { setFeedbackOpen(false); setFeedbackSent(false); }, 1800);
   }
 
-  const NAV_ICONS = { dashboard: '🏠', exercises: '💪', history: '📋', bodyweight: '⚖️', calories: '🥗', ocenjevalec: '🔍', rankings: '🏆', advisor: '💡', settings: '⚙️', admin: '🛡️' };
+  const navIconProps = { size: 18, strokeWidth: 2.2 };
+  const NAV_ICONS = {
+    dashboard: <Home {...navIconProps} />,
+    exercises: <Dumbbell {...navIconProps} />,
+    history: <ClipboardList {...navIconProps} />,
+    bodyweight: <Scale {...navIconProps} />,
+    calories: <Utensils {...navIconProps} />,
+    ocenjevalec: <Search {...navIconProps} />,
+    rankings: <Trophy {...navIconProps} />,
+    advisor: <Lightbulb {...navIconProps} />,
+    settings: <Settings {...navIconProps} />,
+    admin: <Shield {...navIconProps} />,
+  };
   const NAV_SHORT = settings.language === 'sl'
     ? { dashboard: 'Domov', exercises: 'Vaje', history: 'Arhiv', bodyweight: 'Teža', calories: 'Obroki', ocenjevalec: 'Išči', rankings: 'Rang', advisor: 'Nasvet', settings: 'Opcije', admin: 'Admin' }
     : { dashboard: 'Home', exercises: 'Workout', history: 'Log', bodyweight: 'Weight', calories: 'Meals', ocenjevalec: 'Search', rankings: 'Rank', advisor: 'Tips', settings: 'Options', admin: 'Admin' };
   const nav = [['dashboard', copy.dashboard], ['exercises', copy.exercises], ['history', copy.history], ['bodyweight', copy.bodyweight], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['rankings', copy.rankings], ['advisor', copy.advisor], ['settings', copy.settings], ...(currentUser === ADMIN_EMAIL ? [['admin', copy.admin]] : [])];
+  const passwordStrength = getPasswordScore(authForm.password, authForm.email);
+  const strengthLabels = [copy.authStrengthWeak, copy.authStrengthWeak, copy.authStrengthOk, copy.authStrengthGood, copy.authStrengthStrong];
+  const passwordRules = [
+    ['length', copy.authRuleLength],
+    ['variety', copy.authRuleVariety],
+    ['noEmail', copy.authRuleNoEmail],
+    ['common', copy.authRuleCommon],
+  ];
 
   if (!currentUser) {
     return (
-      <div className="auth-shell">
-        <section className="glass-panel auth-card">
-          <div className="brand"><div className="logo-icon">P</div><h2>{copy.app}</h2></div>
-          <div className="auth-copy">
-            <h2>{copy.authTitle}</h2>
-            <p>{copy.authSubtitle}</p>
-            <p className="settings-copy">{copy.authLocalOnly}</p>
+      <div className="auth-shell auth-shell-premium">
+        <section className="auth-stage">
+          <div className="auth-hero-panel">
+            <div className="auth-brand-lockup">
+              <div className="logo-icon auth-logo">P</div>
+              <div>
+                <p className="auth-eyebrow">{copy.authEyebrow}</p>
+                <h1>{copy.app}</h1>
+              </div>
+            </div>
+            <div className="auth-hero-copy">
+              <h2>{copy.authTitle}</h2>
+              <p>{copy.authSubtitle}</p>
+            </div>
+            <div className="auth-security-strip" aria-label="Security highlights">
+              <span>{copy.authSecurityLocal}</span>
+              <span>{copy.authSecurityHash}</span>
+              <span>{copy.authSecuritySync}</span>
+            </div>
           </div>
-          <div className="auth-tabs">
-            <button className={`nav-btn ${authMode === 'login' ? 'active' : ''}`} type="button" onClick={() => { setAuthMode('login'); setAuthError(''); }}>{copy.login}</button>
-            <button className={`nav-btn ${authMode === 'signup' ? 'active' : ''}`} type="button" onClick={() => { setAuthMode('signup'); setAuthError(''); }}>{copy.signup}</button>
-          </div>
-          <form className="premium-form" onSubmit={handleAuthSubmit}>
-            <div className="input-group"><label htmlFor="auth-email">{copy.email}</label><input id="auth-email" type="email" value={authForm.email} onChange={(e) => setAuthForm((c) => ({ ...c, email: e.target.value }))} /></div>
-            <div className="input-group"><label htmlFor="auth-password">{copy.password}</label><input id="auth-password" type="password" value={authForm.password} onChange={(e) => setAuthForm((c) => ({ ...c, password: e.target.value }))} /></div>
-            {authMode === 'signup' ? <div className="input-group"><label htmlFor="auth-confirm">{copy.confirmPassword}</label><input id="auth-confirm" type="password" value={authForm.confirmPassword} onChange={(e) => setAuthForm((c) => ({ ...c, confirmPassword: e.target.value }))} /></div> : null}
-            {authMode === 'signup' ? <div className="input-group"><label>{copy.genderTitle}</label><div style={{display:'flex',gap:'1rem',marginTop:'0.25rem'}}><label style={{display:'flex',alignItems:'center',gap:'0.4rem',cursor:'pointer'}}><input type="radio" name="auth-gender" value="male" checked={authForm.gender === 'male'} onChange={() => setAuthForm(c => ({...c, gender:'male'}))} />{copy.tdeeMale}</label><label style={{display:'flex',alignItems:'center',gap:'0.4rem',cursor:'pointer'}}><input type="radio" name="auth-gender" value="female" checked={authForm.gender === 'female'} onChange={() => setAuthForm(c => ({...c, gender:'female'}))} />{copy.tdeeFemale}</label></div></div> : null}
-            {authError ? <p className="auth-error">{authError}</p> : null}
-            <button className="action-btn-primary full-width" type="submit" disabled={authLoading}>{authMode === 'signup' ? copy.authCreate : copy.authEnter}</button>
-          </form>
-          <p className="settings-copy">{authMode === 'signup' ? copy.authSwitchLogin : copy.authSwitchSignup}</p>
+
+          <section className="glass-panel auth-card auth-card-premium" aria-labelledby="auth-heading">
+            <div className="auth-tabs auth-mode-tabs" role="tablist" aria-label="Authentication mode">
+              <button className={`auth-mode-btn ${authMode === 'login' ? 'active' : ''}`} type="button" role="tab" aria-selected={authMode === 'login'} onClick={() => { setAuthMode('login'); setAuthError(''); }}>
+                {copy.login}
+              </button>
+              <button className={`auth-mode-btn ${authMode === 'signup' ? 'active' : ''}`} type="button" role="tab" aria-selected={authMode === 'signup'} onClick={() => { setAuthMode('signup'); setAuthError(''); }}>
+                {copy.signup}
+              </button>
+            </div>
+
+            <div className="auth-copy">
+              <p className="auth-eyebrow">{authMode === 'signup' ? copy.signup : copy.login}</p>
+              <h2 id="auth-heading">{authMode === 'signup' ? copy.authSignupTitle : copy.authLoginTitle}</h2>
+              <p>{authMode === 'signup' ? copy.authSignupSubtitle : copy.authLoginSubtitle}</p>
+            </div>
+
+            <form className="premium-form auth-form" onSubmit={handleAuthSubmit}>
+              <div className={`auth-field ${authTouched.email && authForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(authForm.email.trim()) ? 'invalid' : ''}`}>
+                <label htmlFor="auth-email">{copy.email}</label>
+                <div className="auth-input-wrap">
+                  <span className="auth-input-icon" aria-hidden="true">@</span>
+                  <input id="auth-email" type="email" inputMode="email" autoComplete="email" placeholder="you@example.com" value={authForm.email} onBlur={() => setAuthTouched((c) => ({ ...c, email: true }))} onChange={(e) => setAuthForm((c) => ({ ...c, email: e.target.value }))} />
+                </div>
+              </div>
+
+              <div className="auth-field">
+                <label htmlFor="auth-password">{copy.password}</label>
+                <div className="auth-input-wrap">
+                  <span className="auth-input-icon" aria-hidden="true">#</span>
+                  <input id="auth-password" type={showAuthPassword ? 'text' : 'password'} autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} value={authForm.password} onBlur={() => setAuthTouched((c) => ({ ...c, password: true }))} onChange={(e) => setAuthForm((c) => ({ ...c, password: e.target.value }))} />
+                  <button className="auth-field-action" type="button" onClick={() => setShowAuthPassword((v) => !v)} aria-label={showAuthPassword ? copy.authHidePassword : copy.authShowPassword}>{showAuthPassword ? copy.authHideShort : copy.authShowShort}</button>
+                </div>
+              </div>
+
+              {authMode === 'signup' && (
+                <div className="password-quality" aria-live="polite">
+                  <div className="password-quality-top"><span>{copy.authStrength}</span><strong>{strengthLabels[passwordStrength.score]}</strong></div>
+                  <div className={`password-meter score-${passwordStrength.score}`}><span /></div>
+                  <div className="password-rule-grid">
+                    {passwordRules.map(([key, label]) => <span className={passwordStrength.checks[key] ? 'met' : ''} key={key}>{passwordStrength.checks[key] ? '✓' : '•'} {label}</span>)}
+                  </div>
+                  <p>{copy.authPasswordHint}</p>
+                </div>
+              )}
+
+              {authMode === 'signup' ? (
+                <div className="auth-field">
+                  <label htmlFor="auth-confirm">{copy.confirmPassword}</label>
+                  <div className="auth-input-wrap">
+                    <span className="auth-input-icon" aria-hidden="true">#</span>
+                    <input id="auth-confirm" type={showAuthConfirm ? 'text' : 'password'} autoComplete="new-password" value={authForm.confirmPassword} onBlur={() => setAuthTouched((c) => ({ ...c, confirmPassword: true }))} onChange={(e) => setAuthForm((c) => ({ ...c, confirmPassword: e.target.value }))} />
+                    <button className="auth-field-action" type="button" onClick={() => setShowAuthConfirm((v) => !v)} aria-label={showAuthConfirm ? copy.authHidePassword : copy.authShowPassword}>{showAuthConfirm ? copy.authHideShort : copy.authShowShort}</button>
+                  </div>
+                </div>
+              ) : null}
+
+              {authMode === 'signup' ? (
+                <div className="auth-field">
+                  <label>{copy.genderTitle}</label>
+                  <div className="auth-gender-toggle">
+                    <button className={authForm.gender === 'male' ? 'active' : ''} type="button" onClick={() => setAuthForm((c) => ({ ...c, gender: 'male' }))}>{copy.tdeeMale}</button>
+                    <button className={authForm.gender === 'female' ? 'active' : ''} type="button" onClick={() => setAuthForm((c) => ({ ...c, gender: 'female' }))}>{copy.tdeeFemale}</button>
+                  </div>
+                </div>
+              ) : null}
+
+              {authError ? <p className="auth-error auth-error-premium" role="alert">{authError}</p> : null}
+              <button className="action-btn-primary full-width auth-submit" type="submit" disabled={authLoading}>{authLoading ? '...' : authMode === 'signup' ? copy.authCreate : copy.authEnter}</button>
+            </form>
+
+            <div className="auth-card-footer">
+              <span>{authMode === 'signup' ? copy.authSwitchLogin : copy.authSwitchSignup}</span>
+              <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAuthError(''); }}>{authMode === 'signup' ? copy.login : copy.signup}</button>
+            </div>
+            <p className="auth-local-note">{copy.authLocalOnly}</p>
+          </section>
         </section>
       </div>
     );
@@ -3108,9 +3413,9 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
 
         {activeSection === 'dashboard' && <>
           <div className="dashboard-grid">
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">💪</div><div><p className="stat-title">{copy.workouts}</p><h3 className="stat-value">{overall.workouts}</h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">≡</div><div><p className="stat-title">{copy.totalSets}</p><h3 className="stat-value">{overall.sets}</h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow">▲</div><div><p className="stat-title">{copy.totalVolume}</p><h3 className="stat-value">{formatVolume(overall.volumeKg, settings.units)}</h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow"><Dumbbell size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.workouts}</p><h3 className="stat-value">{overall.workouts}</h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow"><ClipboardList size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.totalSets}</p><h3 className="stat-value">{overall.sets}</h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow"><Trophy size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.totalVolume}</p><h3 className="stat-value">{formatVolume(overall.volumeKg, settings.units)}</h3></div></article>
             <section className="glass-panel chart-panel fade-in-up">
               <div className="panel-header"><h3>{copy.chart}</h3><button className={`action-btn-${settings.weightDrop ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem',marginLeft:'auto'}} title={copy.weightDropDesc} onClick={() => setSettings(c => ({ ...c, weightDrop: !c.weightDrop }))}>⚖️ {copy.weightDrop}</button></div>
               <div style={{display:'flex',flexWrap:'wrap',gap:'0.4rem',marginBottom:'0.75rem'}}>
@@ -3437,9 +3742,9 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
 
         {activeSection === 'calories' && <>
           <div className="dashboard-grid">
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">🍽</div><div><p className="stat-title">{copy.caloriesConsumed}</p><h3 className="stat-value">{Math.round(selectedDayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">🎯</div><div><p className="stat-title">{copy.calorieGoal}</p><h3 className="stat-value">{Math.round(settings.calorieGoal)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow">⚡</div><div><p className="stat-title">{copy.caloriesRemaining}</p><h3 className="stat-value">{Math.round(settings.calorieGoal - selectedDayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow"><Utensils size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.caloriesConsumed}</p><h3 className="stat-value">{Math.round(selectedDayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow"><Target size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.calorieGoal}</p><h3 className="stat-value">{Math.round(settings.calorieGoal)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow"><Flame size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.caloriesRemaining}</p><h3 className="stat-value">{Math.round(settings.calorieGoal - selectedDayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
 
             <section className="glass-panel chart-panel fade-in-up">
               <div className="panel-header"><h3>{copy.caloriesProgress}</h3><div className="settings-button-row"><button className={`action-btn-outline ${settings.calorieTrackerMode === 'simple' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'simple' }))}>{copy.simpleTracker}</button><button className={`action-btn-outline ${settings.calorieTrackerMode === 'advanced' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'advanced' }))}>{copy.advancedTracker}</button><input type="date" value={calorieForm.date} onChange={(e) => setCalorieForm((c) => ({ ...c, date: e.target.value }))} /></div></div>
@@ -3743,7 +4048,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
               </div>
             </section>
 
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon orange-glow">🔥</div><div><p className="stat-title">{copy.streak}</p><h3 className="stat-value">{calculateStreak(workouts)}</h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon orange-glow"><Flame size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.streak}</p><h3 className="stat-value">{calculateStreak(workouts)}</h3></div></article>
 
             <section className="glass-panel history-section fade-in-up" style={{gridColumn:'span 2'}}>
               <div className="panel-header"><h3>{copy.rankHowTitle}</h3></div>

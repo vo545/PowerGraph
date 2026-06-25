@@ -1582,6 +1582,120 @@ Object.assign(exerciseInfo, {
 });
 
 
+const EXERCISE_MUSCLE_WEIGHTS = {
+  'Bench Press': { Chest: 0.7, Triceps: 0.2, Shoulders: 0.1 },
+  'Incline Bench Press': { Chest: 0.65, Shoulders: 0.2, Triceps: 0.15 },
+  'Decline Bench Press': { Chest: 0.75, Triceps: 0.2, Shoulders: 0.05 },
+  'Chest Fly': { Chest: 1 },
+  'Push-Up': { Chest: 0.65, Triceps: 0.25, Shoulders: 0.1 },
+  'Wide Push-Up': { Chest: 0.8, Triceps: 0.12, Shoulders: 0.08 },
+  'Diamond Push-Up': { Triceps: 0.55, Chest: 0.35, Shoulders: 0.1 },
+  'Archer Push-Up': { Chest: 0.7, Triceps: 0.2, Shoulders: 0.1 },
+  'Pseudo-Planche Push-Up': { Chest: 0.45, Shoulders: 0.35, Triceps: 0.2 },
+  Squat: { Legs: 0.9, Abs: 0.1 },
+  'Leg Press': { Legs: 1 },
+  'Romanian Deadlift': { Legs: 0.65, Back: 0.25, Abs: 0.1 },
+  'Walking Lunge': { Legs: 0.9, Abs: 0.1 },
+  'Leg Extension': { Legs: 1 },
+  'Bodyweight Squat': { Legs: 0.9, Abs: 0.1 },
+  'Bulgarian Split Squat': { Legs: 0.9, Abs: 0.1 },
+  'Pistol Squat': { Legs: 0.9, Abs: 0.1 },
+  'Jump Squat': { Legs: 0.85, 'Stamina/Cardio': 0.15 },
+  'Wall Sit': { Legs: 0.85, Abs: 0.15 },
+  'Triceps Pushdown': { Triceps: 1 },
+  'Overhead Triceps Extension': { Triceps: 1 },
+  'Close Grip Bench Press': { Triceps: 0.55, Chest: 0.3, Shoulders: 0.15 },
+  'Bench Dip': { Triceps: 0.65, Chest: 0.25, Shoulders: 0.1 },
+  'Skull Crusher': { Triceps: 1 },
+  Dip: { Triceps: 0.55, Chest: 0.3, Shoulders: 0.15 },
+  'Close Grip Push-Up': { Triceps: 0.6, Chest: 0.3, Shoulders: 0.1 },
+  'Barbell Curl': { Biceps: 0.8, Forearms: 0.2 },
+  'Dumbbell Curl': { Biceps: 0.85, Forearms: 0.15 },
+  'Hammer Curl': { Biceps: 0.65, Forearms: 0.35 },
+  'Preacher Curl': { Biceps: 0.9, Forearms: 0.1 },
+  'Cable Curl': { Biceps: 0.85, Forearms: 0.15 },
+  'Chin-Up': { Biceps: 0.45, Back: 0.45, Forearms: 0.1 },
+  'Archer Pull-Up': { Back: 0.6, Biceps: 0.3, Forearms: 0.1 },
+  'Commando Pull-Up': { Back: 0.55, Biceps: 0.35, Forearms: 0.1 },
+  'Wrist Curl': { Forearms: 1 },
+  'Reverse Wrist Curl': { Forearms: 1 },
+  'Farmer Carry': { Forearms: 0.55, Back: 0.3, Abs: 0.15 },
+  'Plate Pinch Hold': { Forearms: 1 },
+  'Reverse Curl': { Forearms: 0.55, Biceps: 0.45 },
+  'Dead Hang': { Forearms: 0.55, Back: 0.3, Shoulders: 0.15 },
+  'Overhead Press': { Shoulders: 0.7, Triceps: 0.2, Abs: 0.1 },
+  'Lateral Raise': { Shoulders: 1 },
+  'Front Raise': { Shoulders: 1 },
+  'Rear Delt Fly': { Shoulders: 0.7, Back: 0.3 },
+  'Arnold Press': { Shoulders: 0.7, Triceps: 0.2, Abs: 0.1 },
+  'Pike Push-Up': { Shoulders: 0.6, Triceps: 0.25, Chest: 0.15 },
+  'Handstand Push-Up': { Shoulders: 0.65, Triceps: 0.25, Abs: 0.1 },
+  'Shoulder Tap': { Shoulders: 0.45, Abs: 0.45, Triceps: 0.1 },
+  Running: { 'Stamina/Cardio': 0.7, Legs: 0.3 },
+  Cycling: { 'Stamina/Cardio': 0.6, Legs: 0.4 },
+  Rowing: { 'Stamina/Cardio': 0.35, Back: 0.3, Legs: 0.25, Biceps: 0.1 },
+  'Jump Rope': { 'Stamina/Cardio': 0.65, Legs: 0.25, Forearms: 0.1 },
+  Burpee: { 'Stamina/Cardio': 0.4, Legs: 0.25, Chest: 0.2, Abs: 0.15 },
+  'Mountain Climber': { 'Stamina/Cardio': 0.35, Abs: 0.35, Legs: 0.2, Shoulders: 0.1 },
+  'Box Jump': { Legs: 0.65, 'Stamina/Cardio': 0.35 },
+  'Barbell Row': { Back: 0.75, Biceps: 0.15, Forearms: 0.1 },
+  'Lat Pulldown': { Back: 0.75, Biceps: 0.15, Forearms: 0.1 },
+  'Pull-Up': { Back: 0.65, Biceps: 0.25, Forearms: 0.1 },
+  'Seated Cable Row': { Back: 0.75, Biceps: 0.15, Forearms: 0.1 },
+  'Straight Arm Pulldown': { Back: 0.85, Abs: 0.15 },
+  'Inverted Row': { Back: 0.65, Biceps: 0.25, Forearms: 0.1 },
+  'Australian Pull-Up': { Back: 0.65, Biceps: 0.25, Forearms: 0.1 },
+  'Muscle-Up': { Back: 0.4, Triceps: 0.25, Chest: 0.15, Biceps: 0.1, Shoulders: 0.1 },
+  Crunch: { Abs: 1 },
+  'Leg Raise': { Abs: 0.85, Legs: 0.15 },
+  Plank: { Abs: 0.75, Back: 0.15, Shoulders: 0.1 },
+  'Russian Twist': { Abs: 1 },
+  'Cable Crunch': { Abs: 1 },
+  'L-Sit': { Abs: 0.65, Triceps: 0.2, Shoulders: 0.15 },
+  'Hollow Body Hold': { Abs: 1 },
+  'V-Up': { Abs: 0.9, Legs: 0.1 },
+};
+
+const BODYWEIGHT_LOAD_FACTORS = {
+  'Push-Up': 0.64,
+  'Wide Push-Up': 0.64,
+  'Diamond Push-Up': 0.64,
+  'Archer Push-Up': 0.7,
+  'Pseudo-Planche Push-Up': 0.72,
+  'Bodyweight Squat': 0.75,
+  'Bulgarian Split Squat': 0.8,
+  'Pistol Squat': 0.85,
+  'Jump Squat': 0.75,
+  'Wall Sit': 0.55,
+  Dip: 0.82,
+  'Close Grip Push-Up': 0.64,
+  'Chin-Up': 1,
+  'Archer Pull-Up': 1,
+  'Commando Pull-Up': 1,
+  'Dead Hang': 0.65,
+  'Pike Push-Up': 0.7,
+  'Handstand Push-Up': 0.9,
+  'Shoulder Tap': 0.35,
+  Running: 0.3,
+  Cycling: 0.28,
+  Rowing: 0.45,
+  'Jump Rope': 0.25,
+  Burpee: 0.55,
+  'Mountain Climber': 0.35,
+  'Box Jump': 0.65,
+  'Pull-Up': 1,
+  'Inverted Row': 0.75,
+  'Australian Pull-Up': 0.75,
+  'Muscle-Up': 1.15,
+  Crunch: 0.25,
+  'Leg Raise': 0.35,
+  Plank: 0.3,
+  'Russian Twist': 0.25,
+  'L-Sit': 0.45,
+  'Hollow Body Hold': 0.3,
+  'V-Up': 0.35,
+};
+
 const normalizeWorkout = (w, i = 0) => {
   const setDetails = (Array.isArray(w.setDetails) ? w.setDetails : [])
     .map((v) => Number(v) || 0)
@@ -1607,6 +1721,90 @@ const convertWeight = (kg, units) => (units === 'lbs' ? kg * 2.20462 : kg);
 const formatWeight = (kg, units) => `${units === 'lbs' ? Math.round(convertWeight(kg, units)) : Number(convertWeight(kg, units).toFixed(1))} ${units}`;
 const formatVolume = (kg, units) => `${Math.round(convertWeight(kg, units)).toLocaleString()} ${units}`;
 const findSection = (exercise) => Object.entries(sections).find(([, items]) => items.includes(exercise))?.[0] ?? 'Chest';
+function getExerciseSection(exercise, customExercises = []) {
+  const builtIn = Object.entries(sections).find(([, items]) => items.includes(exercise))?.[0];
+  if (builtIn) return builtIn;
+  const calisthenics = Object.entries(calisthenicsSections).find(([, items]) => items.includes(exercise))?.[0];
+  if (calisthenics) return calisthenics;
+  const custom = customExercises.find((item) => item.name === exercise);
+  return custom?.section || 'Chest';
+}
+function getLatestBodyWeightKg(entries, gender = 'male') {
+  const latest = [...(entries || [])]
+    .map((entry) => ({ ...entry, weight: Number(entry.weight) || 0 }))
+    .filter((entry) => entry.weight > 0)
+    .sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0))
+    .at(-1);
+  return latest?.weight || (gender === 'female' ? 62 : 78);
+}
+function getExerciseMuscleWeights(exercise, customExercises = []) {
+  return EXERCISE_MUSCLE_WEIGHTS[exercise] || { [getExerciseSection(exercise, customExercises)]: 1 };
+}
+function getEstimatedExerciseLoad(exercise, bodyWeightKg, customExercises = []) {
+  const explicitFactor = BODYWEIGHT_LOAD_FACTORS[exercise];
+  if (explicitFactor !== undefined) return bodyWeightKg * explicitFactor;
+  const section = getExerciseSection(exercise, customExercises);
+  if (section === 'Stamina/Cardio') return bodyWeightKg * 0.3;
+  if (section === 'Abs') return bodyWeightKg * 0.3;
+  return 0;
+}
+function getWorkoutStrengthVolume(workout, bodyWeightKg, customExercises = []) {
+  const reps = getTotalReps(workout);
+  if (!reps) return 0;
+  const perSetVolume = Array.isArray(workout.setWeights) && workout.setWeights.some((value) => Number(value) > 0)
+    ? workout.setDetails.reduce((sum, repCount, index) => sum + ((Number(repCount) || 0) * (Number(workout.setWeights[index]) || 0)), 0)
+    : 0;
+  if (perSetVolume > 0) return perSetVolume;
+  const loggedLoad = Number(workout.weight) || 0;
+  const effectiveLoad = loggedLoad > 0 ? loggedLoad : getEstimatedExerciseLoad(workout.exercise, bodyWeightKg, customExercises);
+  return effectiveLoad * reps;
+}
+function getMuscleVolumeData(muscleKey, workouts, bodyWeightEntries = [], settings = {}, customExercises = []) {
+  const bodyWeightKg = getLatestBodyWeightKg(bodyWeightEntries, settings.gender || 'male');
+  const exerciseTotals = {};
+  const records = {};
+  let sessions = 0;
+  let sets = 0;
+  let weightedVolume = 0;
+
+  workouts.forEach((workout) => {
+    const weights = getExerciseMuscleWeights(workout.exercise, customExercises);
+    const share = Number(weights[muscleKey]) || 0;
+    if (share <= 0) return;
+    const baseVolume = getWorkoutStrengthVolume(workout, bodyWeightKg, customExercises);
+    const muscleVolume = baseVolume * share;
+    if (muscleVolume <= 0) return;
+    sessions += 1;
+    sets += getSetCount(workout);
+    weightedVolume += muscleVolume;
+    exerciseTotals[workout.exercise] = (exerciseTotals[workout.exercise] || 0) + muscleVolume;
+    const recordLoad = Number(workout.weight) || getEstimatedExerciseLoad(workout.exercise, bodyWeightKg, customExercises);
+    records[workout.exercise] = Math.max(records[workout.exercise] || 0, recordLoad);
+  });
+
+  const topExercises = Object.entries(exerciseTotals)
+    .map(([name, volume]) => ({ name, volume }))
+    .sort((a, b) => b.volume - a.volume);
+  const volume = Math.round(weightedVolume);
+  const rank = getMuscleRank(volume, settings.language || 'en');
+  return {
+    pts: volume,
+    volume,
+    sessions,
+    sets,
+    prs: Object.keys(records).length,
+    rank,
+    topExercise: topExercises[0] || null,
+    topExercises,
+    bodyWeightKg,
+  };
+}
+function getAllMuscleVolumeData(workouts, bodyWeightEntries = [], settings = {}, customExercises = []) {
+  return MUSCLE_KEYS.reduce((map, muscleKey) => {
+    map[muscleKey] = getMuscleVolumeData(muscleKey, workouts, bodyWeightEntries, settings, customExercises);
+    return map;
+  }, {});
+}
 const localize = (pair, lang) => pair?.[lang] ?? pair?.en ?? pair?.sl ?? '';
 const getExerciseInfo = (exercise) => ({
   ...(exerciseInfo[exercise] ?? { sl: exercise, en: exercise, targets: { sl: '', en: '' }, primary: { sl: '', en: '' }, howTo: { sl: '', en: '' }, cues: { sl: '', en: '' } }),
@@ -1726,16 +1924,17 @@ const RANKS = [
 
 const MUSCLE_RANKS = [
   { nameEn: 'Wood',     nameSl: 'Les',      min: 0,    color: '#a16207', bg: 'linear-gradient(135deg,#78350f,#b45309)' },
-  { nameEn: 'Bronze',   nameSl: 'Bron',     min: 60,   color: '#d97706', bg: 'linear-gradient(135deg,#92400e,#fbbf24)' },
-  { nameEn: 'Silver',   nameSl: 'Srebro',   min: 180,  color: '#94a3b8', bg: 'linear-gradient(135deg,#475569,#cbd5e1)' },
-  { nameEn: 'Gold',     nameSl: 'Zlato',    min: 400,  color: '#f59e0b', bg: 'linear-gradient(135deg,#b45309,#fde68a)' },
-  { nameEn: 'Platinum', nameSl: 'Platina',  min: 750,  color: '#67e8f9', bg: 'linear-gradient(135deg,#0e7490,#a5f3fc)' },
-  { nameEn: 'Diamond',  nameSl: 'Diamant',  min: 1300, color: '#a78bfa', bg: 'linear-gradient(135deg,#6d28d9,#ddd6fe)' },
-  { nameEn: 'Champion', nameSl: 'Prvak',    min: 2200, color: '#f472b6', bg: 'linear-gradient(135deg,#be185d,#fbcfe8)' },
-  { nameEn: 'Titan',    nameSl: 'Titan',    min: 3500, color: '#f87171', bg: 'linear-gradient(135deg,#7f1d1d,#fca5a5)' },
-  { nameEn: 'Olympian', nameSl: 'Olimpijec',min: 5500, color: '#fcd34d', bg: 'linear-gradient(135deg,#78350f,#fcd34d,#67e8f9)' },
+  { nameEn: 'Bronze',   nameSl: 'Bron',     min: 2500, color: '#d97706', bg: 'linear-gradient(135deg,#92400e,#fbbf24)' },
+  { nameEn: 'Silver',   nameSl: 'Srebro',   min: 7500, color: '#94a3b8', bg: 'linear-gradient(135deg,#475569,#cbd5e1)' },
+  { nameEn: 'Gold',     nameSl: 'Zlato',    min: 15000, color: '#f59e0b', bg: 'linear-gradient(135deg,#b45309,#fde68a)' },
+  { nameEn: 'Platinum', nameSl: 'Platina',  min: 30000, color: '#67e8f9', bg: 'linear-gradient(135deg,#0e7490,#a5f3fc)' },
+  { nameEn: 'Diamond',  nameSl: 'Diamant',  min: 60000, color: '#a78bfa', bg: 'linear-gradient(135deg,#6d28d9,#ddd6fe)' },
+  { nameEn: 'Champion', nameSl: 'Prvak',    min: 100000, color: '#f472b6', bg: 'linear-gradient(135deg,#be185d,#fbcfe8)' },
+  { nameEn: 'Titan',    nameSl: 'Titan',    min: 160000, color: '#f87171', bg: 'linear-gradient(135deg,#7f1d1d,#fca5a5)' },
+  { nameEn: 'Olympian', nameSl: 'Olimpijec',min: 250000, color: '#fcd34d', bg: 'linear-gradient(135deg,#78350f,#fcd34d,#67e8f9)' },
 ];
 const MUSCLE_RANK_ICONS = ['🪵','🥉','🥈','🥇','💠','💎','🏅','🔥','⚡'];
+const MUSCLE_KEYS = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms', 'Legs', 'Abs', 'Stamina/Cardio'];
 const MUSCLE_COLORS = {
   Chest: '#3b82f6', Back: '#6366f1', Shoulders: '#f59e0b',
   Biceps: '#8b5cf6', Triceps: '#ec4899', Forearms: '#10b981',
@@ -1786,17 +1985,7 @@ function calculatePoints(workouts, calorieEntries, bodyWeightEntries, restDays, 
 }
 
 function getMusclePoints(muscleKey, workouts) {
-  const muscleEx = new Set([...(sections[muscleKey] || []), ...(calisthenicsSections[muscleKey] || [])]);
-  const rel = workouts.filter(w => muscleEx.has(w.exercise));
-  let pts = rel.length * 5;
-  const totalVol = rel.reduce((s, w) => s + getVolume(w), 0);
-  pts += Math.floor(totalVol / 800);
-  const exMax = {};
-  [...rel].sort((a, b) => a.date.localeCompare(b.date)).forEach(w => {
-    if (exMax[w.exercise] !== undefined && w.weight > exMax[w.exercise]) pts += 15;
-    if (exMax[w.exercise] === undefined || w.weight > exMax[w.exercise]) exMax[w.exercise] = w.weight;
-  });
-  return { pts: Math.max(0, pts), sessions: rel.length, volume: Math.round(totalVol), prs: Object.keys(exMax).length };
+  return getMuscleVolumeData(muscleKey, workouts);
 }
 
 function getMuscleRank(pts, lang) {
@@ -2064,224 +2253,190 @@ async function callGemini(email, parts) {
   return typeof data?.text === 'string' ? data.text : null;
 }
 
-function MuscleSilhouetteFront({ pp, fp, gender }) {
-  const fem = gender === 'female';
-  return (
-    <g>
-      <path d="M52,32 Q42,37 29,47 Q26,51 24,56 L28,58 Q39,53 51,48 Z" {...pp('Back')} />
-      <path d="M58,32 Q68,37 81,47 Q84,51 86,56 L82,58 Q71,53 59,48 Z" {...pp('Back')} />
-      {fem ? (
-        <>
-          <path d="M17,48 Q10,55 11,67 Q13,76 20,76 Q27,74 30,64 Q31,53 24,48 Z" {...pp('Shoulders')} />
-          <path d="M93,48 Q100,55 99,67 Q97,76 90,76 Q83,74 80,64 Q79,53 86,48 Z" {...pp('Shoulders')} />
-        </>
-      ) : (
-        <>
-          <path d="M14,48 Q8,55 9,68 Q11,79 19,80 Q27,78 30,67 Q32,55 23,48 Z" {...pp('Shoulders')} />
-          <path d="M96,48 Q102,55 101,68 Q99,79 91,80 Q83,78 80,67 Q78,55 87,48 Z" {...pp('Shoulders')} />
-        </>
-      )}
-      {fem ? (
-        <>
-          <path d="M51,44 C42,45 34,51 32,60 C31,66 36,73 46,72 C50,68 53,59 52,47 Z" {...pp('Chest')} />
-          <path d="M59,44 C68,45 76,51 78,60 C79,66 74,73 64,72 C60,68 57,59 58,47 Z" {...pp('Chest')} />
-        </>
-      ) : (
-        <>
-          <path d="M50,44 C41,45 33,50 31,59 C30,66 35,73 45,72 C50,68 53,58 52,47 Z" {...pp('Chest')} />
-          <path d="M60,44 C69,45 77,50 79,59 C80,66 75,73 65,72 C60,68 57,58 58,47 Z" {...pp('Chest')} />
-          <path d="M50,50 C43,52 36,55 32,61" {...fp('Chest')} />
-          <path d="M50,57 C42,59 35,62 32,67" {...fp('Chest')} />
-          <path d="M50,65 C43,67 38,69 35,72" {...fp('Chest')} />
-        </>
-      )}
-      <path d="M55,58 C53,55 48,55 48,60 C48,65 55,71 55,71 C55,71 62,65 62,60 C62,55 57,55 55,58 Z" {...pp('Stamina/Cardio')} />
-      {fem ? (
-        <>
-          <path d="M47,72 C45,76 45,81 47,84 C50,85 53,84 54,80 L54,73 C52,72 49,71 47,72 Z" {...pp('Abs')} />
-          <path d="M56,73 L56,80 C57,84 60,85 63,84 C65,81 65,76 63,72 C61,71 58,72 56,73 Z" {...pp('Abs')} />
-          <path d="M46,85 C45,89 45,94 47,97 C50,98 53,97 54,94 L54,86 C51,85 48,85 46,85 Z" {...pp('Abs')} />
-          <path d="M56,86 L56,94 C57,97 60,98 63,97 C65,94 65,89 64,85 C62,85 59,85 56,86 Z" {...pp('Abs')} />
-          <path d="M48,97 C48,99 51,100 55,100 L55,97 Z" {...pp('Abs')} />
-          <path d="M55,97 L55,100 C59,100 62,99 62,97 Z" {...pp('Abs')} />
-          <path d="M38,73 C39,83 41,93 45,100 C45,92 45,82 47,72 C43,73 40,73 38,73 Z" {...pp('Abs')} />
-          <path d="M72,73 C71,83 69,93 65,100 C65,92 65,82 63,72 C67,73 70,73 72,73 Z" {...pp('Abs')} />
-          <path d="M55,73 L55,100" {...fp('Abs')} />
-          <path d="M46,84 C51,85 59,85 64,84" {...fp('Abs')} />
-          <path d="M46,97 C51,98 59,98 64,97" {...fp('Abs')} />
-        </>
-      ) : (
-        <>
-          <path d="M46,72 C44,76 44,81 46,84 C49,85 53,84 54,80 L54,73 C51,72 48,71 46,72 Z" {...pp('Abs')} />
-          <path d="M56,73 L56,80 C57,84 61,85 64,84 C66,81 66,76 64,72 C62,71 59,72 56,73 Z" {...pp('Abs')} />
-          <path d="M45,85 C44,89 44,95 47,98 C50,99 53,98 54,94 L54,86 C51,85 48,85 45,85 Z" {...pp('Abs')} />
-          <path d="M56,86 L56,94 C57,98 60,99 63,98 C66,95 66,89 65,85 C62,85 59,85 56,86 Z" {...pp('Abs')} />
-          <path d="M47,97 C47,99 50,100 55,100 L55,97 Z" {...pp('Abs')} />
-          <path d="M55,97 L55,100 C60,100 63,99 63,97 Z" {...pp('Abs')} />
-          <path d="M35,72 C36,83 39,94 45,100 C45,92 44,82 46,72 C41,73 38,73 35,72 Z" {...pp('Abs')} />
-          <path d="M75,72 C74,83 71,94 65,100 C65,92 66,82 64,72 C69,73 72,73 75,72 Z" {...pp('Abs')} />
-          <path d="M55,73 L55,100" {...fp('Abs')} />
-          <path d="M46,84 C51,85 59,85 64,84" {...fp('Abs')} />
-          <path d="M45,98 C51,99 59,99 65,98" {...fp('Abs')} />
-        </>
-      )}
-      <path d="M22,57 Q14,68 13,86 Q14,96 22,97 Q30,95 34,85 Q36,70 30,57 Z" {...pp('Biceps')} />
-      <path d="M88,57 Q96,68 97,86 Q96,96 88,97 Q80,95 76,85 Q74,70 80,57 Z" {...pp('Biceps')} />
-      <path d="M26,62 Q19,75 18,87" {...fp('Biceps')} />
-      <path d="M84,62 Q91,75 92,87" {...fp('Biceps')} />
-      <path d="M16,52 Q8,66 9,84 Q11,92 16,90 Q18,80 18,56 Z" {...pp('Triceps')} />
-      <path d="M94,52 Q102,66 101,84 Q99,92 94,90 Q92,80 92,56 Z" {...pp('Triceps')} />
-      <path d="M14,88 C8,101 7,116 11,127 C17,131 24,126 26,117 C25,104 22,94 18,88 Z" {...pp('Forearms')} />
-      <path d="M96,88 C102,101 103,116 99,127 C93,131 86,126 84,117 C85,104 88,94 92,88 Z" {...pp('Forearms')} />
-      <path d="M16,92 C12,106 11,119 13,127" {...fp('Forearms')} />
-      <path d="M94,92 C98,106 99,119 97,127" {...fp('Forearms')} />
-      <path d="M31,124 C25,142 24,163 29,178 C35,188 51,186 56,171 C57,153 56,137 52,124 Z" {...pp('Legs')} />
-      <path d="M58,124 C54,137 53,153 54,171 C59,186 75,188 81,178 C86,163 85,142 79,124 Z" {...pp('Legs')} />
-      <path d="M28,172 C22,190 23,213 29,228 C36,234 50,228 52,211 C52,195 53,182 57,171 Z" {...pp('Legs')} />
-      <path d="M82,172 C88,190 87,213 81,228 C74,234 60,228 58,211 C58,195 57,182 53,171 Z" {...pp('Legs')} />
-      <path d="M35,126 C38,143 37,160 32,177" {...fp('Legs')} />
-      <path d="M47,126 C51,143 51,160 47,181" {...fp('Legs')} />
-      <path d="M32,176 C40,181 50,178 55,170" {...fp('Legs')} />
-      <path d="M75,126 C72,143 73,160 78,177" {...fp('Legs')} />
-      <path d="M63,126 C59,143 59,160 63,181" {...fp('Legs')} />
-      <path d="M78,176 C70,181 60,178 55,170" {...fp('Legs')} />
-      <path d="M31,176 C27,192 28,212 33,227" {...fp('Legs')} />
-      <path d="M47,178 C50,196 48,213 43,229" {...fp('Legs')} />
-      <path d="M79,176 C83,192 82,212 77,227" {...fp('Legs')} />
-      <path d="M63,178 C60,196 62,213 67,229" {...fp('Legs')} />
-    </g>
-  );
+const MUSCLE_PREFERRED_VIEW = {
+  Chest: 'front',
+  Back: 'back',
+  Shoulders: 'front',
+  Biceps: 'front',
+  Triceps: 'back',
+  Forearms: 'front',
+  Legs: 'front',
+  Abs: 'front',
+  'Stamina/Cardio': 'front',
+};
+
+const ANATOMY_ZONES = {
+  front: {
+    Chest: {
+      paths: {
+        male: [
+          'M50,44 C41,45 33,50 31,59 C30,66 35,73 45,72 C50,68 53,58 52,47 Z',
+          'M60,44 C69,45 77,50 79,59 C80,66 75,73 65,72 C60,68 57,58 58,47 Z',
+        ],
+        female: [
+          'M51,44 C42,45 34,51 32,60 C31,66 36,73 46,72 C50,68 53,59 52,47 Z',
+          'M59,44 C68,45 76,51 78,60 C79,66 74,73 64,72 C60,68 57,59 58,47 Z',
+        ],
+      },
+      fibers: ['M50,50 C43,52 36,55 32,61', 'M50,57 C42,59 35,62 32,67', 'M50,65 C43,67 38,69 35,72'],
+    },
+    Shoulders: {
+      paths: {
+        male: ['M14,48 Q8,55 9,68 Q11,79 19,80 Q27,78 30,67 Q32,55 23,48 Z', 'M96,48 Q102,55 101,68 Q99,79 91,80 Q83,78 80,67 Q78,55 87,48 Z'],
+        female: ['M17,48 Q10,55 11,67 Q13,76 20,76 Q27,74 30,64 Q31,53 24,48 Z', 'M93,48 Q100,55 99,67 Q97,76 90,76 Q83,74 80,64 Q79,53 86,48 Z'],
+      },
+    },
+    Biceps: {
+      paths: ['M22,57 Q14,68 13,86 Q14,96 22,97 Q30,95 34,85 Q36,70 30,57 Z', 'M88,57 Q96,68 97,86 Q96,96 88,97 Q80,95 76,85 Q74,70 80,57 Z'],
+      fibers: ['M26,62 Q19,75 18,87', 'M84,62 Q91,75 92,87'],
+    },
+    Forearms: {
+      paths: ['M14,88 C8,101 7,116 11,127 C17,131 24,126 26,117 C25,104 22,94 18,88 Z', 'M96,88 C102,101 103,116 99,127 C93,131 86,126 84,117 C85,104 88,94 92,88 Z'],
+      fibers: ['M16,92 C12,106 11,119 13,127', 'M94,92 C98,106 99,119 97,127'],
+    },
+    Legs: {
+      paths: [
+        'M31,124 C25,142 24,163 29,178 C35,188 51,186 56,171 C57,153 56,137 52,124 Z',
+        'M58,124 C54,137 53,153 54,171 C59,186 75,188 81,178 C86,163 85,142 79,124 Z',
+        'M28,172 C22,190 23,213 29,228 C36,234 50,228 52,211 C52,195 53,182 57,171 Z',
+        'M82,172 C88,190 87,213 81,228 C74,234 60,228 58,211 C58,195 57,182 53,171 Z',
+      ],
+      fibers: ['M35,126 C38,143 37,160 32,177', 'M47,126 C51,143 51,160 47,181', 'M75,126 C72,143 73,160 78,177', 'M63,126 C59,143 59,160 63,181', 'M31,176 C27,192 28,212 33,227', 'M79,176 C83,192 82,212 77,227'],
+    },
+    Abs: {
+      paths: {
+        male: [
+          'M46,72 C44,76 44,81 46,84 C49,85 53,84 54,80 L54,73 C51,72 48,71 46,72 Z',
+          'M56,73 L56,80 C57,84 61,85 64,84 C66,81 66,76 64,72 C62,71 59,72 56,73 Z',
+          'M45,85 C44,89 44,95 47,98 C50,99 53,98 54,94 L54,86 C51,85 48,85 45,85 Z',
+          'M56,86 L56,94 C57,98 60,99 63,98 C66,95 66,89 65,85 C62,85 59,85 56,86 Z',
+          'M47,97 C47,99 50,100 55,100 L55,97 Z',
+          'M55,97 L55,100 C60,100 63,99 63,97 Z',
+          'M35,72 C36,83 39,94 45,100 C45,92 44,82 46,72 C41,73 38,73 35,72 Z',
+          'M75,72 C74,83 71,94 65,100 C65,92 66,82 64,72 C69,73 72,73 75,72 Z',
+        ],
+        female: [
+          'M47,72 C45,76 45,81 47,84 C50,85 53,84 54,80 L54,73 C52,72 49,71 47,72 Z',
+          'M56,73 L56,80 C57,84 60,85 63,84 C65,81 65,76 63,72 C61,71 58,72 56,73 Z',
+          'M46,85 C45,89 45,94 47,97 C50,98 53,97 54,94 L54,86 C51,85 48,85 46,85 Z',
+          'M56,86 L56,94 C57,97 60,98 63,97 C65,94 65,89 64,85 C62,85 59,85 56,86 Z',
+          'M48,97 C48,99 51,100 55,100 L55,97 Z',
+          'M55,97 L55,100 C59,100 62,99 62,97 Z',
+          'M38,73 C39,83 41,93 45,100 C45,92 45,82 47,72 C43,73 40,73 38,73 Z',
+          'M72,73 C71,83 69,93 65,100 C65,92 65,82 63,72 C67,73 70,73 72,73 Z',
+        ],
+      },
+      fibers: ['M55,73 L55,100', 'M46,84 C51,85 59,85 64,84', 'M45,98 C51,99 59,99 65,98'],
+    },
+    'Stamina/Cardio': {
+      paths: ['M55,58 C53,55 48,55 48,60 C48,65 55,71 55,71 C55,71 62,65 62,60 C62,55 57,55 55,58 Z'],
+    },
+  },
+  back: {
+    Back: {
+      paths: [
+        'M52,34 C45,38 39,45 33,55 C40,54 47,51 52,47 Z',
+        'M58,34 C65,38 71,45 77,55 C70,54 63,51 58,47 Z',
+        'M52,49 C45,52 39,59 36,70 C40,77 47,83 53,91 L55,63 Z',
+        'M58,49 C65,52 71,59 74,70 C70,77 63,83 57,91 L55,63 Z',
+        'M34,61 C28,72 27,84 30,94 C33,99 38,100 43,96 C40,88 39,77 40,66 C38,63 36,62 34,61 Z',
+        'M76,61 C82,72 83,84 80,94 C77,99 72,100 67,96 C70,88 71,77 70,66 C72,63 74,62 76,61 Z',
+      ],
+      fibers: ['M55,36 L55,88', 'M52,40 C46,49 40,56 34,60', 'M58,40 C64,49 70,56 76,60', 'M39,64 C42,76 47,84 53,90', 'M71,64 C68,76 63,84 57,90'],
+    },
+    Shoulders: {
+      paths: {
+        male: ['M14,50 Q10,56 10,68 Q12,78 18,78 Q24,76 28,66 Q30,56 22,50 Z', 'M96,50 Q100,56 100,68 Q98,78 92,78 Q86,76 82,66 Q80,56 88,50 Z'],
+        female: ['M16,50 Q11,56 11,67 Q13,76 19,76 Q25,74 29,65 Q30,54 22,50 Z', 'M94,50 Q99,56 99,67 Q97,76 91,76 Q85,74 81,65 Q80,54 88,50 Z'],
+      },
+    },
+    Triceps: {
+      paths: ['M22,58 Q14,74 14,93 Q16,104 24,104 Q32,102 34,90 Q36,74 28,58 Z', 'M88,58 Q96,74 96,93 Q94,104 86,104 Q78,102 76,90 Q74,74 82,58 Z'],
+      fibers: ['M18,66 Q16,80 17,92', 'M24,60 Q20,74 20,90', 'M92,66 Q94,80 93,92', 'M86,60 Q90,74 90,90'],
+    },
+    Forearms: {
+      paths: ['M13,92 C7,105 8,120 12,128 C18,131 25,126 27,118 C26,105 22,96 18,92 Z', 'M97,92 C103,105 102,120 98,128 C92,131 85,126 83,118 C84,105 88,96 92,92 Z'],
+      fibers: ['M16,96 C12,110 12,121 14,128', 'M94,96 C98,110 98,121 96,128'],
+    },
+    Legs: {
+      paths: {
+        male: ['M27,126 C24,135 24,149 29,158 C34,165 44,164 50,154 C51,144 52,135 52,128 C43,130 35,130 27,126 Z', 'M83,126 C86,135 86,149 81,158 C76,165 66,164 60,154 C59,144 58,135 58,128 C67,130 75,130 83,126 Z'],
+        female: ['M25,126 C22,135 22,149 27,158 C32,165 42,166 48,158 C49,147 50,136 52,128 C42,130 34,130 25,126 Z', 'M85,126 C88,135 88,149 83,158 C78,165 68,166 62,158 C61,147 60,136 58,128 C68,130 76,130 85,126 Z'],
+      },
+      extraPaths: ['M28,160 C24,176 25,194 31,203 C36,209 43,206 45,194 C43,179 45,168 49,158 C41,164 34,164 28,160 Z', 'M46,161 C51,177 51,195 45,205 C40,211 33,206 32,194 C35,180 35,169 32,161 C37,164 42,164 46,161 Z', 'M82,160 C86,176 85,194 79,203 C74,209 67,206 65,194 C67,179 65,168 61,158 C69,164 76,164 82,160 Z', 'M64,161 C59,177 59,195 65,205 C70,211 77,206 78,194 C75,180 75,169 78,161 C73,164 68,164 64,161 Z', 'M31,202 C26,215 26,229 32,235 C39,239 45,232 44,218 C43,210 45,204 49,198 C42,204 36,206 31,202 Z', 'M79,202 C84,215 84,229 78,235 C71,239 65,232 66,218 C67,210 65,204 61,198 C68,204 74,206 79,202 Z'],
+      fibers: ['M31,164 C29,178 30,191 32,203', 'M45,164 C43,178 42,191 43,205', 'M79,164 C81,178 80,191 78,203', 'M65,164 C67,178 68,191 67,205'],
+    },
+  },
+};
+
+function getAnatomyPaths(zone, gender) {
+  const base = Array.isArray(zone.paths) ? zone.paths : (zone.paths?.[gender] || zone.paths?.male || []);
+  return [...base, ...(zone.extraPaths || [])];
 }
 
-function MuscleSilhouetteBack({ pp, fp, gender }) {
-  const fem = gender === 'female';
-  return (
-    <g>
-      <path d="M52,34 C45,38 39,45 33,55 C40,54 47,51 52,47 Z" {...pp('Back')} />
-      <path d="M58,34 C65,38 71,45 77,55 C70,54 63,51 58,47 Z" {...pp('Back')} />
-      <path d="M52,49 C45,52 39,59 36,70 C40,77 47,83 53,91 L55,63 Z" {...pp('Back')} />
-      <path d="M58,49 C65,52 71,59 74,70 C70,77 63,83 57,91 L55,63 Z" {...pp('Back')} />
-      <path d="M34,61 C27,74 25,91 28,108 C31,116 38,119 43,112 C40,97 38,81 40,66 C38,63 36,62 34,61 Z" {...pp('Back')} />
-      <path d="M76,61 C83,74 85,91 82,108 C79,116 72,119 67,112 C70,97 72,81 70,66 C72,63 74,62 76,61 Z" {...pp('Back')} />
-      <path d="M49,90 C46,101 46,114 49,124 L54,124 L54,88 C52,88 50,89 49,90 Z" {...pp('Back')} />
-      <path d="M61,90 C64,101 64,114 61,124 L56,124 L56,88 C58,88 60,89 61,90 Z" {...pp('Back')} />
-      <path d="M55,36 L55,124" {...fp('Back')} />
-      <path d="M52,40 C46,49 40,56 34,60" {...fp('Back')} />
-      <path d="M58,40 C64,49 70,56 76,60" {...fp('Back')} />
-      <path d="M39,64 C42,82 47,98 53,114" {...fp('Back')} />
-      <path d="M71,64 C68,82 63,98 57,114" {...fp('Back')} />
-      <path d="M29,75 C28,88 30,101 35,112" {...fp('Back')} />
-      <path d="M81,75 C82,88 80,101 75,112" {...fp('Back')} />
-      {fem ? (
-        <>
-          <path d="M16,50 Q11,56 11,67 Q13,76 19,76 Q25,74 29,65 Q30,54 22,50 Z" {...pp('Shoulders')} />
-          <path d="M94,50 Q99,56 99,67 Q97,76 91,76 Q85,74 81,65 Q80,54 88,50 Z" {...pp('Shoulders')} />
-        </>
-      ) : (
-        <>
-          <path d="M14,50 Q10,56 10,68 Q12,78 18,78 Q24,76 28,66 Q30,56 22,50 Z" {...pp('Shoulders')} />
-          <path d="M96,50 Q100,56 100,68 Q98,78 92,78 Q86,76 82,66 Q80,56 88,50 Z" {...pp('Shoulders')} />
-        </>
-      )}
-      <path d="M22,58 Q14,74 14,93 Q16,104 24,104 Q32,102 34,90 Q36,74 28,58 Z" {...pp('Triceps')} />
-      <path d="M88,58 Q96,74 96,93 Q94,104 86,104 Q78,102 76,90 Q74,74 82,58 Z" {...pp('Triceps')} />
-      <path d="M18,66 Q16,80 17,92" {...fp('Triceps')} />
-      <path d="M24,60 Q20,74 20,90" {...fp('Triceps')} />
-      <path d="M92,66 Q94,80 93,92" {...fp('Triceps')} />
-      <path d="M86,60 Q90,74 90,90" {...fp('Triceps')} />
-      <path d="M13,92 C7,105 8,120 12,128 C18,131 25,126 27,118 C26,105 22,96 18,92 Z" {...pp('Forearms')} />
-      <path d="M97,92 C103,105 102,120 98,128 C92,131 85,126 83,118 C84,105 88,96 92,92 Z" {...pp('Forearms')} />
-      <path d="M16,96 C12,110 12,121 14,128" {...fp('Forearms')} />
-      <path d="M94,96 C98,110 98,121 96,128" {...fp('Forearms')} />
-      {fem ? (
-        <>
-          <path d="M25,126 C22,135 22,149 27,158 C32,165 42,166 48,158 C49,147 50,136 52,128 C42,130 34,130 25,126 Z" {...pp('Legs')} />
-          <path d="M85,126 C88,135 88,149 83,158 C78,165 68,166 62,158 C61,147 60,136 58,128 C68,130 76,130 85,126 Z" {...pp('Legs')} />
-        </>
-      ) : (
-        <>
-          <path d="M27,126 C24,135 24,149 29,158 C34,165 44,164 50,154 C51,144 52,135 52,128 C43,130 35,130 27,126 Z" {...pp('Legs')} />
-          <path d="M83,126 C86,135 86,149 81,158 C76,165 66,164 60,154 C59,144 58,135 58,128 C67,130 75,130 83,126 Z" {...pp('Legs')} />
-        </>
-      )}
-      <path d="M29,158 C34,162 42,162 49,157" {...fp('Legs')} />
-      <path d="M81,158 C76,162 68,162 61,157" {...fp('Legs')} />
-      <path d="M28,160 C24,176 25,194 31,203 C36,209 43,206 45,194 C43,179 45,168 49,158 C41,164 34,164 28,160 Z" {...pp('Legs')} />
-      <path d="M46,161 C51,177 51,195 45,205 C40,211 33,206 32,194 C35,180 35,169 32,161 C37,164 42,164 46,161 Z" {...pp('Legs')} />
-      <path d="M82,160 C86,176 85,194 79,203 C74,209 67,206 65,194 C67,179 65,168 61,158 C69,164 76,164 82,160 Z" {...pp('Legs')} />
-      <path d="M64,161 C59,177 59,195 65,205 C70,211 77,206 78,194 C75,180 75,169 78,161 C73,164 68,164 64,161 Z" {...pp('Legs')} />
-      <path d="M31,202 C26,215 26,229 32,235 C39,239 45,232 44,218 C43,210 45,204 49,198 C42,204 36,206 31,202 Z" {...pp('Legs')} />
-      <path d="M79,202 C84,215 84,229 78,235 C71,239 65,232 66,218 C67,210 65,204 61,198 C68,204 74,206 79,202 Z" {...pp('Legs')} />
-      <path d="M31,164 C29,178 30,191 32,203" {...fp('Legs')} />
-      <path d="M45,164 C43,178 42,191 43,205" {...fp('Legs')} />
-      <path d="M79,164 C81,178 80,191 78,203" {...fp('Legs')} />
-      <path d="M65,164 C67,178 68,191 67,205" {...fp('Legs')} />
-      <path d="M35,204 C33,216 34,228 36,235" {...fp('Legs')} />
-      <path d="M75,204 C77,216 76,228 74,235" {...fp('Legs')} />
-    </g>
-  );
-}
+function AnatomyRankModel({ selected, onSelect, gender = 'male', language = 'en', muscleStats = {}, sectionNames = {} }) {
+  const preferredView = MUSCLE_PREFERRED_VIEW[selected] || 'front';
+  const [view, setView] = useState(preferredView);
+  useEffect(() => { setView(preferredView); }, [preferredView]);
 
-function MuscleSilhouette({ selected, onSelect, gender = 'male', language = 'en' }) {
-  const [showBack, setShowBack] = useState(false);
-  useEffect(() => {
-    if (['Back', 'Triceps'].includes(selected)) setShowBack(true);
-    else if (['Chest', 'Abs', 'Stamina/Cardio', 'Biceps', 'Forearms'].includes(selected)) setShowBack(false);
-  }, [selected]);
-  const handleSelect = (k) => {
-    if (['Back', 'Triceps'].includes(k)) setShowBack(true);
-    else if (['Chest', 'Abs', 'Stamina/Cardio', 'Biceps', 'Forearms'].includes(k)) setShowBack(false);
-    onSelect(k);
-  };
-  const col = MUSCLE_COLORS;
-  const pp = (k) => ({
-    fill: col[k] || '#38bdf8',
-    fillOpacity: selected === k ? 0.4 : 0,
-    stroke: col[k] || '#38bdf8',
-    strokeOpacity: selected === k ? 0.18 : 0,
-    strokeWidth: selected === k ? 1.05 : 0.8,
-    className: `muscle-zone ${selected === k ? 'selected' : ''}`,
-    'data-muscle': k,
-    pointerEvents: 'all',
-    vectorEffect: 'non-scaling-stroke',
-    onClick: () => handleSelect(k),
-    style: { '--muscle-color': col[k] || '#38bdf8', color: col[k] || '#38bdf8', cursor: 'pointer', transition: 'fill-opacity 0.18s, stroke-opacity 0.18s, filter 0.18s ease' },
-  });
-  const fp = (k) => ({
-    fill: 'none',
-    stroke: col[k] || '#38bdf8',
-    strokeOpacity: selected === k ? 0.72 : 0,
-    strokeWidth: 0.7,
-    className: 'muscle-fiber-line',
-    vectorEffect: 'non-scaling-stroke',
-    pointerEvents: 'none',
-  });
+  const showBack = view === 'back';
   const imgSrc = showBack
     ? (gender === 'female' ? bodyFemaleBackImg : bodyMaleBackImg)
     : (gender === 'female' ? bodyFemaleFrontImg : bodyMaleFrontImg);
   const maskSrc = showBack
     ? (gender === 'female' ? bodyFemaleBackMaskImg : bodyMaleBackMaskImg)
     : (gender === 'female' ? bodyFemaleFrontMaskImg : bodyMaleFrontMaskImg);
-  const maskId = `muscle-body-mask-${gender}-${showBack ? 'back' : 'front'}`;
+  const maskId = `anatomy-rank-mask-${gender}-${view}`;
+  const zones = ANATOMY_ZONES[view] || {};
+  const modelLabel = gender === 'female'
+    ? (language === 'sl' ? 'Zenski model' : 'Female model')
+    : (language === 'sl' ? 'Moski model' : 'Male model');
+  const viewLabel = showBack
+    ? (language === 'sl' ? 'Zadnji pogled' : 'Back view')
+    : (language === 'sl' ? 'Sprednji pogled' : 'Front view');
+
+  const selectMuscle = (muscleKey) => {
+    setView(MUSCLE_PREFERRED_VIEW[muscleKey] || view);
+    onSelect(muscleKey);
+  };
+  const zoneProps = (muscleKey) => {
+    const data = muscleStats[muscleKey] || { volume: 0, rank: getMuscleRank(0, language) };
+    const color = data.rank?.color || MUSCLE_COLORS[muscleKey] || '#38bdf8';
+    const active = selected === muscleKey;
+    return {
+      fill: color,
+      fillOpacity: active ? 0.62 : 0,
+      stroke: color,
+      strokeOpacity: active ? 0.96 : 0,
+      strokeWidth: active ? 1.25 : 0.85,
+      vectorEffect: 'non-scaling-stroke',
+      className: `muscle-zone ${active ? 'selected' : ''}`,
+      style: { '--muscle-color': color, cursor: 'pointer' },
+    };
+  };
+  const fiberProps = (muscleKey) => {
+    const data = muscleStats[muscleKey] || { volume: 0, rank: getMuscleRank(0, language) };
+    const color = data.rank?.color || MUSCLE_COLORS[muscleKey] || '#38bdf8';
+    return {
+      fill: 'none',
+      stroke: color,
+      strokeOpacity: selected === muscleKey ? 0.72 : 0,
+      strokeWidth: 0.55,
+      vectorEffect: 'non-scaling-stroke',
+      className: 'muscle-fiber-line',
+      pointerEvents: 'none',
+    };
+  };
+
   return (
-    <div style={{ position: 'relative', display: 'inline-block', width: '100%', maxWidth: '420px' }}>
-      <div style={{ position: 'relative', width: '100%', paddingBottom: '150%', overflow: 'hidden', borderRadius: '8px' }}>
-        <img
-          src={imgSrc}
-          alt=""
-          style={{
-            position: 'absolute', top: 0, left: 0,
-            width: '100%', height: '100%',
-            objectFit: 'cover',
-            objectPosition: 'center',
-          }}
-        />
-        <svg
-          className="muscle-map-svg"
-          viewBox="0 0 1536 1024"
-          preserveAspectRatio="xMidYMid slice"
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', mixBlendMode: 'normal' }}
-        >
+    <div className="anatomy-rank-model">
+      <div className="anatomy-model-meta">
+        <span>{modelLabel}</span>
+        <strong>{viewLabel}</strong>
+      </div>
+      <div className="anatomy-stage">
+        <img src={imgSrc} alt="" className="anatomy-body-img" />
+        <svg className="muscle-map-svg anatomy-overlay-svg" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden="false">
           <defs>
             <mask id={maskId} className="muscle-body-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="1536" height="1024">
               <image href={maskSrc} x="0" y="0" width="1536" height="1024" preserveAspectRatio="none" />
@@ -2289,14 +2444,33 @@ function MuscleSilhouette({ selected, onSelect, gender = 'male', language = 'en'
           </defs>
           <g mask={`url(#${maskId})`}>
             <g transform="translate(540.925 33.032) scale(4.129)">
-              {showBack ? <MuscleSilhouetteBack pp={pp} fp={fp} gender={gender} /> : <MuscleSilhouetteFront pp={pp} fp={fp} gender={gender} />}
+              {Object.entries(zones).map(([muscleKey, zone]) => (
+                <g
+                  key={muscleKey}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={sectionNames[muscleKey] || muscleKey}
+                  data-muscle={muscleKey}
+                  onClick={() => selectMuscle(muscleKey)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      selectMuscle(muscleKey);
+                    }
+                  }}
+                >
+                  {getAnatomyPaths(zone, gender).map((d, index) => <path key={`${muscleKey}-p-${index}`} d={d} {...zoneProps(muscleKey)} />)}
+                  {(zone.fibers || []).map((d, index) => <path key={`${muscleKey}-f-${index}`} d={d} {...fiberProps(muscleKey)} />)}
+                </g>
+              ))}
             </g>
           </g>
         </svg>
       </div>
-      <button onClick={() => setShowBack(v => !v)} aria-label={showBack ? (language === 'sl' ? 'Prikazi sprednji pogled' : 'Show front body view') : (language === 'sl' ? 'Prikazi zadnji pogled' : 'Show back body view')} style={{ display: 'block', margin: '0.4rem auto 0', padding: '0.18rem 0.8rem', fontSize: '0.68rem', borderRadius: '999px', border: '1px solid rgba(148,163,184,0.28)', background: 'rgba(148,163,184,0.1)', cursor: 'pointer', color: 'inherit' }}>
-        {showBack ? (language === 'sl' ? '<- Spredaj' : '<- Front') : (language === 'sl' ? 'Zadaj ->' : 'Back ->')}
-      </button>
+      <div className="anatomy-view-toggle" role="group" aria-label={language === 'sl' ? 'Pogled modela' : 'Model view'}>
+        <button className={view === 'front' ? 'active' : ''} type="button" onClick={() => setView('front')}>{language === 'sl' ? 'Spredaj' : 'Front'}</button>
+        <button className={view === 'back' ? 'active' : ''} type="button" onClick={() => setView('back')}>{language === 'sl' ? 'Zadaj' : 'Back'}</button>
+      </div>
     </div>
   );
 }
@@ -2533,6 +2707,7 @@ export default function App() {
     const nextRank = RANKS.find(r => r.min > pts);
     return { pts, rank, nextRank };
   }, [workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, settings.calorieGoal, settings.language, adminBonus]);
+  const muscleStats = useMemo(() => getAllMuscleVolumeData(workouts, bodyWeightEntries, settings, customExercises), [workouts, bodyWeightEntries, settings, customExercises]);
 
   const chartData = useMemo(() => ({ labels: selectedWorkouts.map((w, i) => `${formatDateValue(w.date, settings.dateFormat)} #${i + 1}`), datasets: [{ data: selectedWorkouts.map((w) => Math.round(convertWeight(getVolume(w), settings.units))), borderColor: '#60a5fa', backgroundColor: 'rgba(59,130,246,0.18)', fill: true, tension: 0.3, borderWidth: 3, pointRadius: 4 }] }), [selectedWorkouts, settings.dateFormat, settings.units]);
   const chartOptions = useMemo(() => {
@@ -4128,20 +4303,27 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
             {/* Muscle-specific ranking section */}
             <section className="glass-panel chart-panel fade-in-up muscle-rank-section" style={{gridColumn:'span 2'}}>
               <div className="panel-header"><h3>{copy.muscleRankTitle}</h3></div>
-              <p className="settings-copy" style={{marginBottom:'1rem'}}>{copy.muscleRankSelect}</p>
+              <p className="settings-copy" style={{marginBottom:'1rem'}}>{settings.language === 'sl' ? 'Klikni misico na modelu. Rang in barva sta izracunana iz tehtanega volumna vaj, ki dejansko trenirajo ta del telesa.' : 'Click a muscle on the model. Rank and color are calculated from weighted volume of exercises that actually train that body part.'}</p>
               {(() => {
-                const muscleData = getMusclePoints(selectedRankMuscle, workouts);
-                const rank = getMuscleRank(muscleData.pts, settings.language);
+                const muscleData = muscleStats[selectedRankMuscle] || getMuscleVolumeData(selectedRankMuscle, workouts, bodyWeightEntries, settings, customExercises);
+                const rank = muscleData.rank || getMuscleRank(muscleData.volume, settings.language);
                 const nextIdx = rank.idx + 1;
                 const next = nextIdx < MUSCLE_RANKS.length ? MUSCLE_RANKS[nextIdx] : null;
-                const selectedColor = MUSCLE_COLORS[selectedRankMuscle];
+                const selectedColor = rank.color;
                 const selectedLabel = sectionNames[selectedRankMuscle] || selectedRankMuscle;
-                const progressPct = next ? Math.min(100, Math.max(0, Math.round(((muscleData.pts - rank.min) / (next.min - rank.min)) * 100))) : 100;
+                const progressPct = next ? Math.min(100, Math.max(0, Math.round(((muscleData.volume - rank.min) / (next.min - rank.min)) * 100))) : 100;
                 const nextLabel = next ? (settings.language === 'sl' ? next.nameSl : next.nameEn) : '';
+                const topExerciseLabel = muscleData.topExercise ? getExerciseName(muscleData.topExercise.name, settings.language) : '-';
+                const volumeRankCopy = settings.language === 'sl' ? 'Rang po volumnu moci' : 'Strength volume rank';
+                const volumeCopy = settings.language === 'sl' ? 'tehtanega volumna' : 'weighted volume';
+                const nextCopy = settings.language === 'sl' ? 'do' : 'to';
+                const emptyCopy = settings.language === 'sl'
+                  ? 'Zabelezi vajo, ki trenira to misico, in rang se bo dvignil iz dejanskega volumna.'
+                  : 'Log an exercise that trains this muscle and the rank will rise from real volume.';
                 return (
                   <div className="muscle-rank-layout">
                     <div className="muscle-map-shell">
-                      <MuscleSilhouette selected={selectedRankMuscle} onSelect={setSelectedRankMuscle} gender={settings.gender || 'male'} language={settings.language || 'en'} />
+                      <AnatomyRankModel selected={selectedRankMuscle} onSelect={setSelectedRankMuscle} gender={settings.gender || 'male'} language={settings.language || 'en'} muscleStats={muscleStats} sectionNames={sectionNames} />
                     </div>
                     <div className="muscle-rank-detail" style={{'--muscle-color': selectedColor}}>
                       <div className="muscle-rank-head">
@@ -4149,41 +4331,41 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                         <div>
                           <p className="exercise-category">{selectedLabel}</p>
                           <h2>{rank.displayName}</h2>
-                          <p>{muscleData.pts} {copy.rankPoints}</p>
+                          <p>{formatVolume(muscleData.volume, settings.units)} {volumeCopy}</p>
                         </div>
                       </div>
                       <div className="muscle-progress-copy">
-                        <span>{next ? `${Math.max(0, next.min - muscleData.pts)} ${copy.rankPoints} ${settings.language === 'sl' ? 'do' : 'to'} ${nextLabel}` : copy.rankMax}</span>
+                        <span>{next ? `${formatVolume(Math.max(0, next.min - muscleData.volume), settings.units)} ${nextCopy} ${nextLabel}` : copy.rankMax}</span>
                         {next ? <strong>{progressPct}%</strong> : null}
                       </div>
                       <div className="muscle-progress-rail"><span style={{width:`${progressPct}%`, background: rank.bg}} /></div>
-                      {muscleData.sessions === 0 ? <p className="muscle-empty-note">{copy.muscleRankNoData}</p> : null}
+                      {muscleData.sessions === 0 ? <p className="muscle-empty-note">{emptyCopy}</p> : null}
                       <div className="muscle-stat-grid">
-                        <div><span>{copy.muscleRankVolume}</span><strong>{formatVolume(muscleData.volume, settings.units)}</strong></div>
+                        <div><span>{volumeRankCopy}</span><strong>{formatVolume(muscleData.volume, settings.units)}</strong></div>
                         <div><span>{copy.muscleRankSessions}</span><strong>{muscleData.sessions}</strong></div>
-                        <div><span>{copy.muscleRankPRs}</span><strong>{muscleData.prs}</strong></div>
+                        <div><span>{settings.language === 'sl' ? 'Najmocnejsa vaja' : 'Top exercise'}</span><strong>{topExerciseLabel}</strong></div>
                       </div>
                       <div className="muscle-chip-row">
-                        {Object.keys(MUSCLE_COLORS).map(k => (
-                          <button key={k} className={`muscle-chip ${selectedRankMuscle === k ? 'active' : ''}`} style={{'--muscle-color': MUSCLE_COLORS[k]}} type="button" onClick={() => setSelectedRankMuscle(k)}>
+                        {MUSCLE_KEYS.map(k => (
+                          <button key={k} className={`muscle-chip ${selectedRankMuscle === k ? 'active' : ''}`} style={{'--muscle-color': muscleStats[k]?.rank?.color || MUSCLE_COLORS[k]}} type="button" onClick={() => setSelectedRankMuscle(k)}>
                             {sectionNames[k] || k}
                           </button>
                         ))}
                       </div>
                     </div>
                     <div className="muscle-overview-grid">
-                      {Object.keys(MUSCLE_COLORS).map(k => {
-                        const d = getMusclePoints(k, workouts);
-                        const r = getMuscleRank(d.pts, settings.language);
+                      {MUSCLE_KEYS.map(k => {
+                        const d = muscleStats[k] || getMuscleVolumeData(k, workouts, bodyWeightEntries, settings, customExercises);
+                        const r = d.rank || getMuscleRank(d.volume, settings.language);
                         const isSelected = selectedRankMuscle === k;
                         return (
-                          <button key={k} className={`muscle-overview-card ${isSelected ? 'active' : ''}`} style={{'--muscle-color': MUSCLE_COLORS[k]}} type="button" onClick={() => setSelectedRankMuscle(k)}>
+                          <button key={k} className={`muscle-overview-card ${isSelected ? 'active' : ''}`} style={{'--muscle-color': r.color}} type="button" onClick={() => setSelectedRankMuscle(k)}>
                             <div>
                               <span className="muscle-overview-icon">{MUSCLE_RANK_ICONS[r.idx]}</span>
                               <strong>{sectionNames[k] || k}</strong>
                             </div>
                             <span>{r.displayName}</span>
-                            <small>{d.pts} {copy.rankPoints}</small>
+                            <small>{formatVolume(d.volume, settings.units)}</small>
                           </button>
                         );
                       })}

@@ -2,12 +2,13 @@
 // Changing this string causes the browser to detect a new SW and trigger an update.
 const BUILD_ID = '__BUILD_ID__';
 const CACHE = 'powergraph-' + BUILD_ID;
+const APP_SCOPE = new URL(self.registration.scope).pathname;
 
 // ── Install: pre-cache the app shell ─────────────────────────────────────────
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE)
-      .then(c => c.addAll(['/PowerGraph/', '/PowerGraph/index.html']))
+      .then(c => c.addAll([APP_SCOPE, `${APP_SCOPE}index.html`]))
       .catch(() => {}) // ignore if offline at install time
       .then(() => self.skipWaiting()) // activate immediately, don't wait for old tabs to close
   );

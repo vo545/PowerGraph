@@ -59,8 +59,6 @@ const USERS_KEY = 'powergraph_users';
 const SESSION_KEY = 'powergraph_session';
 const ADMIN_EMAIL = 'vid.oreskovic@gmail.com';
 const LOGINS_KEY = 'powergraph_logins';
-const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
-const GIST_ID = import.meta.env.VITE_GIST_ID || '';
 
 const BAR_OPTS = {
   responsive: true,
@@ -306,10 +304,22 @@ function normalizeFoodQuery(s) {
 function getCalHistoryKey(email) { return `${CAL_HISTORY_KEY_PREFIX}${email}`; }
 function getBodyWeightKey(email) { return `${BODYWEIGHT_KEY_PREFIX}${email}`; }
 function getRecapKey(email) { return `${RECAP_KEY_PREFIX}${email}`; }
-function getRestKey(email) { return `${REST_KEY_PREFIX}${(email || '').split('@')[0]}`; }
-function getCheatKey(email) { return `${CHEAT_KEY_PREFIX}${(email || '').split('@')[0]}`; }
-function loadRestDays(email) { if (!email) return []; try { return JSON.parse(localStorage.getItem(getRestKey(email)) || '[]'); } catch { return []; } }
-function loadCheatDays(email) { if (!email) return []; try { return JSON.parse(localStorage.getItem(getCheatKey(email)) || '[]'); } catch { return []; } }
+function getRestKey(email) { return `${REST_KEY_PREFIX}${email || ''}`; }
+function getCheatKey(email) { return `${CHEAT_KEY_PREFIX}${email || ''}`; }
+function getLegacyRestKey(email) { return `${REST_KEY_PREFIX}${(email || '').split('@')[0]}`; }
+function getLegacyCheatKey(email) { return `${CHEAT_KEY_PREFIX}${(email || '').split('@')[0]}`; }
+function loadDateList(primaryKey, legacyKey) {
+  try {
+    const primary = JSON.parse(localStorage.getItem(primaryKey) || '[]');
+    if (Array.isArray(primary) && primary.length) return primary;
+  } catch {}
+  try {
+    const legacy = JSON.parse(localStorage.getItem(legacyKey) || '[]');
+    return Array.isArray(legacy) ? legacy : [];
+  } catch { return []; }
+}
+function loadRestDays(email) { return email ? loadDateList(getRestKey(email), getLegacyRestKey(email)) : []; }
+function loadCheatDays(email) { return email ? loadDateList(getCheatKey(email), getLegacyCheatKey(email)) : []; }
 function getCustomExKey(email) { return `${CUSTOM_EX_KEY_PREFIX}${email}`; }
 function loadCustomExercises(email) { if (!email) return []; try { return JSON.parse(localStorage.getItem(getCustomExKey(email)) || '[]'); } catch { return []; } }
 function getWaterKey(email) { return `${WATER_KEY_PREFIX}${email}_${new Date().toISOString().slice(0, 10)}`; }
@@ -445,7 +455,7 @@ const ui = {
     authExists: 'Uporabnik s tem emailom \u017ee obstaja.',
     authNotFound: 'Uporabnik ne obstaja.',
     authWrongPassword: 'Napa\u010dno geslo.',
-    authLocalOnly: 'Lokalni ra\u010duni so shranjeni samo v tem brskalniku.',
+    authLocalOnly: 'Podatki se shranijo lokalno; backend sync je uporabljen samo, ce je nastavljen.',
     caloriesTitle: 'Dnevni vnos kalorij',
     caloriesSubtitle: 'Bele\u017ei obroke, dnevni cilj in osnovne makre.',
     addMeal: 'Dodaj obrok',
@@ -491,7 +501,7 @@ const ui = {
     calPhotoBtn: 'Dodaj sliko / Fotografiraj',
     calPhotoChange: 'Zamenjaj sliko',
     calPhotoAnalyze: 'Oceni kalorije',
-    calPhotoNoKey: 'Gemini API ključ ni nastavljen.',
+    calPhotoNoKey: 'AI backend ni nastavljen ali nisi povezan z njim.',
     prTitle: 'Osebni rekordi',
     prBadge: 'PR',
     prNoData: 'Še ni PR-jev. Dodaj trening!',
@@ -658,7 +668,7 @@ const ui = {
     tutorialBack: 'Nazaj',
     tutorialClose: 'Začni',
     tutorialStep1Title: 'Dobrodošel v PowerGraph! 💪',
-    tutorialStep1: 'PowerGraph je dnevnik treningov, ki deluje v tvojem brskalniku. Vse je shranjeno lokalno – nobenih strežnikov, brez čakanja.',
+    tutorialStep1: 'PowerGraph je lokalno-prvi dnevnik treningov. Deluje v brskalniku, po potrebi pa se lahko sinhronizira z backendom.',
     tutorialStep2Title: 'Nadzorna plošča 📊',
     tutorialStep2: 'Tukaj vidiš svoje statistike: aktivni niz dni, število treningov, kalorije in telesno težo. Graf prikazuje napredek po mesecih.',
     tutorialStep3Title: 'Dodaj trening ➕',
@@ -701,7 +711,7 @@ const ui = {
     ingredientAnalyze: 'Analiziraj z AI',
     ingredientAnalyzing: 'Analiziram…',
     ingredientTotal: 'Skupaj',
-    ingredientNoKey: 'Za analizo potrebuješ Gemini API ključ.',
+    ingredientNoKey: 'Za analizo potrebuješ povezan AI backend.',
     ingredientError: 'Napaka pri analizi. Poskusi znova.',
     ingredientQuickPlaceholder: 'npr. kruh, 2 jajci, tuna, šparglji, riž',
     ingredientQuickDesc: 'Napiši jedi in AI bo ocenil količine ter izračunal makre.',
@@ -713,7 +723,7 @@ const ui = {
     bodyFatAnalyze: 'Oceni % telesne maščobe',
     bodyFatAnalyzing: 'Ocenjujem…',
     bodyFatResultLabel: '% telesne maščobe',
-    bodyFatNoKey: 'Za oceno potrebuješ Gemini API ključ.',
+    bodyFatNoKey: 'Za oceno potrebuješ povezan AI backend.',
     bodyFatError: 'Napaka pri oceni. Poskusi znova.',
     bodyFatAddPhoto: 'Dodaj fotografijo',
     bodyFatRemove: 'Odstrani',
@@ -845,7 +855,7 @@ const ui = {
     authExists: 'A user with this email already exists.',
     authNotFound: 'User not found.',
     authWrongPassword: 'Wrong password.',
-    authLocalOnly: 'Local accounts are stored only in this browser.',
+    authLocalOnly: 'Data is stored locally; backend sync is used only when configured.',
     caloriesTitle: 'Daily calorie intake',
     caloriesSubtitle: 'Track meals, your daily target, and basic macros.',
     addMeal: 'Add meal',
@@ -891,7 +901,7 @@ const ui = {
     calPhotoBtn: 'Add photo / Take photo',
     calPhotoChange: 'Change photo',
     calPhotoAnalyze: 'Estimate calories',
-    calPhotoNoKey: 'Gemini API key is not set.',
+    calPhotoNoKey: 'AI backend is not configured or connected.',
     prTitle: 'Personal Records',
     prBadge: 'PR',
     prNoData: 'No PRs yet. Add a workout!',
@@ -1058,7 +1068,7 @@ const ui = {
     tutorialBack: 'Back',
     tutorialClose: 'Get started',
     tutorialStep1Title: 'Welcome to PowerGraph! 💪',
-    tutorialStep1: 'PowerGraph is a workout log that runs entirely in your browser. Everything is stored locally — no servers, no waiting.',
+    tutorialStep1: 'PowerGraph is a local-first workout log. It works in your browser and can sync to a backend when configured.',
     tutorialStep2Title: 'Dashboard 📊',
     tutorialStep2: 'Here you see your stats: active streak, workout count, calories, and body weight. The chart shows your progress over the last months.',
     tutorialStep3Title: 'Add a workout ➕',
@@ -1101,7 +1111,7 @@ const ui = {
     ingredientAnalyze: 'Analyze with AI',
     ingredientAnalyzing: 'Analyzing…',
     ingredientTotal: 'Total',
-    ingredientNoKey: 'Gemini API key required for analysis.',
+    ingredientNoKey: 'Connected AI backend required for analysis.',
     ingredientError: 'Analysis failed. Try again.',
     ingredientQuickPlaceholder: 'e.g. bread, 2 eggs, tuna, asparagus, rice',
     ingredientQuickDesc: 'Type any foods and AI will estimate portions and calculate macros.',
@@ -1113,7 +1123,7 @@ const ui = {
     bodyFatAnalyze: 'Estimate body fat %',
     bodyFatAnalyzing: 'Estimating…',
     bodyFatResultLabel: 'Body fat %',
-    bodyFatNoKey: 'Gemini API key required for estimation.',
+    bodyFatNoKey: 'Connected AI backend required for estimation.',
     bodyFatError: 'Estimation failed. Try again.',
     bodyFatAddPhoto: 'Add photo',
     bodyFatRemove: 'Remove',
@@ -1394,7 +1404,23 @@ Object.assign(exerciseInfo, {
 });
 
 
-const normalizeWorkout = (w, i = 0) => ({ id: w.id ?? Date.now() + i, date: w.date ?? new Date().toISOString().slice(0, 10), exercise: w.exercise ?? 'Bench Press', weight: Number(w.weight ?? 0), setDetails: (Array.isArray(w.setDetails) ? w.setDetails : []).map((v) => Number(v) || 0).filter((v) => v > 0).length ? (Array.isArray(w.setDetails) ? w.setDetails : []).map((v) => Number(v) || 0).filter((v) => v > 0) : [1] });
+const normalizeWorkout = (w, i = 0) => {
+  const setDetails = (Array.isArray(w.setDetails) ? w.setDetails : [])
+    .map((v) => Number(v) || 0)
+    .filter((v) => v > 0);
+  const setWeights = Array.isArray(w.setWeights)
+    ? w.setWeights.map((v) => Number(v) || 0).filter((v) => v > 0)
+    : null;
+  return {
+    id: w.id ?? Date.now() + i,
+    date: w.date ?? new Date().toISOString().slice(0, 10),
+    exercise: w.exercise ?? 'Bench Press',
+    weight: Number(w.weight ?? 0),
+    setDetails: setDetails.length ? setDetails : [1],
+    comment: w.comment ?? w.notes ?? '',
+    ...(setWeights?.length ? { setWeights } : {}),
+  };
+};
 const getSetCount = (w) => w.setDetails.length;
 const getTotalReps = (w) => w.setDetails.reduce((s, v) => s + v, 0);
 const getVolume = (w) => w.weight * getTotalReps(w);
@@ -1594,89 +1620,36 @@ function getMuscleRank(pts, lang) {
   return { ...rank, displayName: lang === 'en' ? rank.nameEn : rank.nameSl, idx: MUSCLE_RANKS.indexOf(rank) };
 }
 
-async function fetchLoginLogs() {
-  if (!GITHUB_TOKEN || !GIST_ID) {
-    try { return JSON.parse(localStorage.getItem(LOGINS_KEY) || '[]'); } catch { return []; }
+async function fetchLoginLogs(email = '') {
+  if (email && API_URL && getJwt(email)) {
+    const rows = await apiCall(email, '/api/admin/logs');
+    if (Array.isArray(rows)) {
+      return rows.map((entry) => ({
+        email: entry.email,
+        type: entry.type,
+        ts: entry.timestamp || entry.ts || new Date().toISOString(),
+        ip: entry.ip,
+      }));
+    }
   }
-  try {
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json' }
-    });
-    const data = await res.json();
-    const content = data.files?.['logs.json']?.content || '[]';
-    return JSON.parse(content);
-  } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(LOGINS_KEY) || '[]'); } catch { return []; }
 }
 
 async function pushLoginLog(email, type) {
-  const entry = { email, type, ts: new Date().toISOString() };
-  if (!GITHUB_TOKEN || !GIST_ID) { recordLogin(email, type); return; }
-  try {
-    const logs = await fetchLoginLogs();
-    logs.push(entry);
-    const trimmed = logs.slice(-500);
-    await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ files: { 'logs.json': { content: JSON.stringify(trimmed) } } })
-    });
-  } catch { recordLogin(email, type); }
+  recordLogin(email, type);
 }
 
 function loadPresence() { try { return JSON.parse(localStorage.getItem(PRESENCE_KEY) || '[]'); } catch { return []; } }
 function savePresence(list) { localStorage.setItem(PRESENCE_KEY, JSON.stringify(list)); }
-async function pushPresenceToGist(email) {
+async function pushPresence(email) {
   const ua = navigator.userAgent.slice(0, 80);
   const entry = { email, ts: new Date().toISOString(), ua };
-  if (!GITHUB_TOKEN || !GIST_ID) {
-    const list = loadPresence().filter(p => p.email !== email);
-    list.push(entry);
-    savePresence(list);
-    return;
-  }
-  try {
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, { headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json' } });
-    const data = await res.json();
-    let list = [];
-    try { list = JSON.parse(data.files?.['presence.json']?.content || '[]'); } catch {}
-    list = list.filter(p => p.email !== email);
-    list.push(entry);
-    await fetch(`https://api.github.com/gists/${GIST_ID}`, { method: 'PATCH', headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify({ files: { 'presence.json': { content: JSON.stringify(list) } } }) });
-  } catch {}
+  const list = loadPresence().filter(p => p.email !== email);
+  list.push(entry);
+  savePresence(list.slice(-200));
 }
 async function fetchPresence() {
-  if (!GITHUB_TOKEN || !GIST_ID) return loadPresence();
-  try {
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, { headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json' } });
-    const data = await res.json();
-    return JSON.parse(data.files?.['presence.json']?.content || '[]');
-  } catch { return loadPresence(); }
-}
-
-function gistFileName(email) { return `data_${email.replace(/[^a-z0-9]/gi, '_')}.json`; }
-
-async function gistPushData(email, payload) {
-  if (!GITHUB_TOKEN || !GIST_ID) return;
-  try {
-    await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ files: { [gistFileName(email)]: { content: JSON.stringify(payload) } } })
-    });
-  } catch {}
-}
-
-async function gistPullData(email) {
-  if (!GITHUB_TOKEN || !GIST_ID) return null;
-  try {
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json' }
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const content = data.files?.[gistFileName(email)]?.content;
-    return content ? JSON.parse(content) : null;
-  } catch { return null; }
+  return loadPresence();
 }
 
 function mergeById(local, remote) {
@@ -1690,23 +1663,23 @@ function mergeStrings(local, remote) {
   return [...new Set([...local, ...remote])];
 }
 
-async function applyGistData(email, gistData) {
-  if (!gistData) return;
+async function applyRemoteData(email, remoteData) {
+  if (!remoteData) return;
   const lw = loadWorkouts(email);
-  const mw = mergeById(lw, (gistData.workouts || []).map(normalizeWorkout));
+  const mw = mergeById(lw, (remoteData.workouts || []).map(normalizeWorkout));
   if (mw.length > lw.length) localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify(mw));
   const lc = loadCalories(email);
-  const mc = mergeById(lc, gistData.calorieEntries || []);
+  const mc = mergeById(lc, remoteData.calorieEntries || remoteData.calories || []);
   if (mc.length > lc.length) localStorage.setItem(getCaloriesStorageKey(email), JSON.stringify(mc));
   const lb = loadBodyWeight(email);
-  const mb = mergeById(lb, gistData.bodyWeightEntries || []);
+  const mb = mergeById(lb, remoteData.bodyWeightEntries || remoteData.bodyWeight || []);
   if (mb.length > lb.length) localStorage.setItem(getBodyWeightKey(email), JSON.stringify(mb));
-  const lr = loadRestDays(email); const mr = mergeStrings(lr, gistData.restDays || []);
+  const lr = loadRestDays(email); const mr = mergeStrings(lr, remoteData.restDays || []);
   if (mr.length > lr.length) localStorage.setItem(getRestKey(email), JSON.stringify(mr));
-  const lch = loadCheatDays(email); const mch = mergeStrings(lch, gistData.cheatDays || []);
+  const lch = loadCheatDays(email); const mch = mergeStrings(lch, remoteData.cheatDays || []);
   if (mch.length > lch.length) localStorage.setItem(getCheatKey(email), JSON.stringify(mch));
   const lcalh = loadCalHistory(email);
-  const mcalh = mergeById(lcalh, gistData.calHistory || []);
+  const mcalh = mergeById(lcalh, remoteData.calHistory || []);
   if (mcalh.length > lcalh.length) localStorage.setItem(getCalHistoryKey(email), JSON.stringify(mcalh));
 }
 
@@ -1773,16 +1746,9 @@ function downloadFile(name, content, type) {
   URL.revokeObjectURL(url);
 }
 
-const GEMINI_KEY = import.meta.env.VITE_GEMINI_KEY || '';
-async function callGemini(parts) {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts }] }),
-  });
-  const data = await res.json().catch(() => null);
-  if (!res.ok || !data) return null;
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+async function callGemini(email, parts) {
+  const data = await apiCall(email, '/api/gemini', 'POST', { parts });
+  return typeof data?.text === 'string' ? data.text : null;
 }
 
 function MuscleSilhouetteFront({ pp, fp, gender }) {
@@ -1997,6 +1963,7 @@ export default function App() {
   const bodyFatBackRef = useRef(null);
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) ?? 'dark');
   const [currentUser, setCurrentUser] = useState(() => localStorage.getItem(SESSION_KEY) || '');
+  const aiEnabled = Boolean(API_URL && currentUser && getJwt(currentUser));
   const [workouts, setWorkouts] = useState(() => loadWorkouts(localStorage.getItem(SESSION_KEY) || ''));
   const [calorieEntries, setCalorieEntries] = useState(() => loadCalories(localStorage.getItem(SESSION_KEY) || ''));
   const [settings, setSettings] = useState(() => loadSettings(localStorage.getItem(SESSION_KEY) || ''));
@@ -2279,32 +2246,10 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     localStorage.setItem(getWorkoutStorageKey(currentUser), JSON.stringify(workouts));
-    if (API_URL && getJwt(currentUser)) {
-      apiCall(currentUser, '/api/sync').then(serverData => {
-        if (!serverData) return;
-        const serverIds = new Set((serverData.workouts || []).map(w => w.id));
-        workouts.forEach(w => {
-          if (!serverIds.has(w.id)) {
-            apiCall(currentUser, '/api/workouts', 'POST', { date: w.date, exercise: w.exercise, sets: w.setDetails.length, weight: w.weight, setDetails: w.setDetails, notes: w.comment || '' });
-          }
-        });
-      });
-    }
   }, [currentUser, workouts]);
   useEffect(() => {
     if (!currentUser) return;
     localStorage.setItem(getCaloriesStorageKey(currentUser), JSON.stringify(calorieEntries));
-    if (API_URL && getJwt(currentUser)) {
-      apiCall(currentUser, '/api/sync').then(serverData => {
-        if (!serverData) return;
-        const serverIds = new Set((serverData.calories || []).map(e => e.id));
-        calorieEntries.forEach(e => {
-          if (!serverIds.has(e.id)) {
-            apiCall(currentUser, '/api/calories', 'POST', { date: e.date, mealType: e.mealType, name: e.name, calories: e.calories, protein: e.protein, carbs: e.carbs, fat: e.fat });
-          }
-        });
-      });
-    }
   }, [calorieEntries, currentUser]);
   useEffect(() => {
     if (!currentUser) return;
@@ -2318,6 +2263,18 @@ export default function App() {
     if (!currentUser) return;
     localStorage.setItem(getBodyWeightKey(currentUser), JSON.stringify(bodyWeightEntries));
   }, [bodyWeightEntries, currentUser]);
+  useEffect(() => {
+    if (!currentUser) return;
+    localStorage.setItem(getRestKey(currentUser), JSON.stringify(restDays));
+  }, [currentUser, restDays]);
+  useEffect(() => {
+    if (!currentUser) return;
+    localStorage.setItem(getCheatKey(currentUser), JSON.stringify(cheatDays));
+  }, [cheatDays, currentUser]);
+  useEffect(() => {
+    if (!currentUser) return;
+    localStorage.setItem(getCustomExKey(currentUser), JSON.stringify(customExercises));
+  }, [currentUser, customExercises]);
   useEffect(() => {
     timerAlarmFnRef.current = () => {
       playTimerAlarm();
@@ -2368,7 +2325,7 @@ export default function App() {
   useEffect(() => {
     if (activeSection !== 'admin' || currentUser !== ADMIN_EMAIL) return;
     setAdminLogs(null);
-    fetchLoginLogs().then(setAdminLogs);
+    fetchLoginLogs(currentUser).then(setAdminLogs);
     fetchPresence().then(setAdminPresence);
     const id = setInterval(() => fetchPresence().then(setAdminPresence), 30000);
     return () => clearInterval(id);
@@ -2376,21 +2333,28 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser) return undefined;
-    pushPresenceToGist(currentUser);
-    const id = setInterval(() => pushPresenceToGist(currentUser), 60000);
+    pushPresence(currentUser);
+    const id = setInterval(() => pushPresence(currentUser), 60000);
     return () => clearInterval(id);
   }, [currentUser]);
 
   useEffect(() => {
-    if (!GITHUB_TOKEN || !GIST_ID || !currentUser) return undefined;
+    if (!currentUser || !API_URL || !getJwt(currentUser)) return undefined;
     setSyncing(true);
     const id = setTimeout(async () => {
       try {
-        await gistPushData(currentUser, { workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory });
+        await apiCall(currentUser, '/api/sync', 'POST', { workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory });
       } finally { setSyncing(false); }
-    }, 5000);
+    }, 1500);
     return () => { clearTimeout(id); setSyncing(false); };
   }, [currentUser, workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory]);
+
+  async function hydrateFromBackend(email, password) {
+    const token = await backendLogin(email, password);
+    if (!token) return;
+    const data = await pullFromBackend(email);
+    await applyRemoteData(email, data);
+  }
 
   async function handleAuthSubmit(event) {
     event.preventDefault();
@@ -2427,16 +2391,7 @@ export default function App() {
         localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify([]));
         localStorage.setItem(getSettingsStorageKey(email), JSON.stringify({ ...defaultSettings, gender: authForm.gender }));
         await pushLoginLog(email, 'signup');
-        await applyGistData(email, await gistPullData(email));
-        backendLogin(email, password).then(token => {
-          if (token) pullFromBackend(email).then(data => {
-            if (data?.workouts?.length) localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify(data.workouts.map(normalizeWorkout)));
-            if (data?.calories?.length) localStorage.setItem(getCaloriesStorageKey(email), JSON.stringify(data.calories));
-            if (data?.bodyWeight?.length) localStorage.setItem(getBodyWeightKey(email), JSON.stringify(data.bodyWeight));
-            if (data?.restDays?.length) localStorage.setItem(getRestKey(email), JSON.stringify(data.restDays));
-            if (data?.cheatDays?.length) localStorage.setItem(getCheatKey(email), JSON.stringify(data.cheatDays));
-          });
-        });
+        await hydrateFromBackend(email, password);
         setCurrentUser(email);
         setTutorialStep(0);
         setShowTutorial(true);
@@ -2455,18 +2410,7 @@ export default function App() {
           return;
         }
         await pushLoginLog(email, 'login');
-        await applyGistData(email, await gistPullData(email));
-        backendLogin(email, password).then(token => {
-          if (token) pullFromBackend(email).then(data => {
-            if (data) {
-              if (Array.isArray(data.workouts) && data.workouts.length) localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify(data.workouts.map(normalizeWorkout)));
-              if (Array.isArray(data.calories) && data.calories.length) localStorage.setItem(getCaloriesStorageKey(email), JSON.stringify(data.calories));
-              if (Array.isArray(data.bodyWeight) && data.bodyWeight.length) localStorage.setItem(getBodyWeightKey(email), JSON.stringify(data.bodyWeight));
-              if (Array.isArray(data.restDays)) localStorage.setItem(getRestKey(email), JSON.stringify(data.restDays));
-              if (Array.isArray(data.cheatDays)) localStorage.setItem(getCheatKey(email), JSON.stringify(data.cheatDays));
-            }
-          });
-        });
+        await hydrateFromBackend(email, password);
         setCurrentUser(email);
       }
       setAuthForm({ email: '', password: '', confirmPassword: '', gender: 'male' });
@@ -2509,7 +2453,23 @@ export default function App() {
     setFormData((c) => ({ ...c, weight: '', setDetails: [''], setWeights: [''] }));
     setToast(copy.saved);
   }
-  function exportData() { downloadFile(`powergraph-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ workouts, calorieEntries, settings, calHistory, bodyWeightEntries }, null, 2), 'application/json'); setSettings((c) => ({ ...c, lastBackupAt: new Date().toISOString() })); setToast(copy.backupDone); }
+  function exportData() {
+    const backup = {
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      workouts,
+      calorieEntries,
+      settings,
+      calHistory,
+      bodyWeightEntries,
+      restDays,
+      cheatDays,
+      customExercises,
+    };
+    downloadFile(`powergraph-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2), 'application/json');
+    setSettings((c) => ({ ...c, lastBackupAt: new Date().toISOString() }));
+    setToast(copy.backupDone);
+  }
   function saveMeal(event) {
     event.preventDefault();
     if (!calorieForm.name || !calorieForm.calories || !calorieForm.date) return;
@@ -2532,10 +2492,42 @@ export default function App() {
     const [file] = event.target.files ?? [];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => { try { const parsed = JSON.parse(String(reader.result)); const imported = Array.isArray(parsed) ? parsed : parsed.workouts; if (!Array.isArray(imported)) throw new Error('invalid'); setWorkouts(imported.map(normalizeWorkout)); if (Array.isArray(parsed.calorieEntries)) setCalorieEntries(parsed.calorieEntries); if (parsed.settings) setSettings(sanitizeSettings(parsed.settings)); if (Array.isArray(parsed.calHistory)) setCalHistory(parsed.calHistory); if (Array.isArray(parsed.bodyWeightEntries)) setBodyWeightEntries(parsed.bodyWeightEntries); setToast(copy.importDone); } catch { setToast(copy.importFail); } finally { event.target.value = ''; } };
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result));
+        const imported = Array.isArray(parsed) ? parsed : parsed.workouts;
+        if (!Array.isArray(imported)) throw new Error('invalid');
+        setWorkouts(imported.map(normalizeWorkout));
+        if (Array.isArray(parsed.calorieEntries)) setCalorieEntries(parsed.calorieEntries);
+        if (parsed.settings) setSettings(sanitizeSettings(parsed.settings));
+        if (Array.isArray(parsed.calHistory)) setCalHistory(parsed.calHistory);
+        if (Array.isArray(parsed.bodyWeightEntries)) setBodyWeightEntries(parsed.bodyWeightEntries);
+        if (Array.isArray(parsed.restDays)) setRestDays(parsed.restDays);
+        if (Array.isArray(parsed.cheatDays)) setCheatDays(parsed.cheatDays);
+        if (Array.isArray(parsed.customExercises)) setCustomExercises(parsed.customExercises);
+        setToast(copy.importDone);
+      } catch {
+        setToast(copy.importFail);
+      } finally {
+        event.target.value = '';
+      }
+    };
     reader.readAsText(file);
   }
-  function clearData() { if (!window.confirm(copy.clearConfirm)) return; setWorkouts([]); setCalorieEntries([]); setCalHistory([]); setBodyWeightEntries([]); setRestDays([]); setCheatDays([]); localStorage.removeItem(getRestKey(currentUser)); localStorage.removeItem(getCheatKey(currentUser)); setToast(copy.cleared); }
+  function clearData() {
+    if (!window.confirm(copy.clearConfirm)) return;
+    setWorkouts([]);
+    setCalorieEntries([]);
+    setCalHistory([]);
+    setBodyWeightEntries([]);
+    setRestDays([]);
+    setCheatDays([]);
+    setCustomExercises([]);
+    localStorage.removeItem(getRestKey(currentUser));
+    localStorage.removeItem(getCheatKey(currentUser));
+    localStorage.removeItem(getCustomExKey(currentUser));
+    setToast(copy.cleared);
+  }
   function deleteWorkout(id) { setWorkouts((current) => current.filter((item) => item.id !== id)); if (editingWorkoutId === id) setEditingWorkoutId(null); }
   function saveComment(id) { setWorkouts(cur => cur.map(w => w.id === id ? { ...w, comment: commentText.trim() } : w)); setEditingCommentId(null); setCommentText(''); }
   function startEditComment(w) { setEditingCommentId(w.id); setCommentText(w.comment || ''); }
@@ -2652,8 +2644,8 @@ export default function App() {
     const normalized = normalizeFoodQuery(calQuery);
     const local = LOCAL_FOODS[normalized];
 
-    // 1. Gemini AI estimate (if key available)
-    if (GEMINI_KEY) {
+    // 1. Gemini AI estimate via backend proxy, when configured
+    if (aiEnabled) {
       try {
         const prompt = `You are a nutritionist. The user ate: "${calQuery.trim()}", ${calGrams}g.
 Give a realistic average calorie estimate for this food (not a branded product).
@@ -2661,7 +2653,7 @@ Briefly state what ingredients/preparation you assumed (1 sentence).
 Then on a new line write exactly: KCAL_PER_100G: <number>
 Then on a new line write exactly: TOTAL_KCAL: <number>
 Be concise. Use average homemade/generic values, not brand values.`;
-        const text = await callGemini([{ text: prompt }]);
+        const text = await callGemini(currentUser, [{ text: prompt }]);
         if (text) {
           const per100Match = text.match(/KCAL_PER_100G:\s*(\d+)/i);
           const totalMatch = text.match(/TOTAL_KCAL:\s*(\d+)/i);
@@ -2724,7 +2716,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
 
   async function analyzeImageCalories() {
     if (!calImage) return;
-    if (!GEMINI_KEY) { setCalPhotoError('noKey'); return; }
+    if (!aiEnabled) { setCalPhotoError('noKey'); return; }
     setCalImageLoading(true);
     setCalPhotoError('');
     setCalPhotoResult(null);
@@ -2736,7 +2728,7 @@ Then on a new line write exactly: FOOD_NAME: <name of the main food or meal>
 Then on a new line write exactly: KCAL_PER_100G: <average kcal per 100g>
 Then on a new line write exactly: TOTAL_KCAL: <estimated total kcal for the portion shown>
 Be concise. Use average homemade/generic values, not brand values.`;
-      const text = await callGemini([
+      const text = await callGemini(currentUser, [
         { inlineData: { mimeType: calImage.mimeType, data: calImage.base64 } },
         { text: prompt },
       ]);
@@ -2774,12 +2766,12 @@ Be concise. Use average homemade/generic values, not brand values.`;
     let targets = { sl: '', en: '' };
     let primary = { sl: sectionNames[addExForm.section] || addExForm.section, en: addExForm.section };
 
-    if (GEMINI_KEY) {
+    if (aiEnabled) {
       try {
         const prompt = `You are a fitness expert. For the exercise "${name}" targeting the "${addExForm.section}" muscle group, respond ONLY with this JSON object (no markdown, no extra text):
 {"howTo":{"en":"...","sl":"..."},"cues":{"en":"...","sl":"..."},"targets":{"en":"...","sl":"..."},"primary":{"en":"...","sl":"..."}}
 Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
-        const text = await callGemini([{ text: prompt }]);
+        const text = await callGemini(currentUser, [{ text: prompt }]);
         if (text) {
           const m = text.match(/\{[\s\S]*\}/);
           if (m) {
@@ -2811,7 +2803,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
 
   async function analyzeIngredients(e) {
     e.preventDefault();
-    if (!GEMINI_KEY) { setIngredientError('noKey'); return; }
+    if (!aiEnabled) { setIngredientError('noKey'); return; }
     setIngredientLoading(true);
     setIngredientError('');
     setIngredientResults(null);
@@ -2826,7 +2818,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
         const list = valid.map(i => `- ${i.name.trim()} (${i.grams}g)`).join('\n');
         prompt = `You are a nutritionist. Calculate exact nutrition for these ingredients:\n${list}\n\nReturn ONLY this JSON object (no markdown, no extra text):\n{"total":{"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0},"items":[{"name":"...","grams":0,"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0}]}\nAll values are numbers. Use average generic values per given grams.`;
       }
-      const text = await callGemini([{ text: prompt }]);
+      const text = await callGemini(currentUser, [{ text: prompt }]);
       if (text) {
         const m = text.match(/\{[\s\S]*\}/);
         if (m) {
@@ -2871,7 +2863,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
   async function estimateBodyFat() {
     const photos = Object.entries(bodyFatImages).filter(([, img]) => img !== null);
     if (!photos.length) return;
-    if (!GEMINI_KEY) { setBodyFatError('noKey'); return; }
+    if (!aiEnabled) { setBodyFatError('noKey'); return; }
     setBodyFatLoading(true); setBodyFatError(''); setBodyFatResult(null);
     try {
       const parts = [];
@@ -2881,7 +2873,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
       });
       const lang = settings.language;
       parts.push({ text: `You are a body composition expert. Estimate body fat percentage from the photo(s).\nReturn ONLY this JSON (no markdown):\n{"bodyFatPercent":15.5,"confidence":"moderate","category":"Fitness","description":"..."}\n"confidence" is "low", "moderate", or "high". "category" is one of: "Essential fat (<5%)", "Athletes (6-13%)", "Fitness (14-17%)", "Average (18-24%)", "Obese (25%+)" for males, or "Essential fat (<12%)", "Athletes (14-20%)", "Fitness (21-24%)", "Average (25-31%)", "Obese (32%+)" for females.\n"description" is 1-2 sentences in ${lang === 'sl' ? 'Slovenian' : 'English'}.` });
-      const text = await callGemini(parts);
+      const text = await callGemini(currentUser, parts);
       if (text) {
         const m = text.match(/\{[\s\S]*\}/);
         if (m) {

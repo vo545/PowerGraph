@@ -1,3 +1,17 @@
 node_modules
 dist
 .vite
+
+# Local secrets and runtime data
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.log

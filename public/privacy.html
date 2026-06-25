@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Politika zasebnosti – PowerGraph</title>
+  <title>Politika zasebnosti - PowerGraph</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #0f172a;
       color: #e2e8f0;
-      max-width: 720px;
+      max-width: 760px;
       margin: 0 auto;
       padding: 2rem 1.5rem 4rem;
       line-height: 1.7;
@@ -18,41 +18,34 @@
     h2 { color: #93c5fd; margin-top: 2rem; font-size: 1.1rem; }
     p, li { color: #94a3b8; }
     a { color: #60a5fa; }
+    code { color: #bfdbfe; }
     .updated { color: #64748b; font-size: 0.85rem; margin-bottom: 2rem; }
   </style>
 </head>
 <body>
   <h1>Politika zasebnosti</h1>
-  <p class="updated">Zadnja posodobitev: April 2026</p>
+  <p class="updated">Zadnja posodobitev: Junij 2026</p>
 
   <h2>1. Kdo smo</h2>
-  <p>PowerGraph je brezplačna fitness aplikacija za sledenje treningom, kalorijam in telesnemu napredku. Aplikacija je dostopna na <a href="https://vo545.github.io/PowerGraph">https://vo545.github.io/PowerGraph</a>.</p>
+  <p>PowerGraph je fitness aplikacija za sledenje treningom, kalorijam in telesnemu napredku. Aplikacija je lahko uporabljena lokalno v brskalniku ali skupaj z opcijskim PowerGraph backendom.</p>
 
-  <h2>2. Kateri podatki se zbirajo</h2>
-  <p>PowerGraph <strong>ne zbira nobenih osebnih podatkov</strong>. Vsi podatki (treningi, kalorije, nastavitve) se shranjujejo izključno lokalno v vašem brskalniku (<code>localStorage</code>) in nikoli ne zapustijo vaše naprave.</p>
-  <ul>
-    <li>Ne zahtevamo ustvaritve računa z e-pošto ali geslom na strežniku.</li>
-    <li>Ne pošiljamo nobenih podatkov na naše strežnike.</li>
-    <li>Ne uporabljamo analitike, piškotkov ali sledenja.</li>
-    <li>Ne delimo podatkov s tretjimi osebami.</li>
-  </ul>
+  <h2>2. Lokalni nacin</h2>
+  <p>Ce backend ni nastavljen, se podatki shranjujejo samo v vasem brskalniku prek <code>localStorage</code>. Ti podatki ostanejo na napravi, dokler jih ne izbrisete ali ne pocistite podatkov brskalnika.</p>
 
-  <h2>3. Lokalni račun</h2>
-  <p>Aplikacija ponuja lokalno prijavo (e-pošta + geslo), ki je shranjena samo v vašem brskalniku. Ti podatki niso poslani na noben strežnik in so dostopni samo na vaši napravi.</p>
+  <h2>3. Opcijski backend sync</h2>
+  <p>Ce je aplikacija povezana z backendom, se lahko podatki o racunu, treningih, kalorijah, telesni tezi, rest/cheat dnevih, ocenah aplikacije in login dogodkih shranijo v SQLite bazo na serverju. Ta nacin omogoca backup, sync in admin pregled.</p>
 
-  <h2>4. Iskanje kalorij (Open Food Facts)</h2>
-  <p>Funkcija ocenjevalca kalorij pošlje iskalni pojem na javni API <a href="https://world.openfoodfacts.org" target="_blank">Open Food Facts</a>. Nobeni osebni podatki niso vključeni v to poizvedbo.</p>
+  <h2>4. AI in zunanji API-ji</h2>
+  <p>Funkcije za AI oceno hrane, sestavin, vaj ali telesne sestave uporabljajo server-side Gemini proxy. V tem primeru se besedilo ali slika, ki jo posljete v AI funkcijo, posreduje ponudniku AI storitve za obdelavo zahteve.</p>
+  <p>Iskanje kalorij lahko uporablja javne podatke ali lokalno bazo hrane. Pri zunanjem iskanju se poslje iskalni pojem, ne pa celoten profil uporabnika.</p>
 
-  <h2>5. Varnost podatkov</h2>
-  <p>Ker so vsi podatki lokalni, ste vi odgovorni za varnostno kopiranje podatkov (izvoz v JSON prek nastavitev). Brisanje brskalnika ali naprave bo izbrisalo vse podatke.</p>
+  <h2>5. Backup in izbris</h2>
+  <p>Uporabnik lahko izvozi JSON backup ali pocisti lokalne podatke v nastavitvah aplikacije. Pri uporabi backend synca je za popoln izbris server podatkov potreben tudi izbris na backend strani.</p>
 
-  <h2>6. Otroci</h2>
-  <p>Aplikacija ni posebej namenjena otrokom, mlajšim od 13 let, in ne zbira podatkov od nikogar.</p>
+  <h2>6. Varnost</h2>
+  <p>API kljuci in JWT skrivnosti morajo biti shranjeni samo na backendu. Ne vpisujte skrivnosti v frontend <code>VITE_*</code> spremenljivke, ker so vidne v brskalniku.</p>
 
-  <h2>7. Spremembe politike</h2>
-  <p>Morebitne spremembe te politike bodo objavljene na tej strani z novim datumom posodobitve.</p>
-
-  <h2>8. Kontakt</h2>
-  <p>Za vprašanja glede zasebnosti nas kontaktirajte na: <a href="mailto:vid.oreskovic@gmail.com">vid.oreskovic@gmail.com</a></p>
+  <h2>7. Kontakt</h2>
+  <p>Za vprasanja glede zasebnosti kontaktirajte: <a href="mailto:vid.oreskovic@gmail.com">vid.oreskovic@gmail.com</a></p>
 </body>
 </html>

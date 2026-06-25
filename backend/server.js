@@ -105,7 +105,7 @@ db.exec(`
 
 // ── Middleware ─────────────────────────────────────────────────────────────
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '6mb' }));
 
 function requireAuth(req, res, next) {
   const auth = req.headers.authorization;
@@ -125,6 +125,76 @@ function requireAdmin(req, res, next) {
     return res.status(403).json({ error: 'Forbidden' });
   }
   next();
+}
+
+function parseWorkoutSets(raw) {
+  try {
+    const parsed = JSON.parse(raw || '[]');
+    if (Array.isArray(parsed)) return { setDetails: parsed };
+    if (parsed && Array.isArray(parsed.reps)) {
+      return {
+        setDetails: parsed.reps,
+        ...(Array.isArray(parsed.weights) ? { setWeights: parsed.weights } : {}),
+      };
+    }
+  } catch {}
+  return { setDetails: [] };
+}
+
+function serializeWorkoutSets(setDetails, setWeights) {
+  const reps = Array.isArray(setDetails) ? setDetails.map(Number).filter(v => v > 0) : [];
+  const weights = Array.isArray(setWeights) ? setWeights.map(Number).filter(v => v > 0) : [];
+  return JSON.stringify(weights.length ? { reps, weights } : reps);
+}
+
+function asCleanDate(value) {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
+function asPositiveId(value) {
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+function insertWithOptionalId(stmtWithId, stmtWithoutId, id, values) {
+  if (id) {
+    try {
+      stmtWithId.run(id, ...values);
+      return;
+    } catch {}
+  }
+  stmtWithoutId.run(...values);
+}
+
+function normalizeGeminiParts(body) {
+  const incoming = Array.isArray(body?.parts)
+    ? body.parts
+    : (typeof body?.prompt === 'string' ? [{ text: body.prompt }] : null);
+  if (!incoming || incoming.length === 0 || incoming.length > 10) return null;
+
+  let textChars = 0;
+  let imageChars = 0;
+  const parts = [];
+  for (const part of incoming) {
+    if (typeof part?.text === 'string') {
+      const text = part.text.trim();
+      if (!text) continue;
+      textChars += text.length;
+      if (textChars > 10000) return null;
+      parts.push({ text });
+      continue;
+    }
+
+    const inline = part?.inlineData;
+    if (inline && typeof inline.data === 'string' && typeof inline.mimeType === 'string') {
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(inline.mimeType)) return null;
+      if (!/^[A-Za-z0-9+/=]+$/.test(inline.data)) return null;
+      imageChars += inline.data.length;
+      if (imageChars > 5_500_000) return null;
+      parts.push({ inlineData: { mimeType: inline.mimeType, data: inline.data } });
+    }
+  }
+  return parts.length ? parts : null;
 }
 
 // ── Prijava / Registracija ─────────────────────────────────────────────────
@@ -166,28 +236,28 @@ app.post('/api/auth/login', async (req, res) => {
 // ── Treningi ───────────────────────────────────────────────────────────────
 app.get('/api/workouts', requireAuth, (req, res) => {
   const rows = db.prepare('SELECT * FROM workouts WHERE user_id = ? ORDER BY date DESC, id DESC').all(req.user.userId);
-  res.json(rows.map(w => ({ ...w, setDetails: JSON.parse(w.set_details), set_details: undefined })));
+  res.json(rows.map(w => ({ ...w, ...parseWorkoutSets(w.set_details), set_details: undefined })));
 });
 
 app.post('/api/workouts', requireAuth, (req, res) => {
-  const { date, exercise, sets, weight, setDetails, notes } = req.body ?? {};
+  const { date, exercise, sets, weight, setDetails, setWeights, notes } = req.body ?? {};
   if (!date || !exercise || sets == null || weight == null || !Array.isArray(setDetails)) {
     return res.status(400).json({ error: 'Missing fields' });
   }
   const result = db.prepare(
     'INSERT INTO workouts (user_id, date, exercise, sets, weight, set_details, notes) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).run(req.user.userId, date, exercise, Number(sets), Number(weight), JSON.stringify(setDetails), notes || '');
+  ).run(req.user.userId, date, exercise, Number(sets), Number(weight), serializeWorkoutSets(setDetails, setWeights), notes || '');
   res.status(201).json({ id: result.lastInsertRowid });
 });
 
 app.put('/api/workouts/:id', requireAuth, (req, res) => {
-  const { date, exercise, sets, weight, setDetails, notes } = req.body ?? {};
+  const { date, exercise, sets, weight, setDetails, setWeights, notes } = req.body ?? {};
   if (!date || !exercise || sets == null || weight == null || !Array.isArray(setDetails)) {
     return res.status(400).json({ error: 'Missing fields' });
   }
   const result = db.prepare(
     'UPDATE workouts SET date=?, exercise=?, sets=?, weight=?, set_details=?, notes=? WHERE id=? AND user_id=?'
-  ).run(date, exercise, Number(sets), Number(weight), JSON.stringify(setDetails), notes || '', req.params.id, req.user.userId);
+  ).run(date, exercise, Number(sets), Number(weight), serializeWorkoutSets(setDetails, setWeights), notes || '', req.params.id, req.user.userId);
   if (result.changes === 0) return res.status(404).json({ error: 'Not found' });
   res.json({ ok: true });
 });
@@ -303,9 +373,8 @@ app.delete('/api/cheat-days/:date', requireAuth, (req, res) => {
 // ── Gemini proxy (API ključ ostane na strežniku!) ──────────────────────────
 app.post('/api/gemini', requireAuth, async (req, res) => {
   if (!GEMINI_KEY) return res.status(503).json({ error: 'Gemini not configured' });
-  const { prompt } = req.body ?? {};
-  if (!prompt || typeof prompt !== 'string') return res.status(400).json({ error: 'Prompt required' });
-  if (prompt.length > 2000) return res.status(400).json({ error: 'Prompt too long' });
+  const parts = normalizeGeminiParts(req.body);
+  if (!parts) return res.status(400).json({ error: 'Invalid Gemini payload' });
 
   try {
     const r = await fetch(
@@ -313,7 +382,7 @@ app.post('/api/gemini', requireAuth, async (req, res) => {
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+        body: JSON.stringify({ contents: [{ parts }] }),
       }
     );
     const data = await r.json();
@@ -356,7 +425,7 @@ app.post('/api/ratings', requireAuth, (req, res) => {
 app.get('/api/sync', requireAuth, (req, res) => {
   const uid = req.user.userId;
   const workouts = db.prepare('SELECT id, date, exercise, sets, weight, set_details, notes FROM workouts WHERE user_id = ? ORDER BY date DESC, id DESC').all(uid)
-    .map(w => ({ id: w.id, date: w.date, exercise: w.exercise, weight: w.weight, setDetails: JSON.parse(w.set_details || '[]'), comment: w.notes || '' }));
+    .map(w => ({ id: w.id, date: w.date, exercise: w.exercise, weight: w.weight, ...parseWorkoutSets(w.set_details), comment: w.notes || '' }));
   const calories = db.prepare('SELECT id, date, meal_type, name, calories, protein, carbs, fat FROM calorie_entries WHERE user_id = ? ORDER BY date DESC, id DESC').all(uid)
     .map(e => ({ id: e.id, date: e.date, mealType: e.meal_type, name: e.name, calories: e.calories, protein: e.protein, carbs: e.carbs, fat: e.fat }));
   const bodyWeight = db.prepare('SELECT id, date, weight FROM body_weight WHERE user_id = ? ORDER BY date ASC').all(uid);
@@ -367,7 +436,122 @@ app.get('/api/sync', requireAuth, (req, res) => {
   res.json({ workouts, calories, bodyWeight, restDays, cheatDays, calHistory });
 });
 
-// ── Admin endpointi ────────────────────────────────────────────────────────
+// Bulk sync write
+app.post('/api/sync', requireAuth, (req, res) => {
+  const uid = req.user.userId;
+  const body = req.body ?? {};
+  const workouts = Array.isArray(body.workouts) ? body.workouts : [];
+  const calories = Array.isArray(body.calorieEntries) ? body.calorieEntries : (Array.isArray(body.calories) ? body.calories : []);
+  const bodyWeight = Array.isArray(body.bodyWeightEntries) ? body.bodyWeightEntries : (Array.isArray(body.bodyWeight) ? body.bodyWeight : []);
+  const restDays = Array.isArray(body.restDays) ? body.restDays : [];
+  const cheatDays = Array.isArray(body.cheatDays) ? body.cheatDays : [];
+  const calHistory = Array.isArray(body.calHistory) ? body.calHistory : [];
+
+  const workoutWithId = db.prepare('INSERT INTO workouts (id, user_id, date, exercise, sets, weight, set_details, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+  const workoutWithoutId = db.prepare('INSERT INTO workouts (user_id, date, exercise, sets, weight, set_details, notes) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  const calorieWithId = db.prepare('INSERT INTO calorie_entries (id, user_id, date, meal_type, name, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const calorieWithoutId = db.prepare('INSERT INTO calorie_entries (user_id, date, meal_type, name, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+  const bodyWeightWithId = db.prepare('INSERT INTO body_weight (id, user_id, date, weight) VALUES (?, ?, ?, ?)');
+  const bodyWeightWithoutId = db.prepare('INSERT INTO body_weight (user_id, date, weight) VALUES (?, ?, ?)');
+  const calHistoryWithId = db.prepare('INSERT INTO cal_history (id, user_id, date, name, grams, kcal_per_100, total) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  const calHistoryWithoutId = db.prepare('INSERT INTO cal_history (user_id, date, name, grams, kcal_per_100, total) VALUES (?, ?, ?, ?, ?, ?)');
+  const insertRestDay = db.prepare('INSERT OR IGNORE INTO rest_days (user_id, date) VALUES (?, ?)');
+  const insertCheatDay = db.prepare('INSERT OR IGNORE INTO cheat_days (user_id, date) VALUES (?, ?)');
+
+  try {
+    db.exec('BEGIN');
+    db.prepare('DELETE FROM workouts WHERE user_id=?').run(uid);
+    db.prepare('DELETE FROM calorie_entries WHERE user_id=?').run(uid);
+    db.prepare('DELETE FROM body_weight WHERE user_id=?').run(uid);
+    db.prepare('DELETE FROM rest_days WHERE user_id=?').run(uid);
+    db.prepare('DELETE FROM cheat_days WHERE user_id=?').run(uid);
+    db.prepare('DELETE FROM cal_history WHERE user_id=?').run(uid);
+
+    workouts.slice(0, 5000).forEach((w) => {
+      const date = asCleanDate(w.date);
+      const exercise = typeof w.exercise === 'string' ? w.exercise.trim().slice(0, 120) : '';
+      const setDetails = Array.isArray(w.setDetails) ? w.setDetails.map(Number).filter(v => v > 0) : [];
+      if (!date || !exercise || !setDetails.length) return;
+      const weight = Number(w.weight) || 0;
+      const notes = String(w.comment ?? w.notes ?? '').slice(0, 1200);
+      insertWithOptionalId(
+        workoutWithId,
+        workoutWithoutId,
+        asPositiveId(w.id),
+        [uid, date, exercise, setDetails.length, weight, serializeWorkoutSets(setDetails, w.setWeights), notes]
+      );
+    });
+
+    calories.slice(0, 10000).forEach((entry) => {
+      const date = asCleanDate(entry.date);
+      const name = typeof entry.name === 'string' ? entry.name.trim().slice(0, 160) : '';
+      if (!date || !name) return;
+      insertWithOptionalId(
+        calorieWithId,
+        calorieWithoutId,
+        asPositiveId(entry.id),
+        [
+          uid,
+          date,
+          String(entry.mealType || entry.meal_type || 'breakfast').slice(0, 40),
+          name,
+          Number(entry.calories) || 0,
+          Number(entry.protein) || 0,
+          Number(entry.carbs) || 0,
+          Number(entry.fat) || 0,
+        ]
+      );
+    });
+
+    const seenBodyDates = new Set();
+    bodyWeight.slice(0, 5000).forEach((entry) => {
+      const date = asCleanDate(entry.date);
+      if (!date || seenBodyDates.has(date)) return;
+      seenBodyDates.add(date);
+      insertWithOptionalId(
+        bodyWeightWithId,
+        bodyWeightWithoutId,
+        asPositiveId(entry.id),
+        [uid, date, Number(entry.weight) || 0]
+      );
+    });
+
+    [...new Set(restDays)].slice(0, 5000).forEach((date) => {
+      if (asCleanDate(date)) insertRestDay.run(uid, date);
+    });
+    [...new Set(cheatDays)].slice(0, 5000).forEach((date) => {
+      if (asCleanDate(date)) insertCheatDay.run(uid, date);
+    });
+
+    calHistory.slice(0, 10000).forEach((entry) => {
+      const date = asCleanDate(entry.date);
+      const name = typeof entry.name === 'string' ? entry.name.trim().slice(0, 160) : '';
+      if (!date || !name) return;
+      insertWithOptionalId(
+        calHistoryWithId,
+        calHistoryWithoutId,
+        asPositiveId(entry.id),
+        [
+          uid,
+          date,
+          name,
+          Number(entry.grams) || 0,
+          Number(entry.kcalPer100 ?? entry.kcal_per_100) || 0,
+          Number(entry.total) || 0,
+        ]
+      );
+    });
+
+    db.exec('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    try { db.exec('ROLLBACK'); } catch {}
+    console.error('Sync error:', err);
+    res.status(500).json({ error: 'Sync failed' });
+  }
+});
+
+// Admin endpoints
 app.get('/api/admin/users', requireAuth, requireAdmin, (req, res) => {
   const users = db.prepare('SELECT id, email, created_at FROM users ORDER BY created_at DESC').all();
   const enriched = users.map(u => {

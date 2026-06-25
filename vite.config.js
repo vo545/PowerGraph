@@ -36,4 +36,14 @@ export default defineConfig(({ mode }) => ({
     strictPort: true,
     allowedHosts: true,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          charts: ['chart.js', 'react-chartjs-2'],
+        },
+      },
+    },
+  },
 }));

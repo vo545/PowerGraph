@@ -1,207 +1,75 @@
 # PowerGraph arhitektura
 
-PowerGraph je preprosta fitness spletna aplikacija, ki deluje samo v brskalniku. Aplikacija nima backenda, nima prijave in ne uporablja zunanje baze. Vsi podatki se shranjujejo lokalno v brskalniku uporabnika.
+PowerGraph je lokalno-prva fitness PWA aplikacija. Osnovni nacin delovanja je brez serverja: uporabnik se prijavi lokalno, podatki pa se shranjujejo v `localStorage`. Ce je nastavljen backend, aplikacija dodatno podpira JWT prijavo, SQLite sync, admin pregled in varen Gemini proxy za AI funkcije.
 
-## Diagram arhitekture
 ```mermaid
 graph TD
-    A[Frontend (HTML/CSS/JavaScript)] --> B[Browser Storage]
-    A --> C[Chart.js]
-    A --> D[Export JSON/CSV]
+  A[React/Vite PWA] --> B[localStorage]
+  A --> C[Chart.js]
+  A --> D[JSON backup/import]
+  A -. VITE_API_URL .-> E[Express API]
+  E --> F[SQLite]
+  E --> G[Gemini API]
 ```
 
-## Kazalo
-1. [Cilj aplikacije](#1-cilj-aplikacije)
-2. [Osnovna arhitektura](#2-osnovna-arhitektura)
-3. [Podatkovni model](#3-podatkovni-model)
-4. [Shranjevanje podatkov](#4-shranjevanje-podatkov)
-5. [Funkcionalnosti](#5-funkcionalnosti)
-6. [Uporabniški vmesnik](#6-uporabniski-vmesnik)
-7. [Izvoz in uvoz](#7-izvoz-in-uvoz)
-8. [Tehnične odločitve](#8-tehnicne-odlocitve)
-9. [Omejitve](#9-omejitve)
-10. [Roadmap](#10-roadmap)
+## Cilj aplikacije
 
-## 1. Cilj aplikacije
-- Uporabnik vnese trening direktno v spletni strani.
-- Podatki se shranijo samo lokalno v brskalniku.
-- Uporabnik vidi zgodovino treningov, osnovno statistiko in graf napredka.
-- Uporabnik lahko izvozi ali uvozi svoje podatke brez strežnika.
+- Hiter vnos treningov z vajami, seti, tezo, komentarji in zgodovino.
+- Sledenje kalorijam, makrom, telesni tezi, rest dnevom, cheat dnevom in vodi.
+- Pregled napredka s statistikami, grafi, heatmapom in rang sistemom.
+- JSON backup/import za prenos med napravami.
+- Opcijski backend sync brez izpostavljanja API kljucev v frontend bundle.
 
-## 2. Osnovna arhitektura
+## Frontend
 
-### Frontend
-- HTML za strukturo strani
-- CSS za izgled
-- JavaScript za logiko aplikacije
+- `src/App.jsx` vsebuje trenutno glavno aplikacijsko logiko.
+- `src/styles.css` vsebuje responsive layout, PWA/mobile prilagoditve in komponente.
+- `public/sw.js` skrbi za cache aplikacije in obvestilo o novi verziji.
+- `public/manifest.json` definira PWA instalacijo.
 
-### Browser-only pristop
-- brez Node.js backenda
-- brez API klicev
-- brez avtentikacije
-- brez baze na strežniku
-- brez sinhronizacije med napravami
+Glavna shramba:
 
-### Glavni moduli na strani
-- obrazec za vnos treninga
-- seznam vseh treningov
-- statistika in povzetki
-- graf napredka
-- izvoz in uvoz podatkov
-- nastavitve uporabnika, shranjene lokalno
+- `powergraph_users`
+- `powergraph_session`
+- `powergraph_workouts_<email>`
+- `powergraph_calories_<email>`
+- `powergraph_bodyweight_<email>`
+- `powergraph_rest_<email>`
+- `powergraph_cheat_<email>`
+- `powergraph_custom_ex_<email>`
+- `powergraph_settings_<email>`
 
-## 3. Podatkovni model
+## Backend
 
-Osnovni zapis treninga:
+Backend je v `backend/server.js`.
 
-```json
-{
-  "id": "uuid-ali-timestamp",
-  "date": "2026-04-07",
-  "exercise": "Bench Press",
-  "weight": 80,
-  "sets": 3,
-  "reps": 10,
-  "notes": "dober trening"
-}
-```
+Funkcije:
 
-Možna razširitev:
-- `duration`
-- `bodyWeight`
-- `calories`
-- `category`
+- JWT registracija/prijava.
+- SQLite tabele za uporabnike, treninge, kalorije, telesno tezo, zgodovino kalorimetra, rest/cheat dneve, ratings in login loge.
+- `GET /api/sync` za prenos server podatkov v frontend.
+- `POST /api/sync` za snapshot sync lokalnega stanja v SQLite.
+- `POST /api/gemini` kot proxy, da `GEMINI_KEY` ostane na serverju.
+- Admin endpointi za uporabnike in prijave.
 
-## 4. Shranjevanje podatkov
+## Sync pravila
 
-### Primarna izbira
-Za enostavno verzijo aplikacija uporablja `localStorage`.
+- Frontend je vir takojšnje resnice: vsaka sprememba se takoj zapise v `localStorage`.
+- Ce obstajata `VITE_API_URL` in JWT, frontend po kratkem zamiku poslje snapshot na `/api/sync`.
+- Ob prijavi frontend najprej poskusi potegniti backend podatke in jih zdruzi z lokalnimi.
+- JSON export/import ostane fallback in rocni backup.
 
-Predlagani ključi:
-- `powergraph_workouts`
-- `powergraph_settings`
+## Varnost
 
-### Primer strukture v `localStorage`
-```json
-[
-  {
-    "id": "1712486400000",
-    "date": "2026-04-07",
-    "exercise": "Squat",
-    "weight": 100,
-    "sets": 5,
-    "reps": 5,
-    "notes": ""
-  }
-]
-```
+- Frontend ne sme vsebovati `VITE_GITHUB_TOKEN` ali `VITE_GEMINI_KEY`.
+- Skrivnosti so v `backend/.env`, ki ne sme biti commitan.
+- SQLite datoteke so runtime podatki in niso del izvorne kode.
+- Lokalna prijava v browser-only nacinu ni prava kriptografsko varna avtentikacija med napravami; namenjena je locevanju lokalnih profilov.
 
-### Pravila shranjevanja
-- ob dodajanju treninga se podatki takoj shranijo v `localStorage`
-- ob urejanju se prepiše celoten seznam treningov
-- ob brisanju se seznam ponovno shrani
-- ob nalaganju strani se podatki preberejo iz `localStorage`
+## Roadmap
 
-### Alternativa za kasneje
-Če bo podatkov več, se lahko `localStorage` kasneje zamenja z `IndexedDB`, še vedno brez backenda.
-
-## 5. Funkcionalnosti
-
-### MVP
-- dodaj trening
-- uredi trening
-- izbriši trening
-- prikaži seznam treningov
-- filtriranje po vaji ali datumu
-- osnovna statistika
-- graf napredka
-- izvoz podatkov
-- uvoz podatkov
-
-### Statistika
-- skupno število treningov
-- največja teža po vaji
-- skupni volumen: `weight * sets * reps`
-- zgodovina napredka po posamezni vaji
-
-## 6. Uporabniški vmesnik
-
-Stran naj bo ena enostavna SPA stran ali pa klasična večsekcijska stran brez strežniške logike.
-
-Glavni deli vmesnika:
-- zgornji naslov in kratek povzetek
-- obrazec za vnos treninga
-- tabela ali kartice z vnosi
-- sekcija statistike
-- sekcija z grafom
-- gumbi za izvoz, uvoz in čiščenje podatkov
-
-UI smernice:
-- responsive layout za telefon in desktop
-- čim manj korakov za vnos treninga
-- jasen prikaz napak pri vnosu
-- potrditveni dialog pri brisanju vseh podatkov
-
-## 7. Izvoz in uvoz
-
-### Izvoz
-- JSON za varnostno kopijo
-- CSV za pregled v Excelu ali Google Sheets
-
-### Uvoz
-- uporabnik naloži prej izvožen JSON
-- aplikacija preveri osnovno strukturo podatkov
-- nato podatke zapiše v `localStorage`
-
-### Namen
-Ker ni backenda, je izvoz pomemben za backup in prenos podatkov med napravami.
-
-## 8. Tehnične odločitve
-
-### Predlagan stack
-- HTML
-- CSS
-- JavaScript
-- Chart.js za grafe
-
-### Zakaj taka poenostavitev
-- manj kompleksnosti
-- hitrejša izdelava MVP
-- ni stroškov za strežnik ali bazo
-- aplikacija lahko gostuje kot statična stran
-
-### Deployment
-Aplikacija lahko teče kot statična spletna stran na:
-- GitHub Pages
-- Netlify
-- Vercel
-- lokalno z odpiranjem `index.html` ali prek enostavnega static serverja
-
-## 9. Omejitve
-
-- podatki ostanejo samo v trenutnem brskalniku
-- ob brisanju podatkov brskalnika se podatki izgubijo
-- brez prijave ni sinhronizacije med napravami
-- `localStorage` ima omejitev velikosti
-- lokalni podatki niso primerni za občutljive informacije
-
-## 10. Roadmap
-
-### Faza 1
-- osnovni obrazec
-- lokalno shranjevanje
-- seznam treningov
-
-### Faza 2
-- grafi in statistika
-- izvoz JSON in CSV
-- uvoz JSON
-
-### Faza 3
-- boljši filtri
-- tema svetlo/temno
-- nadgradnja iz `localStorage` na `IndexedDB`, če bo potrebno
-
-## Zaključek
-
-PowerGraph naj bo v prvi verziji čista browser-only aplikacija. To pomeni, da celotna logika živi na frontend strani, vsi podatki ostanejo v brskalniku, uporabnik pa si po potrebi sam naredi izvoz za backup. Tak pristop je najbolj enostaven, najhitrejši za razvoj in dovolj dober za prvi MVP.
+1. Razbiti `src/App.jsx` na module: auth, storage, sync, workouts, calories, admin, AI.
+2. Dodati testni smoke flow za build, backup/import in osnovni sync.
+3. Razmisliti o IndexedDB, ce lokalni podatki prerastejo `localStorage`.
+4. Dodati server endpoint za custom vaje, ce sync custom vaj postane zahteva.
+5. Urediti migracijo git zgodovine, ce so bile skrivnosti ali baze ze commitane.

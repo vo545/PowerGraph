@@ -723,7 +723,7 @@ const ui = {
     tutorialStep2Title: 'Nadzorna plošča 📊',
     tutorialStep2: 'Tukaj vidiš svoje statistike: aktivni niz dni, število treningov, kalorije in telesno težo. Graf prikazuje napredek po mesecih.',
     tutorialStep3Title: 'Dodaj trening ➕',
-    tutorialStep3: 'Pritisni "Dodaj trening", izberi vajo in vnesi serije ter ponovitve. Za vsak trening dobiš točke za lestvico rangov.',
+    tutorialStep3: 'Pritisni "Dodaj trening", izberi vajo in vnesi serije ter ponovitve. Volumen vaje se doda misicam, ki jih dejansko trenira.',
     tutorialStep4Title: 'Vaje 🏋️',
     tutorialStep4: 'V zavihku Vaje najdeš podrobnosti o vsaki vaji: kako jo izvajamo, katera oprema je potrebna in kako zahtevna je.',
     tutorialStep5Title: 'Kalorije 🍎',
@@ -731,7 +731,7 @@ const ui = {
     tutorialStep6Title: 'Nasvetovalec 🧠',
     tutorialStep6: 'Vsak dan ti predlagamo vajo glede na to, kaj si nazadnje treniral. Predlog temelji na skupini, ki je bila najmanj trenirana.',
     tutorialStep7Title: 'Lestvica rangov 🏆',
-    tutorialStep7: 'Za vsak trening, osebni rekord in dan počitka dobiš točke. Z njimi napreduj skozi range – od začetnika do legende!',
+    tutorialStep7: 'Rangi temeljijo na tehtanem volumnu po misicah. Skupni rang je povprecje vseh devetih misicnih skupin.',
     tutorialStep8Title: 'Nastavitve ⚙️',
     tutorialStep8: 'V nastavitvah izberi jezik, enote in varnostno kopiranje. Vodič (ta zaslon) je vedno dostopen tukaj.',
     myEquipmentTitle: 'Moja oprema',
@@ -1151,7 +1151,7 @@ const ui = {
     tutorialStep2Title: 'Dashboard 📊',
     tutorialStep2: 'Here you see your stats: active streak, workout count, calories, and body weight. The chart shows your progress over the last months.',
     tutorialStep3Title: 'Add a workout ➕',
-    tutorialStep3: 'Click "Add workout", pick an exercise and enter your sets and reps. Every workout earns you points on the leaderboard.',
+    tutorialStep3: 'Click "Add workout", pick an exercise, and enter your sets and reps. Exercise volume is added to the muscles it actually trains.',
     tutorialStep4Title: 'Exercises 🏋️',
     tutorialStep4: 'The Exercises tab has details for every exercise: how to perform it, what equipment you need, and the difficulty level.',
     tutorialStep5Title: 'Calories 🍎',
@@ -1159,7 +1159,7 @@ const ui = {
     tutorialStep6Title: 'Advisor 🧠',
     tutorialStep6: 'Every day the Advisor suggests a workout based on what you trained recently and which muscle group has been neglected the most.',
     tutorialStep7Title: 'Rankings 🏆',
-    tutorialStep7: 'Earn points for every workout, personal record, and rest day. Climb through ranks — from Beginner all the way to Legend!',
+    tutorialStep7: 'Ranks are based on weighted volume per muscle. Your overall rank is the average of all nine muscle groups.',
     tutorialStep8Title: 'Settings ⚙️',
     tutorialStep8: 'In Settings you can change the language, units, and backup options. The tutorial button is also here if you want to see this guide again.',
     myEquipmentTitle: 'My Equipment',
@@ -1984,6 +1984,28 @@ function getMuscleRank(pts, lang) {
   return { ...rank, displayName: lang === 'sl' ? rank.nameSl : rank.nameEn, idx: MUSCLE_RANKS.indexOf(rank) };
 }
 
+function getOverallMuscleRankData(muscleStats = {}, lang = 'en') {
+  const volumes = MUSCLE_KEYS.map((key) => Math.max(0, Number(muscleStats[key]?.volume) || 0));
+  const totalVolume = volumes.reduce((sum, value) => sum + value, 0);
+  const averageVolume = Math.round(totalVolume / MUSCLE_KEYS.length);
+  const trainedGroups = volumes.filter((value) => value > 0).length;
+  const rank = getMuscleRank(averageVolume, lang);
+  const nextRank = MUSCLE_RANKS[rank.idx + 1] || null;
+  const progressPct = nextRank
+    ? Math.min(100, Math.max(0, Math.round(((averageVolume - rank.min) / (nextRank.min - rank.min)) * 100)))
+    : 100;
+
+  return {
+    averageVolume,
+    totalVolume: Math.round(totalVolume),
+    trainedGroups,
+    totalGroups: MUSCLE_KEYS.length,
+    rank,
+    nextRank,
+    progressPct,
+  };
+}
+
 async function fetchLoginLogs(email = '') {
   if (email && API_URL && getJwt(email)) {
     const rows = await apiCall(email, '/api/admin/logs');
@@ -2735,7 +2757,7 @@ export default function App() {
     advisor: settings.language === 'sl' ? 'Pameten dnevni predlog na podlagi tvojih preteklih treningov.' : 'A smart daily suggestion based on your recent training history.',
     calories: settings.language === 'sl' ? 'Beleži obroke, kalorije in osnovne makrote po dnevih.' : 'Track meals, calories, and basic macros by day.',
     ocenjevalec: settings.language === 'sl' ? 'Vpiši jed in grame ter izvedi iskanje kalorij.' : 'Enter a food and grams to look up its calorie count.',
-    rankings: settings.language === 'sl' ? 'Preglej svoj rang, točke in napredek skozi vse stopnje.' : 'View your rank, points, and progression through all tiers.',
+    rankings: settings.language === 'sl' ? 'Preglej povprecni misicni rang, volumen in napredek skozi vse stopnje.' : 'View your average muscle rank, volume, and progression through all tiers.',
     bodyweight: settings.language === 'sl' ? 'Sledi telesni teži in izračunaj dnevne kalorijske potrebe.' : 'Track your body weight and calculate your daily calorie needs.',
     settings: settings.language === 'sl' ? 'Uredi lokalne nastavitve, backup in prikaz podatkov.' : 'Adjust local preferences, backups, and data display.',
     ratings: settings.language === 'sl' ? 'Oceni aplikacijo z zvezdami in napiši predlog za izboljšavo.' : 'Rate the app with stars and write a suggestion for improvement.',
@@ -2848,14 +2870,8 @@ export default function App() {
     return { sections: chosenSections, comboLabel, last, reason, plan, exercises };
   }, [copy.planCardio, copy.planStrength, copy.reasonBalance, copy.reasonCold, copy.reasonEmpty, workouts, advisorMode, advisorSplitId, customSplitSections, activeAdvisorSections, settings.language]);
 
-  const rankData = useMemo(() => {
-    const base = calculatePoints(workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, settings.calorieGoal);
-    const pts = base + adminBonus;
-    const rank = getRank(pts, settings.language);
-    const nextRank = RANKS.find(r => r.min > pts);
-    return { pts, rank, nextRank };
-  }, [workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, settings.calorieGoal, settings.language, adminBonus]);
   const muscleStats = useMemo(() => getAllMuscleVolumeData(workouts, bodyWeightEntries, settings, customExercises), [workouts, bodyWeightEntries, settings, customExercises]);
+  const overallMuscleRankData = useMemo(() => getOverallMuscleRankData(muscleStats, settings.language), [muscleStats, settings.language]);
 
   const chartData = useMemo(() => ({ labels: selectedWorkouts.map((w, i) => `${formatDateValue(w.date, settings.dateFormat)} #${i + 1}`), datasets: [{ data: selectedWorkouts.map((w) => Math.round(convertWeight(getVolume(w), settings.units))), borderColor: '#60a5fa', backgroundColor: 'rgba(59,130,246,0.18)', fill: true, tension: 0.3, borderWidth: 3, pointRadius: 4 }] }), [selectedWorkouts, settings.dateFormat, settings.units]);
   const chartOptions = useMemo(() => {
@@ -4524,49 +4540,67 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
             </section>
             <section className="glass-panel chart-panel fade-in-up" style={{gridColumn:'span 2'}}>
               <div className="panel-header"><h3>{copy.rankCurrentLabel}</h3></div>
-              <div style={{padding:'1rem 0'}}>
-                <div style={{display:'flex',alignItems:'center',gap:'1.2rem',marginBottom:'1.5rem'}}>
-                  <div style={{background:'linear-gradient(135deg,#f59e0b,#ef4444)',borderRadius:'50%',width:'3.5rem',height:'3.5rem',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.8rem',flexShrink:0}}>{rankData.rank.icon}</div>
-                  <div>
-                    <h2 style={{fontSize:'1.8rem',fontWeight:700,margin:0}}>{rankData.rank.displayName}</h2>
-                    <p style={{opacity:0.7,margin:0}}>{rankData.pts} {copy.rankPoints}</p>
+              {(() => {
+                const overall = overallMuscleRankData;
+                const rank = overall.rank;
+                const next = overall.nextRank;
+                const nextLabel = next ? (settings.language === 'sl' ? next.nameSl : next.nameEn) : '';
+                const nextCopy = settings.language === 'sl' ? 'do' : 'to';
+                const avgCopy = settings.language === 'sl' ? 'povprecnega misicnega volumna' : 'average muscle volume';
+                const trainedCopy = settings.language === 'sl' ? 'aktivne skupine' : 'active groups';
+                const totalCopy = settings.language === 'sl' ? 'skupni volumen' : 'total volume';
+                return (
+                  <div style={{padding:'1rem 0'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'1.2rem',marginBottom:'1.5rem'}}>
+                      <div style={{background: rank.bg,borderRadius:'50%',width:'3.5rem',height:'3.5rem',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.8rem',flexShrink:0}}>{MUSCLE_RANK_ICONS[rank.idx]}</div>
+                      <div>
+                        <h2 style={{fontSize:'1.8rem',fontWeight:700,margin:0}}>{rank.displayName}</h2>
+                        <p style={{opacity:0.7,margin:0}}>{formatVolume(overall.averageVolume, settings.units)} {avgCopy}</p>
+                      </div>
+                    </div>
+                    {next ? (<>
+                      <p style={{fontSize:'0.85rem',opacity:0.7,marginBottom:'0.5rem'}}>{copy.rankProgress}: {formatVolume(Math.max(0, next.min - overall.averageVolume), settings.units)} {nextCopy} {nextLabel}</p>
+                      <div style={{background:'rgba(148,163,184,0.15)',borderRadius:'999px',height:'0.6rem',overflow:'hidden'}}>
+                        <div style={{
+                          background: rank.bg,
+                          height:'100%',
+                          borderRadius:'999px',
+                          width:`${overall.progressPct}%`,
+                          transition:'width 0.6s ease'
+                        }} />
+                      </div>
+                      <p style={{fontSize:'0.78rem',opacity:0.5,marginTop:'0.4rem',textAlign:'right'}}>{formatVolume(Math.max(0, next.min - overall.averageVolume), settings.units)} / {formatVolume(next.min - rank.min, settings.units)}</p>
+                    </>) : (
+                      <p style={{fontSize:'0.9rem',opacity:0.7}}>{copy.rankMax}</p>
+                    )}
+                    <div className="muscle-stat-grid" style={{marginTop:'1rem'}}>
+                      <div><span>{settings.language === 'sl' ? 'Povprecje' : 'Average'}</span><strong>{formatVolume(overall.averageVolume, settings.units)}</strong></div>
+                      <div><span>{trainedCopy}</span><strong>{overall.trainedGroups} / {overall.totalGroups}</strong></div>
+                      <div><span>{totalCopy}</span><strong>{formatVolume(overall.totalVolume, settings.units)}</strong></div>
+                    </div>
                   </div>
-                </div>
-                {rankData.nextRank ? (<>
-                  <p style={{fontSize:'0.85rem',opacity:0.7,marginBottom:'0.5rem'}}>{copy.rankProgress}: {rankData.nextRank.min - rankData.pts} {copy.rankPoints}</p>
-                  <div style={{background:'rgba(148,163,184,0.15)',borderRadius:'999px',height:'0.6rem',overflow:'hidden'}}>
-                    <div style={{
-                      background:'linear-gradient(90deg,#f59e0b,#ef4444)',
-                      height:'100%',
-                      borderRadius:'999px',
-                      width:`${Math.min(100,Math.round(((rankData.pts - rankData.rank.min) / (rankData.nextRank.min - rankData.rank.min)) * 100))}%`,
-                      transition:'width 0.6s ease'
-                    }} />
-                  </div>
-                  <p style={{fontSize:'0.78rem',opacity:0.5,marginTop:'0.4rem',textAlign:'right'}}>{rankData.nextRank.min - rankData.pts} / {rankData.nextRank.min - rankData.rank.min} {copy.rankPoints}</p>
-                </>) : (
-                  <p style={{fontSize:'0.9rem',opacity:0.7}}>{copy.rankMax}</p>
-                )}
-              </div>
+                );
+              })()}
             </section>
 
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon orange-glow"><Flame size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.streak}</p><h3 className="stat-value">{calculateStreak(workouts)}</h3></div></article>
 
             <section className="glass-panel history-section fade-in-up" style={{gridColumn:'span 2'}}>
-              <div className="panel-header"><h3>{copy.rankHowTitle}</h3></div>
+              <div className="panel-header"><h3>{settings.language === 'sl' ? 'Kako delujejo misicni rangi' : 'How muscle ranks work'}</h3></div>
               <div className="history-list">
-                {[
-                  {text: copy.rankHowWorkout, color: 'var(--primary-glow)', icon: '💪'},
-                  {text: copy.rankHowPR, color: '#f59e0b', icon: '🏆'},
-                  {text: copy.rankHowRest, color: 'var(--secondary-glow)', icon: '😴'},
-                  {text: copy.rankHowBodyweight, color: '#a78bfa', icon: '⚖️'},
-                  {text: copy.rankHowCalories, color: '#fb923c', icon: '🍽'},
-                  {text: copy.rankHowCaloriesBonus, color: '#34d399', icon: '🎯'},
-                  {text: copy.rankHowCaloriesMinus, color: 'var(--error)', icon: '⚠️'},
-                  {text: copy.rankHowInactive, color: 'var(--error)', icon: '📉'},
-                ].map((item, i) => (
+                {(settings.language === 'sl' ? [
+                  {text: 'Vaja doda tehtan volumen samo misicam, ki jih dejansko trenira.', color: 'var(--primary-glow)', icon: '01'},
+                  {text: 'Rang posamezne misice raste iz njenega lastnega volumna.', color: '#f59e0b', icon: '02'},
+                  {text: 'Trenutni rang je povprecje vseh devetih misicnih skupin.', color: '#34d399', icon: '03'},
+                  {text: 'Uravnotezen trening dvigne skupni rang hitreje kot samo ena mocna skupina.', color: '#a78bfa', icon: '04'},
+                ] : [
+                  {text: 'Each exercise adds weighted volume only to the muscles it actually trains.', color: 'var(--primary-glow)', icon: '01'},
+                  {text: 'Each muscle rank rises from that muscle group volume.', color: '#f59e0b', icon: '02'},
+                  {text: 'Current rank is the average of all nine muscle groups.', color: '#34d399', icon: '03'},
+                  {text: 'Balanced training raises the overall rank faster than one strong group only.', color: '#a78bfa', icon: '04'},
+                ]).map((item, i) => (
                   <article className="history-item" key={i} style={{gap:'0.6rem'}}>
-                    <span style={{fontSize:'1.2rem',flexShrink:0}}>{item.icon}</span>
+                    <span style={{fontSize:'0.8rem',flexShrink:0,fontWeight:800,color:item.color,minWidth:'1.6rem'}}>{item.icon}</span>
                     <strong style={{color: item.color, fontFamily:'monospace',fontSize:'0.9rem'}}>{item.text}</strong>
                   </article>
                 ))}
@@ -4576,22 +4610,23 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
             <section className="glass-panel history-section fade-in-up" style={{gridColumn:'span 2'}}>
               <div className="panel-header"><h3>{copy.rankAllRanks}</h3></div>
               <div className="history-list">
-                {RANKS.map((r, i) => {
-                  const isCurrent = rankData.rank.name === r.name;
-                  const isUnlocked = rankData.pts >= r.min;
-                  const rankName = settings.language === 'sl' ? r.name : r.nameEn;
+                {MUSCLE_RANKS.map((r, i) => {
+                  const isCurrent = overallMuscleRankData.rank.idx === i;
+                  const isUnlocked = overallMuscleRankData.averageVolume >= r.min;
+                  const rankName = settings.language === 'sl' ? r.nameSl : r.nameEn;
+                  const remaining = Math.max(0, r.min - overallMuscleRankData.averageVolume);
                   return (
-                    <article key={r.name} className="history-item" style={{opacity: isUnlocked ? 1 : 0.4, background: isCurrent ? 'rgba(245,158,11,0.08)' : undefined, borderLeft: isCurrent ? '3px solid #f59e0b' : '3px solid transparent'}}>
+                    <article key={r.nameEn} className="history-item" style={{opacity: isUnlocked ? 1 : 0.4, background: isCurrent ? 'rgba(245,158,11,0.08)' : undefined, borderLeft: isCurrent ? `3px solid ${r.color}` : '3px solid transparent'}}>
                       <div style={{display:'flex',alignItems:'center',gap:'0.8rem'}}>
-                        <span style={{fontSize:'1.5rem',minWidth:'2rem',textAlign:'center'}}>{r.icon}</span>
+                        <span style={{background:r.bg,borderRadius:'0.75rem',fontSize:'1.2rem',minWidth:'2.4rem',height:'2.4rem',display:'inline-flex',alignItems:'center',justifyContent:'center',textAlign:'center'}}>{MUSCLE_RANK_ICONS[i]}</span>
                         <div>
-                          <h3 style={{margin:0,fontWeight: isCurrent ? 700 : 500}}>{rankName}{isCurrent ? ' ←' : ''}</h3>
-                          <p style={{margin:0,fontSize:'0.8rem',opacity:0.6}}>{r.min} {copy.rankPoints}</p>
+                          <h3 style={{margin:0,fontWeight: isCurrent ? 700 : 500}}>{rankName}{isCurrent ? ' <-' : ''}</h3>
+                          <p style={{margin:0,fontSize:'0.8rem',opacity:0.6}}>{formatVolume(r.min, settings.units)} {settings.language === 'sl' ? 'povprecja' : 'average'}</p>
                         </div>
                       </div>
-                      {isUnlocked && !isCurrent && <span style={{fontSize:'0.8rem',opacity:0.6}}>✓</span>}
-                      {isCurrent && <span style={{fontSize:'0.8rem',color:'#f59e0b',fontWeight:600}}>{copy.rankCurrentLabel}</span>}
-                      {!isUnlocked && <span style={{fontSize:'0.8rem',opacity:0.5}}>{r.min - rankData.pts} {copy.rankPoints}</span>}
+                      {isUnlocked && !isCurrent && <span style={{fontSize:'0.8rem',opacity:0.6}}>OK</span>}
+                      {isCurrent && <span style={{fontSize:'0.8rem',color:r.color,fontWeight:600}}>{copy.rankCurrentLabel}</span>}
+                      {!isUnlocked && <span style={{fontSize:'0.8rem',opacity:0.5}}>{formatVolume(remaining, settings.units)}</span>}
                     </article>
                   );
                 })}
@@ -4948,8 +4983,8 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
             <div className="stats-list" style={{marginBottom:'1rem'}}>
               <div className="stats-row"><span>{copy.recapWorkouts}</span><strong style={{fontSize:'1.2rem'}}>{recapData.workoutCount}</strong></div>
               <div className="stats-row"><span>{copy.recapPRs}</span><strong style={{fontSize:'1.2rem'}}>{recapData.broken.length}</strong></div>
-              <div className="stats-row"><span>{copy.recapRank}</span><strong style={{fontSize:'1.2rem'}}>{rankData.rank.displayName}</strong></div>
-              <div className="stats-row"><span>{copy.recapPoints}</span><strong style={{fontSize:'1.2rem'}}>{rankData.pts}</strong></div>
+              <div className="stats-row"><span>{copy.recapRank}</span><strong style={{fontSize:'1.2rem'}}>{overallMuscleRankData.rank.displayName}</strong></div>
+              <div className="stats-row"><span>{settings.language === 'sl' ? 'Povprecni volumen' : 'Average volume'}</span><strong style={{fontSize:'1.2rem'}}>{formatVolume(overallMuscleRankData.averageVolume, settings.units)}</strong></div>
             </div>
             {recapData.broken.length > 0 ? (
               <div className="pr-list">

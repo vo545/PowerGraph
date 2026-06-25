@@ -345,7 +345,29 @@ function loadCalHistory(email) {
   } catch { return []; }
 }
 
-const defaultSettings = { units: 'kg', language: 'sl', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
+const LANGUAGE_OPTIONS = [
+  { id: 'en', label: 'English' },
+  { id: 'sl', label: 'Slovenscina' },
+  { id: 'es', label: 'Espanol' },
+  { id: 'pt', label: 'Portugues' },
+  { id: 'fr', label: 'Francais' },
+  { id: 'tr', label: 'Turkce' },
+  { id: 'ar', label: 'العربية' },
+  { id: 'ja', label: '日本語' },
+  { id: 'zh', label: '简体中文' },
+  { id: 'ru', label: 'Русский' },
+];
+const SUPPORTED_LANGUAGES = LANGUAGE_OPTIONS.map((item) => item.id);
+const BACKGROUND_PRESETS = [
+  { id: 'blue', color: '#38bdf8', label: { en: 'Blue steel', sl: 'Modra', es: 'Azul acero', pt: 'Azul', fr: 'Bleu acier', tr: 'Mavi', ar: 'Azraq', ja: 'Blue', zh: 'Blue', ru: 'Blue' } },
+  { id: 'green', color: '#a3e635', label: { en: 'Performance green', sl: 'Zelena', es: 'Verde', pt: 'Verde', fr: 'Vert', tr: 'Yesil', ar: 'Akhdar', ja: 'Green', zh: 'Green', ru: 'Green' } },
+  { id: 'amber', color: '#f59e0b', label: { en: 'Amber power', sl: 'Jantarna', es: 'Ambar', pt: 'Ambar', fr: 'Ambre', tr: 'Kehribar', ar: 'Anbari', ja: 'Amber', zh: 'Amber', ru: 'Amber' } },
+  { id: 'red', color: '#f43f5e', label: { en: 'Redline', sl: 'Rdeca', es: 'Rojo', pt: 'Vermelho', fr: 'Rouge', tr: 'Kirmizi', ar: 'Ahmar', ja: 'Red', zh: 'Red', ru: 'Red' } },
+  { id: 'violet', color: '#a78bfa', label: { en: 'Violet', sl: 'Vijolicna', es: 'Violeta', pt: 'Violeta', fr: 'Violet', tr: 'Mor', ar: 'Banafsaji', ja: 'Violet', zh: 'Violet', ru: 'Violet' } },
+  { id: 'mono', color: '#cbd5e1', label: { en: 'Monochrome', sl: 'Monokrom', es: 'Monocromo', pt: 'Monocromatico', fr: 'Monochrome', tr: 'Monokrom', ar: 'Monochrome', ja: 'Mono', zh: 'Mono', ru: 'Mono' } },
+];
+const SUPPORTED_BACKGROUNDS = BACKGROUND_PRESETS.map((item) => item.id);
+const defaultSettings = { units: 'kg', language: 'en', backgroundAccent: 'blue', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
 const RATINGS_KEY = 'powergraph_ratings';
 const BANNED_KEY = 'powergraph_banned';
 const MODS_KEY = 'powergraph_mods';
@@ -398,6 +420,8 @@ const ui = {
     equipment: 'Oprema / naprave',
     units: 'Enote',
     language: 'Jezik',
+    backgroundAccent: 'Barva ozadja',
+    backgroundAccentDesc: 'Izberi barvo, ki se uporabi za ozadje, gumbe in glavne poudarke.',
     dateFormat: 'Na\u010din zapisa datuma',
     backupReminder: 'Opomnik za backup',
     lastBackup: 'Zadnji backup',
@@ -824,6 +848,8 @@ const ui = {
     equipment: 'Equipment / machines',
     units: 'Units',
     language: 'Language',
+    backgroundAccent: 'Background color',
+    backgroundAccentDesc: 'Choose the color used for the background, buttons, and main highlights.',
     dateFormat: 'Date format',
     backupReminder: 'Backup reminder',
     lastBackup: 'Last backup',
@@ -1206,6 +1232,97 @@ const ui = {
   },
 };
 
+const uiOverrides = {
+  es: {
+    dashboard: 'Panel', history: 'Historial', exercises: 'Ejercicios', advisor: 'Asesor', settings: 'Ajustes', calories: 'Calorias', bodyweight: 'Peso corporal', rankings: 'Rangos', ocenjevalec: 'Estimador de calorias',
+    title: 'Sigue tu progreso', subtitle: 'Diario local de entrenamiento en el navegador con sugerencias inteligentes.', addWorkout: 'Anadir entrenamiento', chart: 'Progreso por ejercicio',
+    date: 'Fecha', exercise: 'Ejercicio', weight: 'Peso', sets: 'Series', repsPerSet: 'Repeticiones por serie', addSet: 'Anadir serie', save: 'Guardar entrenamiento', saveChanges: 'Guardar cambios', cancel: 'Cancelar', edit: 'Editar', delete: 'Eliminar',
+    workouts: 'Entrenamientos', totalSets: 'Series totales', totalReps: 'Repeticiones totales', totalVolume: 'Volumen total', bestWeight: 'Mejor peso', recent: 'Entrenamientos recientes', noHistory: 'Aun no hay entrenamientos.',
+    units: 'Unidades', language: 'Idioma', backgroundAccent: 'Color de fondo', backgroundAccentDesc: 'Elige el color para el fondo, botones y acentos principales.', dateFormat: 'Formato de fecha', backupReminder: 'Recordatorio de copia', lastBackup: 'Ultima copia', never: 'Nunca', days: 'dias', export: 'Exportar datos', import: 'Importar datos', clear: 'Borrar todos los datos',
+    backupTitle: 'Recordatorio de copia', backupText: 'Crea una nueva exportacion para no perder tus datos locales.', showFeedbackBtn: 'Boton de comentarios', showFeedbackBtnDesc: 'Muestra u oculta el boton de feedback.', installApp: 'Instalar app', installAppDesc: 'Anade PowerGraph a la pantalla de inicio o escritorio.', installBtn: 'Instalar',
+    login: 'Iniciar sesion', signup: 'Registrarse', logout: 'Salir', email: 'Email', password: 'Contrasena', confirmPassword: 'Confirmar contrasena', authTitle: 'Entrar a PowerGraph', authSubtitle: 'Tu entrenamiento, nutricion y progreso quedan separados por perfil.', authLoginTitle: 'Bienvenido de nuevo', authSignupTitle: 'Crea un perfil seguro', authEnter: 'Continuar', authCreate: 'Crear cuenta',
+    calorieGoal: 'Objetivo diario', trackerMode: 'Modo de seguimiento', simpleTracker: 'Basico', advancedTracker: 'Avanzado', tutorialOpen: 'Abrir guia', tutorialOpenDesc: 'Muestra la guia para principiantes.',
+  },
+  pt: {
+    dashboard: 'Painel', history: 'Historico', exercises: 'Exercicios', advisor: 'Assistente', settings: 'Definicoes', calories: 'Calorias', bodyweight: 'Peso corporal', rankings: 'Rankings', ocenjevalec: 'Estimador de calorias',
+    title: 'Acompanha o teu progresso', subtitle: 'Diario local de treino no navegador com sugestao inteligente diaria.', addWorkout: 'Adicionar treino', chart: 'Progresso por exercicio',
+    date: 'Data', exercise: 'Exercicio', weight: 'Peso', sets: 'Series', repsPerSet: 'Repeticoes por serie', addSet: 'Adicionar serie', save: 'Guardar treino', saveChanges: 'Guardar alteracoes', cancel: 'Cancelar', edit: 'Editar', delete: 'Eliminar',
+    workouts: 'Treinos', totalSets: 'Total de series', totalReps: 'Total de repeticoes', totalVolume: 'Volume total', bestWeight: 'Melhor peso', recent: 'Treinos recentes', noHistory: 'Ainda nao ha treinos.',
+    units: 'Unidades', language: 'Idioma', backgroundAccent: 'Cor de fundo', backgroundAccentDesc: 'Escolhe a cor usada no fundo, botoes e destaques.', dateFormat: 'Formato da data', backupReminder: 'Lembrete de backup', lastBackup: 'Ultimo backup', never: 'Nunca', days: 'dias', export: 'Exportar dados', import: 'Importar dados', clear: 'Apagar todos os dados',
+    backupTitle: 'Lembrete de backup', backupText: 'Cria uma nova exportacao para nao perder dados locais.', showFeedbackBtn: 'Botao de feedback', showFeedbackBtnDesc: 'Mostra ou esconde o botao de feedback.', installApp: 'Instalar app', installAppDesc: 'Adiciona o PowerGraph ao ecra inicial ou desktop.', installBtn: 'Instalar',
+    login: 'Entrar', signup: 'Registar', logout: 'Sair', email: 'Email', password: 'Palavra-passe', confirmPassword: 'Confirmar palavra-passe', authTitle: 'Entrar no PowerGraph', authSubtitle: 'Treino, nutricao e progresso ficam separados por perfil.', authLoginTitle: 'Bem-vindo de volta', authSignupTitle: 'Cria um perfil seguro', authEnter: 'Continuar', authCreate: 'Criar conta',
+    calorieGoal: 'Objetivo diario', trackerMode: 'Modo do tracker', simpleTracker: 'Simples', advancedTracker: 'Avancado', tutorialOpen: 'Abrir guia', tutorialOpenDesc: 'Mostra o guia para iniciantes.',
+  },
+  fr: {
+    dashboard: 'Tableau de bord', history: 'Historique', exercises: 'Exercices', advisor: 'Conseiller', settings: 'Reglages', calories: 'Calories', bodyweight: 'Poids corporel', rankings: 'Classements', ocenjevalec: 'Estimateur de calories',
+    title: 'Suis ta progression', subtitle: 'Journal local d entrainement dans le navigateur avec suggestion quotidienne.', addWorkout: 'Ajouter entrainement', chart: 'Progression par exercice',
+    date: 'Date', exercise: 'Exercice', weight: 'Poids', sets: 'Series', repsPerSet: 'Repetitions par serie', addSet: 'Ajouter serie', save: 'Enregistrer', saveChanges: 'Enregistrer', cancel: 'Annuler', edit: 'Modifier', delete: 'Supprimer',
+    workouts: 'Entrainements', totalSets: 'Total series', totalReps: 'Total repetitions', totalVolume: 'Volume total', bestWeight: 'Meilleur poids', recent: 'Entrainements recents', noHistory: 'Aucun entrainement.',
+    units: 'Unites', language: 'Langue', backgroundAccent: 'Couleur de fond', backgroundAccentDesc: 'Choisis la couleur du fond, des boutons et des accents.', dateFormat: 'Format de date', backupReminder: 'Rappel sauvegarde', lastBackup: 'Derniere sauvegarde', never: 'Jamais', days: 'jours', export: 'Exporter', import: 'Importer', clear: 'Supprimer les donnees',
+    backupTitle: 'Rappel sauvegarde', backupText: 'Cree une nouvelle exportation pour proteger tes donnees locales.', showFeedbackBtn: 'Bouton feedback', showFeedbackBtnDesc: 'Afficher ou masquer le bouton de feedback.', installApp: 'Installer app', installAppDesc: 'Ajoute PowerGraph a l ecran d accueil ou au bureau.', installBtn: 'Installer',
+    login: 'Connexion', signup: 'Inscription', logout: 'Deconnexion', email: 'Email', password: 'Mot de passe', confirmPassword: 'Confirmer', authTitle: 'Entrer dans PowerGraph', authSubtitle: 'Tes entrainements, ta nutrition et tes progres restent separes par profil.', authLoginTitle: 'Bon retour', authSignupTitle: 'Cree un profil securise', authEnter: 'Continuer', authCreate: 'Creer un compte',
+    calorieGoal: 'Objectif quotidien', trackerMode: 'Mode de suivi', simpleTracker: 'Simple', advancedTracker: 'Avance', tutorialOpen: 'Ouvrir le guide', tutorialOpenDesc: 'Afficher le guide debutant.',
+  },
+  tr: {
+    dashboard: 'Panel', history: 'Gecmis', exercises: 'Egzersizler', advisor: 'Danisman', settings: 'Ayarlar', calories: 'Kalori', bodyweight: 'Vucut agirligi', rankings: 'Siralama', ocenjevalec: 'Kalori tahmini',
+    title: 'Ilerlemeni takip et', subtitle: 'Tarayicida yerel antrenman gunlugu ve akilli gunluk oneriler.', addWorkout: 'Antrenman ekle', chart: 'Egzersiz ilerlemesi',
+    date: 'Tarih', exercise: 'Egzersiz', weight: 'Agirlik', sets: 'Setler', repsPerSet: 'Set basina tekrar', addSet: 'Set ekle', save: 'Antrenmani kaydet', saveChanges: 'Degisiklikleri kaydet', cancel: 'Iptal', edit: 'Duzenle', delete: 'Sil',
+    workouts: 'Antrenmanlar', totalSets: 'Toplam set', totalReps: 'Toplam tekrar', totalVolume: 'Toplam hacim', bestWeight: 'En iyi agirlik', recent: 'Son antrenmanlar', noHistory: 'Henuz antrenman yok.',
+    units: 'Birimler', language: 'Dil', backgroundAccent: 'Arka plan rengi', backgroundAccentDesc: 'Arka plan, butonlar ve ana vurgular icin rengi sec.', dateFormat: 'Tarih formati', backupReminder: 'Yedek hatirlatici', lastBackup: 'Son yedek', never: 'Hicbir zaman', days: 'gun', export: 'Verileri disa aktar', import: 'Verileri ice aktar', clear: 'Tum verileri sil',
+    backupTitle: 'Yedek hatirlatici', backupText: 'Yerel verilerini kaybetmemek icin yeni bir disa aktarim yap.', showFeedbackBtn: 'Geri bildirim butonu', showFeedbackBtnDesc: 'Geri bildirim butonunu goster veya gizle.', installApp: 'Uygulamayi yukle', installAppDesc: 'PowerGraph i ana ekrana veya masaustune ekle.', installBtn: 'Yukle',
+    login: 'Giris', signup: 'Kayit ol', logout: 'Cikis', email: 'Email', password: 'Sifre', confirmPassword: 'Sifreyi onayla', authTitle: 'PowerGraph a gir', authSubtitle: 'Antrenman, beslenme ve ilerleme profil bazinda ayrilir.', authLoginTitle: 'Tekrar hos geldin', authSignupTitle: 'Guvenli profil olustur', authEnter: 'Devam', authCreate: 'Hesap olustur',
+    calorieGoal: 'Gunluk hedef', trackerMode: 'Takip modu', simpleTracker: 'Basit', advancedTracker: 'Gelismis', tutorialOpen: 'Kilavuzu ac', tutorialOpenDesc: 'Baslangic kilavuzunu goster.',
+  },
+  ar: {
+    dashboard: 'لوحة التحكم', history: 'السجل', exercises: 'التمارين', advisor: 'المدرب', settings: 'الإعدادات', calories: 'السعرات', bodyweight: 'وزن الجسم', rankings: 'الترتيب', ocenjevalec: 'حاسبة السعرات',
+    title: 'تابع تقدمك', subtitle: 'سجل تدريب محلي في المتصفح مع اقتراح يومي ذكي.', addWorkout: 'أضف تمرينا', chart: 'تقدم التمارين',
+    date: 'التاريخ', exercise: 'التمرين', weight: 'الوزن', sets: 'الجولات', repsPerSet: 'التكرارات', addSet: 'أضف جولة', save: 'حفظ التمرين', saveChanges: 'حفظ التغييرات', cancel: 'إلغاء', edit: 'تعديل', delete: 'حذف',
+    workouts: 'تمارين', totalSets: 'إجمالي الجولات', totalReps: 'إجمالي التكرارات', totalVolume: 'الحجم الكلي', bestWeight: 'أفضل وزن', recent: 'آخر التمارين', noHistory: 'لا توجد تمارين بعد.',
+    units: 'الوحدات', language: 'اللغة', backgroundAccent: 'لون الخلفية', backgroundAccentDesc: 'اختر لون الخلفية والأزرار والعناصر الرئيسية.', dateFormat: 'تنسيق التاريخ', backupReminder: 'تذكير النسخ', lastBackup: 'آخر نسخة', never: 'أبدا', days: 'أيام', export: 'تصدير البيانات', import: 'استيراد البيانات', clear: 'حذف كل البيانات',
+    backupTitle: 'تذكير النسخ', backupText: 'أنشئ تصديرا جديدا حتى لا تفقد البيانات المحلية.', showFeedbackBtn: 'زر الملاحظات', showFeedbackBtnDesc: 'إظهار أو إخفاء زر الملاحظات.', installApp: 'تثبيت التطبيق', installAppDesc: 'أضف PowerGraph إلى الشاشة الرئيسية أو سطح المكتب.', installBtn: 'تثبيت',
+    login: 'تسجيل الدخول', signup: 'إنشاء حساب', logout: 'خروج', email: 'البريد الإلكتروني', password: 'كلمة المرور', confirmPassword: 'تأكيد كلمة المرور', authTitle: 'ادخل إلى PowerGraph', authSubtitle: 'يبقى التدريب والتغذية والتقدم مفصولا حسب الملف الشخصي.', authLoginTitle: 'مرحبا بعودتك', authSignupTitle: 'أنشئ ملفا آمنا', authEnter: 'متابعة', authCreate: 'إنشاء حساب',
+    calorieGoal: 'الهدف اليومي', trackerMode: 'وضع التتبع', simpleTracker: 'بسيط', advancedTracker: 'متقدم', tutorialOpen: 'افتح الدليل', tutorialOpenDesc: 'اعرض دليل المبتدئين.',
+  },
+  ja: {
+    dashboard: 'ダッシュボード', history: '履歴', exercises: 'エクササイズ', advisor: 'アドバイザー', settings: '設定', calories: 'カロリー', bodyweight: '体重', rankings: 'ランキング', ocenjevalec: 'カロリー推定',
+    title: '進捗を記録', subtitle: 'ブラウザ内のローカルトレーニングログと毎日の提案。', addWorkout: 'ワークアウト追加', chart: '種目別の進捗',
+    date: '日付', exercise: '種目', weight: '重量', sets: 'セット', repsPerSet: 'セットごとの回数', addSet: 'セット追加', save: '保存', saveChanges: '変更を保存', cancel: 'キャンセル', edit: '編集', delete: '削除',
+    workouts: 'ワークアウト', totalSets: '総セット', totalReps: '総回数', totalVolume: '総ボリューム', bestWeight: '最高重量', recent: '最近のワークアウト', noHistory: 'まだワークアウトがありません。',
+    units: '単位', language: '言語', backgroundAccent: '背景色', backgroundAccentDesc: '背景、ボタン、アクセントの色を選びます。', dateFormat: '日付形式', backupReminder: 'バックアップ通知', lastBackup: '最終バックアップ', never: 'なし', days: '日', export: 'データを書き出す', import: 'データを読み込む', clear: 'すべて削除',
+    backupTitle: 'バックアップ通知', backupText: 'ローカルデータを失わないように新しく書き出してください。', showFeedbackBtn: 'フィードバックボタン', showFeedbackBtnDesc: 'フィードバックボタンを表示または非表示にします。', installApp: 'アプリをインストール', installAppDesc: 'PowerGraphをホーム画面またはデスクトップに追加します。', installBtn: 'インストール',
+    login: 'ログイン', signup: '登録', logout: 'ログアウト', email: 'メール', password: 'パスワード', confirmPassword: '確認', authTitle: 'PowerGraphへ', authSubtitle: 'トレーニング、栄養、進捗はプロフィールごとに分かれます。', authLoginTitle: 'おかえりなさい', authSignupTitle: '安全なプロフィールを作成', authEnter: '続ける', authCreate: 'アカウント作成',
+    calorieGoal: '1日の目標', trackerMode: 'トラッカーモード', simpleTracker: 'シンプル', advancedTracker: '詳細', tutorialOpen: 'ガイドを開く', tutorialOpenDesc: '初心者ガイドを表示します。',
+  },
+  zh: {
+    dashboard: '仪表盘', history: '历史', exercises: '训练动作', advisor: '建议', settings: '设置', calories: '热量', bodyweight: '体重', rankings: '排名', ocenjevalec: '热量估算',
+    title: '追踪你的进步', subtitle: '浏览器本地训练日志，并提供每日智能建议。', addWorkout: '添加训练', chart: '动作进展',
+    date: '日期', exercise: '动作', weight: '重量', sets: '组数', repsPerSet: '每组次数', addSet: '添加组', save: '保存训练', saveChanges: '保存更改', cancel: '取消', edit: '编辑', delete: '删除',
+    workouts: '训练', totalSets: '总组数', totalReps: '总次数', totalVolume: '总训练量', bestWeight: '最佳重量', recent: '最近训练', noHistory: '还没有训练记录。',
+    units: '单位', language: '语言', backgroundAccent: '背景颜色', backgroundAccentDesc: '选择背景、按钮和主要强调色。', dateFormat: '日期格式', backupReminder: '备份提醒', lastBackup: '上次备份', never: '从不', days: '天', export: '导出数据', import: '导入数据', clear: '删除所有数据',
+    backupTitle: '备份提醒', backupText: '创建新的导出，避免丢失本地数据。', showFeedbackBtn: '反馈按钮', showFeedbackBtnDesc: '显示或隐藏反馈按钮。', installApp: '安装应用', installAppDesc: '将 PowerGraph 添加到主屏幕或桌面。', installBtn: '安装',
+    login: '登录', signup: '注册', logout: '退出', email: '邮箱', password: '密码', confirmPassword: '确认密码', authTitle: '进入 PowerGraph', authSubtitle: '训练、营养和进度按个人资料分开保存。', authLoginTitle: '欢迎回来', authSignupTitle: '创建安全资料', authEnter: '继续', authCreate: '创建账号',
+    calorieGoal: '每日目标', trackerMode: '追踪模式', simpleTracker: '简单', advancedTracker: '高级', tutorialOpen: '打开指南', tutorialOpenDesc: '显示新手指南。',
+  },
+  ru: {
+    dashboard: 'Панель', history: 'История', exercises: 'Упражнения', advisor: 'Советник', settings: 'Настройки', calories: 'Калории', bodyweight: 'Вес тела', rankings: 'Ранги', ocenjevalec: 'Оценка калорий',
+    title: 'Отслеживай прогресс', subtitle: 'Локальный журнал тренировок в браузере с умными ежедневными советами.', addWorkout: 'Добавить тренировку', chart: 'Прогресс по упражнениям',
+    date: 'Дата', exercise: 'Упражнение', weight: 'Вес', sets: 'Подходы', repsPerSet: 'Повторы в подходе', addSet: 'Добавить подход', save: 'Сохранить', saveChanges: 'Сохранить изменения', cancel: 'Отмена', edit: 'Изменить', delete: 'Удалить',
+    workouts: 'Тренировки', totalSets: 'Всего подходов', totalReps: 'Всего повторов', totalVolume: 'Общий объем', bestWeight: 'Лучший вес', recent: 'Последние тренировки', noHistory: 'Тренировок пока нет.',
+    units: 'Единицы', language: 'Язык', backgroundAccent: 'Цвет фона', backgroundAccentDesc: 'Выбери цвет фона, кнопок и основных акцентов.', dateFormat: 'Формат даты', backupReminder: 'Напоминание о копии', lastBackup: 'Последняя копия', never: 'Никогда', days: 'дней', export: 'Экспорт данных', import: 'Импорт данных', clear: 'Удалить все данные',
+    backupTitle: 'Напоминание о копии', backupText: 'Создай новый экспорт, чтобы не потерять локальные данные.', showFeedbackBtn: 'Кнопка отзыва', showFeedbackBtnDesc: 'Показать или скрыть кнопку обратной связи.', installApp: 'Установить приложение', installAppDesc: 'Добавь PowerGraph на главный экран или рабочий стол.', installBtn: 'Установить',
+    login: 'Войти', signup: 'Регистрация', logout: 'Выйти', email: 'Email', password: 'Пароль', confirmPassword: 'Подтвердить пароль', authTitle: 'Войти в PowerGraph', authSubtitle: 'Тренировки, питание и прогресс хранятся отдельно по профилям.', authLoginTitle: 'С возвращением', authSignupTitle: 'Создай защищенный профиль', authEnter: 'Продолжить', authCreate: 'Создать аккаунт',
+    calorieGoal: 'Дневная цель', trackerMode: 'Режим трекера', simpleTracker: 'Простой', advancedTracker: 'Расширенный', tutorialOpen: 'Открыть гид', tutorialOpenDesc: 'Показать руководство для начинающих.',
+  },
+};
+
+function getCopy(language) {
+  return { ...ui.en, ...(ui[language] || {}), ...(uiOverrides[language] || {}) };
+}
+
+function getLocalizedLabel(labels, language) {
+  return labels?.[language] || labels?.en || '';
+}
+
 const sections = {
   Chest: ['Bench Press', 'Incline Bench Press', 'Decline Bench Press', 'Chest Fly', 'Push-Up'],
   Legs: ['Squat', 'Leg Press', 'Romanian Deadlift', 'Walking Lunge', 'Leg Extension'],
@@ -1486,7 +1603,7 @@ const convertWeight = (kg, units) => (units === 'lbs' ? kg * 2.20462 : kg);
 const formatWeight = (kg, units) => `${units === 'lbs' ? Math.round(convertWeight(kg, units)) : Number(convertWeight(kg, units).toFixed(1))} ${units}`;
 const formatVolume = (kg, units) => `${Math.round(convertWeight(kg, units)).toLocaleString()} ${units}`;
 const findSection = (exercise) => Object.entries(sections).find(([, items]) => items.includes(exercise))?.[0] ?? 'Chest';
-const localize = (pair, lang) => pair[lang];
+const localize = (pair, lang) => pair?.[lang] ?? pair?.en ?? pair?.sl ?? '';
 const getExerciseInfo = (exercise) => ({
   ...(exerciseInfo[exercise] ?? { sl: exercise, en: exercise, targets: { sl: '', en: '' }, primary: { sl: '', en: '' }, howTo: { sl: '', en: '' }, cues: { sl: '', en: '' } }),
   equipment: exerciseEquipment[exercise] ?? { sl: 'Osnovna gym oprema', en: 'Basic gym equipment' },
@@ -1508,7 +1625,8 @@ function sanitizeSettings(input) {
   const safe = { ...defaultSettings };
   if (input && typeof input === 'object') {
     if (input.units === 'kg' || input.units === 'lbs') safe.units = input.units;
-    if (input.language === 'sl' || input.language === 'en') safe.language = input.language;
+    if (SUPPORTED_LANGUAGES.includes(input.language)) safe.language = input.language;
+    if (SUPPORTED_BACKGROUNDS.includes(input.backgroundAccent)) safe.backgroundAccent = input.backgroundAccent;
     if (['DD.MM.YYYY', 'YYYY-MM-DD', 'MM/DD/YYYY'].includes(input.dateFormat)) safe.dateFormat = input.dateFormat;
     if ([3, 7, 14, 30].includes(Number(input.backupReminderDays))) safe.backupReminderDays = Number(input.backupReminderDays);
     if (typeof input.lastBackupAt === 'string') safe.lastBackupAt = input.lastBackupAt;
@@ -1625,7 +1743,7 @@ function getRank(points, lang) {
   for (let i = RANKS.length - 1; i >= 0; i--) {
     if (points >= RANKS[i].min) { rank = RANKS[i]; break; }
   }
-  return { ...rank, displayName: lang === 'en' ? rank.nameEn : rank.name };
+  return { ...rank, displayName: lang === 'sl' ? rank.name : rank.nameEn };
 }
 
 function calculatePoints(workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calorieGoal) {
@@ -1682,7 +1800,7 @@ function getMuscleRank(pts, lang) {
   for (let i = MUSCLE_RANKS.length - 1; i >= 0; i--) {
     if (pts >= MUSCLE_RANKS[i].min) { rank = MUSCLE_RANKS[i]; break; }
   }
-  return { ...rank, displayName: lang === 'en' ? rank.nameEn : rank.nameSl, idx: MUSCLE_RANKS.indexOf(rank) };
+  return { ...rank, displayName: lang === 'sl' ? rank.nameSl : rank.nameEn, idx: MUSCLE_RANKS.indexOf(rank) };
 }
 
 async function fetchLoginLogs(email = '') {
@@ -2242,7 +2360,7 @@ export default function App() {
   const [reverseCalDailyKcal, setReverseCalDailyKcal] = useState('');
   const [reverseCalResult, setReverseCalResult] = useState(null);
 
-  const copy = ui[settings.language];
+  const copy = getCopy(settings.language);
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
   const sectionDescriptions = {
     dashboard: settings.language === 'sl' ? 'Pregled napredka, statistike in hiter vnos novega treninga.' : 'A quick overview of progress, stats, and fast workout logging.',
@@ -2403,6 +2521,9 @@ export default function App() {
   }, []);
 
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem(THEME_KEY, theme); }, [theme]);
+  useEffect(() => {
+    document.documentElement.dataset.accent = settings.backgroundAccent || defaultSettings.backgroundAccent;
+  }, [settings.backgroundAccent]);
   useEffect(() => {
     if (!currentUser) return;
     localStorage.setItem(SESSION_KEY, currentUser);
@@ -3256,9 +3377,19 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
     settings: <Settings {...navIconProps} />,
     admin: <Shield {...navIconProps} />,
   };
-  const NAV_SHORT = settings.language === 'sl'
-    ? { dashboard: 'Domov', exercises: 'Vaje', history: 'Arhiv', bodyweight: 'Teža', calories: 'Obroki', ocenjevalec: 'Išči', rankings: 'Rang', advisor: 'Nasvet', settings: 'Opcije', admin: 'Admin' }
-    : { dashboard: 'Home', exercises: 'Workout', history: 'Log', bodyweight: 'Weight', calories: 'Meals', ocenjevalec: 'Search', rankings: 'Rank', advisor: 'Tips', settings: 'Options', admin: 'Admin' };
+  const NAV_SHORT_LABELS = {
+    en: { dashboard: 'Home', exercises: 'Train', history: 'Log', bodyweight: 'Weight', calories: 'Meals', ocenjevalec: 'Search', rankings: 'Rank', advisor: 'Tips', settings: 'Options', admin: 'Admin' },
+    sl: { dashboard: 'Domov', exercises: 'Vaje', history: 'Arhiv', bodyweight: 'Teza', calories: 'Obroki', ocenjevalec: 'Isci', rankings: 'Rang', advisor: 'Nasvet', settings: 'Opcije', admin: 'Admin' },
+    es: { dashboard: 'Inicio', exercises: 'Entrena', history: 'Log', bodyweight: 'Peso', calories: 'Comidas', ocenjevalec: 'Buscar', rankings: 'Rango', advisor: 'Tips', settings: 'Opciones', admin: 'Admin' },
+    pt: { dashboard: 'Inicio', exercises: 'Treino', history: 'Log', bodyweight: 'Peso', calories: 'Refeicoes', ocenjevalec: 'Busca', rankings: 'Rank', advisor: 'Dicas', settings: 'Opcoes', admin: 'Admin' },
+    fr: { dashboard: 'Accueil', exercises: 'Sport', history: 'Log', bodyweight: 'Poids', calories: 'Repas', ocenjevalec: 'Chercher', rankings: 'Rang', advisor: 'Conseil', settings: 'Options', admin: 'Admin' },
+    tr: { dashboard: 'Ana', exercises: 'Antren', history: 'Log', bodyweight: 'Kilo', calories: 'Ogun', ocenjevalec: 'Ara', rankings: 'Sira', advisor: 'Ipucu', settings: 'Ayar', admin: 'Admin' },
+    ar: { dashboard: '\u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629', exercises: '\u062a\u0645\u0631\u064a\u0646', history: '\u0633\u062c\u0644', bodyweight: '\u0648\u0632\u0646', calories: '\u0648\u062c\u0628\u0627\u062a', ocenjevalec: '\u0628\u062d\u062b', rankings: '\u0631\u062a\u0628\u0629', advisor: '\u0646\u0635\u064a\u062d\u0629', settings: '\u0625\u0639\u062f\u0627\u062f', admin: 'Admin' },
+    ja: { dashboard: '\u30db\u30fc\u30e0', exercises: '\u904b\u52d5', history: '\u8a18\u9332', bodyweight: '\u4f53\u91cd', calories: '\u98df\u4e8b', ocenjevalec: '\u691c\u7d22', rankings: '\u30e9\u30f3\u30af', advisor: '\u63d0\u6848', settings: '\u8a2d\u5b9a', admin: 'Admin' },
+    zh: { dashboard: '\u9996\u9875', exercises: '\u8bad\u7ec3', history: '\u8bb0\u5f55', bodyweight: '\u4f53\u91cd', calories: '\u9910\u98df', ocenjevalec: '\u641c\u7d22', rankings: '\u6392\u540d', advisor: '\u5efa\u8bae', settings: '\u8bbe\u7f6e', admin: 'Admin' },
+    ru: { dashboard: '\u0414\u043e\u043c', exercises: '\u0422\u0440\u0435\u043d', history: '\u041b\u043e\u0433', bodyweight: '\u0412\u0435\u0441', calories: '\u0415\u0434\u0430', ocenjevalec: '\u041f\u043e\u0438\u0441\u043a', rankings: '\u0420\u0430\u043d\u0433', advisor: '\u0421\u043e\u0432\u0435\u0442', settings: '\u041e\u043f\u0446\u0438\u0438', admin: 'Admin' },
+  };
+  const NAV_SHORT = NAV_SHORT_LABELS[settings.language] || NAV_SHORT_LABELS.en;
   const nav = [['dashboard', copy.dashboard], ['exercises', copy.exercises], ['history', copy.history], ['bodyweight', copy.bodyweight], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['rankings', copy.rankings], ['advisor', copy.advisor], ['settings', copy.settings], ...(currentUser === ADMIN_EMAIL ? [['admin', copy.admin]] : [])];
   const passwordStrength = getPasswordScore(authForm.password, authForm.email);
   const strengthLabels = [copy.authStrengthWeak, copy.authStrengthWeak, copy.authStrengthOk, copy.authStrengthGood, copy.authStrengthStrong];
@@ -3979,7 +4110,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                         </div>
                         {next && (
                           <div style={{marginBottom:'1rem'}}>
-                            <p style={{fontSize:'0.82rem',opacity:0.7,marginBottom:'0.4rem'}}>{next.min - muscleData.pts} {copy.rankPoints} → {settings.language === 'en' ? next.nameEn : next.nameSl}</p>
+                            <p style={{fontSize:'0.82rem',opacity:0.7,marginBottom:'0.4rem'}}>{next.min - muscleData.pts} {copy.rankPoints} → {settings.language === 'sl' ? next.nameSl : next.nameEn}</p>
                             <div style={{background:'rgba(148,163,184,0.15)',borderRadius:'999px',height:'0.55rem',overflow:'hidden'}}>
                               <div style={{background:rank.bg,height:'100%',borderRadius:'999px',width:`${Math.min(100,Math.round(((muscleData.pts - rank.min) / (next.min - rank.min)) * 100))}%`,transition:'width 0.6s ease'}} />
                             </div>
@@ -4077,7 +4208,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                 {RANKS.map((r, i) => {
                   const isCurrent = rankData.rank.name === r.name;
                   const isUnlocked = rankData.pts >= r.min;
-                  const rankName = settings.language === 'en' ? r.nameEn : r.name;
+                  const rankName = settings.language === 'sl' ? r.name : r.nameEn;
                   return (
                     <article key={r.name} className="history-item" style={{opacity: isUnlocked ? 1 : 0.4, background: isCurrent ? 'rgba(245,158,11,0.08)' : undefined, borderLeft: isCurrent ? '3px solid #f59e0b' : '3px solid transparent'}}>
                       <div style={{display:'flex',alignItems:'center',gap:'0.8rem'}}>
@@ -4351,7 +4482,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
           );
         })()}
 
-        {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}><option value="sl">Slovenščina</option><option value="en">English</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.installApp}</span><p className="settings-copy">{copy.installAppDesc}</p></div><div>{isInStandaloneMode ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installDone}</span> : isIos ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installIos}</span> : <button className="action-btn-outline" type="button" onClick={triggerInstall} disabled={!installPrompt}>{copy.installBtn}</button>}</div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.showFeedbackBtn}</span><p className="settings-copy">{copy.showFeedbackBtnDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => setSettings(c => ({...c, showFeedbackBtn: !c.showFeedbackBtn}))}>{settings.showFeedbackBtn ? '✓ On' : 'Off'}</button></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.tutorialOpen}</span><p className="settings-copy">{copy.tutorialOpenDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => { setTutorialStep(0); setShowTutorial(true); }}>{copy.tutorialOpen}</button></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
+        {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}>{LANGUAGE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></article><article className="settings-card settings-card-wide"><div className="settings-actions settings-actions-stacked"><div><span className="settings-title">{copy.backgroundAccent}</span><p className="settings-copy">{copy.backgroundAccentDesc}</p></div><div className="accent-picker" role="radiogroup" aria-label={copy.backgroundAccent}>{BACKGROUND_PRESETS.map((preset) => <button key={preset.id} className={`accent-choice ${settings.backgroundAccent === preset.id ? 'active' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, backgroundAccent: preset.id }))} aria-pressed={settings.backgroundAccent === preset.id}><span className="accent-swatch" style={{ background: preset.color }} />{getLocalizedLabel(preset.label, settings.language)}</button>)}</div></div></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.installApp}</span><p className="settings-copy">{copy.installAppDesc}</p></div><div>{isInStandaloneMode ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installDone}</span> : isIos ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installIos}</span> : <button className="action-btn-outline" type="button" onClick={triggerInstall} disabled={!installPrompt}>{copy.installBtn}</button>}</div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.showFeedbackBtn}</span><p className="settings-copy">{copy.showFeedbackBtnDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => setSettings(c => ({...c, showFeedbackBtn: !c.showFeedbackBtn}))}>{settings.showFeedbackBtn ? '✓ On' : 'Off'}</button></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.tutorialOpen}</span><p className="settings-copy">{copy.tutorialOpenDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => { setTutorialStep(0); setShowTutorial(true); }}>{copy.tutorialOpen}</button></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
       </main>
       {currentUser && settings.showFeedbackBtn !== false && (
         <div className="feedback-widget">

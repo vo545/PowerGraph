@@ -2327,16 +2327,21 @@ p {
   filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.16));
 }
 
-.atlas-hand-left,
-.atlas-hand-right,
+.atlas-hands .atlas-skin {
+  fill: var(--atlas-skin-fill);
+}
+
+.atlas-hand-palm,
+.atlas-thumb,
+.atlas-finger,
 .atlas-foot-left,
-.atlas-foot-right {
+.atlas-foot-right,
+.atlas-toe {
   stroke-width: 1;
 }
 
 .atlas-body-lines path,
-.atlas-face-lines path,
-.atlas-hand-lines path,
+.atlas-hand-crease,
 .atlas-foot-lines path {
   fill: none;
   stroke: rgba(15, 23, 42, 0.34);
@@ -2346,11 +2351,17 @@ p {
   vector-effect: non-scaling-stroke;
 }
 
-.atlas-face-lines path,
-.atlas-hand-lines path,
+.atlas-hand-crease,
 .atlas-foot-lines path {
   stroke: rgba(15, 23, 42, 0.42);
   stroke-width: 0.7;
+}
+
+.atlas-finger,
+.atlas-thumb,
+.atlas-toe {
+  stroke: rgba(15, 23, 42, 0.4);
+  vector-effect: non-scaling-stroke;
 }
 
 .anatomy-view-toggle {

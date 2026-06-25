@@ -2315,16 +2315,42 @@ p {
   fill: rgba(241, 245, 249, 0.86);
 }
 
+.atlas-hair {
+  fill: rgba(30, 41, 59, 0.78);
+  stroke: rgba(15, 23, 42, 0.5);
+  stroke-width: 0.9;
+  vector-effect: non-scaling-stroke;
+}
+
 .atlas-torso,
 .atlas-pelvis {
   filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.16));
 }
 
-.atlas-body-lines path {
+.atlas-hand-left,
+.atlas-hand-right,
+.atlas-foot-left,
+.atlas-foot-right {
+  stroke-width: 1;
+}
+
+.atlas-body-lines path,
+.atlas-face-lines path,
+.atlas-hand-lines path,
+.atlas-foot-lines path {
   fill: none;
   stroke: rgba(15, 23, 42, 0.34);
   stroke-width: 0.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
+}
+
+.atlas-face-lines path,
+.atlas-hand-lines path,
+.atlas-foot-lines path {
+  stroke: rgba(15, 23, 42, 0.42);
+  stroke-width: 0.7;
 }
 
 .anatomy-view-toggle {

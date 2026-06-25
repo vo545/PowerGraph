@@ -2409,6 +2409,8 @@ function AtlasBaseBody({ gender, view }) {
         </linearGradient>
       </defs>
       <ellipse className="atlas-skin atlas-head" style={{ fill: `url(#${gradientId})` }} cx="120" cy="42" rx={female ? 20 : 22} ry={female ? 26 : 27} />
+      <ellipse className="atlas-skin atlas-ear" style={{ fill: `url(#${gradientId})` }} cx={female ? 99 : 97} cy="44" rx={female ? 3.2 : 3.6} ry={female ? 6.8 : 7.2} />
+      <ellipse className="atlas-skin atlas-ear" style={{ fill: `url(#${gradientId})` }} cx={female ? 141 : 143} cy="44" rx={female ? 3.2 : 3.6} ry={female ? 6.8 : 7.2} />
       <path className="atlas-skin atlas-neck" style={{ fill: `url(#${gradientId})` }} d={female ? 'M105 66 C110 76 130 76 135 66 L136 91 C128 96 112 96 104 91 Z' : 'M103 66 C109 78 131 78 137 66 L139 92 C130 99 110 99 101 92 Z'} />
       <path className="atlas-skin atlas-torso" style={{ fill: `url(#${gradientId})` }} d={female
         ? 'M63 103 C76 84 100 85 120 91 C140 85 164 84 177 103 C164 126 160 174 154 224 C150 253 90 253 86 224 C80 174 76 126 63 103 Z'
@@ -2430,10 +2432,39 @@ function AtlasBaseBody({ gender, view }) {
         : 'M162 292 C147 300 132 297 120 288 C124 342 128 426 141 491 C154 497 164 489 164 463 C162 410 171 344 162 292 Z'} />
       <path className="atlas-skin atlas-foot-left" style={{ fill: `url(#${gradientId})` }} d={female ? 'M78 486 C86 497 98 498 105 490 C108 500 99 506 83 505 C72 504 70 496 78 486 Z' : 'M77 486 C86 498 99 499 106 490 C111 501 100 507 82 506 C70 505 68 495 77 486 Z'} />
       <path className="atlas-skin atlas-foot-right" style={{ fill: `url(#${gradientId})` }} d={female ? 'M135 490 C142 498 154 497 162 486 C170 496 168 504 157 505 C141 506 132 500 135 490 Z' : 'M134 490 C141 499 154 498 163 486 C172 495 170 505 158 506 C140 507 129 501 134 490 Z'} />
+      <path className="atlas-skin atlas-hand-left" style={{ fill: `url(#${gradientId})` }} d={female
+        ? 'M39 323 C36 333 38 346 44 352 C51 351 55 340 52 328 C48 323 43 321 39 323 Z'
+        : 'M35 332 C32 343 35 356 42 361 C50 359 55 346 51 335 C46 330 40 329 35 332 Z'} />
+      <path className="atlas-skin atlas-hand-right" style={{ fill: `url(#${gradientId})` }} d={female
+        ? 'M201 323 C204 333 202 346 196 352 C189 351 185 340 188 328 C192 323 197 321 201 323 Z'
+        : 'M205 332 C208 343 205 356 198 361 C190 359 185 346 189 335 C194 330 200 329 205 332 Z'} />
+      <path className="atlas-hair" d={female
+        ? (back ? 'M96 38 C99 14 141 14 144 38 C146 62 139 83 130 92 C131 70 109 70 110 92 C101 83 94 62 96 38 Z' : 'M98 36 C101 16 139 15 142 36 C133 28 107 28 98 36 Z M98 37 C90 51 93 73 105 85 C101 69 101 54 107 42 Z M142 37 C150 51 147 73 135 85 C139 69 139 54 133 42 Z')
+        : (back ? 'M99 31 C105 12 135 12 141 31 C136 22 104 22 99 31 Z' : 'M99 30 C106 14 135 14 141 30 C134 24 107 24 99 30 Z')} />
+      {!back ? (
+        <g className="atlas-face-lines">
+          <path d={female ? 'M112 42 C114 41 116 41 118 42' : 'M111 42 C114 41 116 41 118 42'} />
+          <path d={female ? 'M122 42 C124 41 126 41 128 42' : 'M122 42 C124 41 126 41 129 42'} />
+          <path d="M120 45 C119 50 119 53 121 56" />
+          <path d={female ? 'M114 61 C118 64 124 64 128 61' : 'M113 61 C118 63 124 63 129 61'} />
+        </g>
+      ) : null}
+      <g className="atlas-hand-lines">
+        <path d={female ? 'M43 331 L41 348' : 'M40 340 L38 357'} />
+        <path d={female ? 'M47 331 L47 350' : 'M44 339 L44 359'} />
+        <path d={female ? 'M50 333 L52 347' : 'M48 341 L51 356'} />
+        <path d={female ? 'M197 331 L199 348' : 'M200 340 L202 357'} />
+        <path d={female ? 'M193 331 L193 350' : 'M196 339 L196 359'} />
+        <path d={female ? 'M190 333 L188 347' : 'M192 341 L189 356'} />
+      </g>
       <g className="atlas-body-lines">
         <path d={back ? 'M120 88 L120 250' : 'M120 92 L120 247'} />
         <path d={female ? 'M82 228 C102 236 138 236 158 228' : 'M84 226 C103 235 137 235 156 226'} />
         <path d="M78 292 C94 304 108 298 120 288 C132 298 146 304 162 292" />
+        <path d={female ? 'M70 142 C78 165 80 193 76 219' : 'M62 142 C72 166 75 195 70 224'} />
+        <path d={female ? 'M170 142 C162 165 160 193 164 219' : 'M178 142 C168 166 165 195 170 224'} />
+        <path d={female ? 'M70 221 C61 233 59 245 65 256' : 'M68 225 C59 237 57 250 64 262'} />
+        <path d={female ? 'M170 221 C179 233 181 245 175 256' : 'M172 225 C181 237 183 250 176 262'} />
         <path d="M95 304 C96 356 91 425 87 487" />
         <path d="M145 304 C144 356 149 425 153 487" />
         {back ? (
@@ -2460,8 +2491,20 @@ function AtlasBaseBody({ gender, view }) {
         <path d="M192 248 C195 278 196 309 199 335" />
         <path d="M88 306 C101 329 104 355 98 383" />
         <path d="M152 306 C139 329 136 355 142 383" />
+        <path d={female ? 'M82 381 C90 386 99 386 106 380' : 'M82 383 C91 388 101 387 108 379'} />
+        <path d={female ? 'M134 380 C141 386 150 386 158 381' : 'M132 379 C139 387 149 388 158 383'} />
         <path d="M91 389 C95 419 94 453 89 486" />
         <path d="M149 389 C145 419 146 453 151 486" />
+      </g>
+      <g className="atlas-foot-lines">
+        <path d={female ? 'M80 493 C88 498 96 498 103 492' : 'M78 494 C88 500 99 500 106 492'} />
+        <path d={female ? 'M137 492 C144 498 152 498 160 493' : 'M134 492 C141 500 152 500 162 494'} />
+        <path d="M85 497 L84 504" />
+        <path d="M91 498 L91 505" />
+        <path d="M97 497 L98 503" />
+        <path d="M143 497 L142 503" />
+        <path d="M149 498 L149 505" />
+        <path d="M155 497 L156 504" />
       </g>
     </g>
   );

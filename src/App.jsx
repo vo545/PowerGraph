@@ -363,7 +363,7 @@ const BACKGROUND_PRESETS = [
   { id: 'mono', color: '#cbd5e1', label: { en: 'Monochrome', sl: 'Monokrom', es: 'Monocromo', pt: 'Monocromatico', fr: 'Monochrome', tr: 'Monokrom', ar: 'Monochrome', ja: 'Mono', zh: 'Mono', ru: 'Mono' } },
 ];
 const SUPPORTED_BACKGROUNDS = BACKGROUND_PRESETS.map((item) => item.id);
-const defaultSettings = { units: 'kg', language: 'en', backgroundAccent: 'blue', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
+const defaultSettings = { units: 'kg', language: 'en', backgroundAccent: 'blue', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, waterGoalMl: 2500, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
 const RATINGS_KEY = 'powergraph_ratings';
 const BANNED_KEY = 'powergraph_banned';
 const MODS_KEY = 'powergraph_mods';
@@ -1707,7 +1707,6 @@ const normalizeWorkout = (w, i = 0) => {
 };
 const getSetCount = (w) => w.setDetails.length;
 const getTotalReps = (w) => w.setDetails.reduce((s, v) => s + v, 0);
-const getVolume = (w) => w.weight * getTotalReps(w);
 const formatSetDetails = (w) => w.setDetails.join(' / ');
 const convertWeight = (kg, units) => (units === 'lbs' ? kg * 2.20462 : kg);
 const formatWeight = (kg, units) => `${units === 'lbs' ? Math.round(convertWeight(kg, units)) : Number(convertWeight(kg, units).toFixed(1))} ${units}`;
@@ -1740,7 +1739,7 @@ function getEstimatedExerciseLoad(exercise, bodyWeightKg, customExercises = []) 
   if (section === 'Abs') return bodyWeightKg * 0.3;
   return 0;
 }
-function getWorkoutStrengthVolume(workout, bodyWeightKg, customExercises = []) {
+function getWorkoutVolumeKg(workout, bodyWeightKg = 0, customExercises = []) {
   const reps = getTotalReps(workout);
   if (!reps) return 0;
   const perSetVolume = Array.isArray(workout.setWeights) && workout.setWeights.some((value) => Number(value) > 0)
@@ -1750,6 +1749,9 @@ function getWorkoutStrengthVolume(workout, bodyWeightKg, customExercises = []) {
   const loggedLoad = Number(workout.weight) || 0;
   const effectiveLoad = loggedLoad > 0 ? loggedLoad : getEstimatedExerciseLoad(workout.exercise, bodyWeightKg, customExercises);
   return effectiveLoad * reps;
+}
+function getWorkoutStrengthVolume(workout, bodyWeightKg, customExercises = []) {
+  return getWorkoutVolumeKg(workout, bodyWeightKg, customExercises);
 }
 function getMuscleVolumeData(muscleKey, workouts, bodyWeightEntries = [], settings = {}, customExercises = []) {
   const bodyWeightKg = getLatestBodyWeightKg(bodyWeightEntries, settings.gender || 'male');
@@ -1825,6 +1827,7 @@ function sanitizeSettings(input) {
     if ([3, 7, 14, 30].includes(Number(input.backupReminderDays))) safe.backupReminderDays = Number(input.backupReminderDays);
     if (typeof input.lastBackupAt === 'string') safe.lastBackupAt = input.lastBackupAt;
     if (Number(input.calorieGoal) >= 1000 && Number(input.calorieGoal) <= 10000) safe.calorieGoal = Number(input.calorieGoal);
+    if (Number(input.waterGoalMl) >= 1000 && Number(input.waterGoalMl) <= 8000) safe.waterGoalMl = Number(input.waterGoalMl);
     if (input.calorieTrackerMode === 'simple' || input.calorieTrackerMode === 'advanced') safe.calorieTrackerMode = input.calorieTrackerMode;
     if (typeof input.weightDrop === 'boolean') safe.weightDrop = input.weightDrop;
     if (input.gender === 'male' || input.gender === 'female') safe.gender = input.gender;
@@ -2003,6 +2006,74 @@ function getOverallMuscleRankData(muscleStats = {}, lang = 'en') {
     rank,
     nextRank,
     progressPct,
+  };
+}
+
+const KCAL_PER_KG_BODY_MASS = 7700;
+const ACTIVITY_MULTIPLIERS = {
+  sedentary: 1.2,
+  light: 1.375,
+  moderate: 1.55,
+  active: 1.725,
+  veryactive: 1.9,
+};
+
+function clampNumber(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getMifflinBmr(weightKg, heightCm, age, gender = 'male') {
+  return gender === 'female'
+    ? 10 * weightKg + 6.25 * heightCm - 5 * age - 161
+    : 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
+}
+
+function getNutritionPlan({ currentWeight, goalWeight, weeks, age, height, gender = 'male', activityLevel = 'moderate' }) {
+  const cw = Number(currentWeight);
+  const gw = Number(goalWeight);
+  const durationWeeks = Math.max(1, Number(weeks) || 1);
+  const userAge = Number(age) || 28;
+  const userHeight = Number(height) || (gender === 'female' ? 166 : 178);
+  const multiplier = ACTIVITY_MULTIPLIERS[activityLevel] || ACTIVITY_MULTIPLIERS.moderate;
+  const bmr = getMifflinBmr(cw, userHeight, userAge, gender);
+  const tdee = Math.round(bmr * multiplier);
+  const rawDailyAdjustment = Math.round(((cw - gw) * KCAL_PER_KG_BODY_MASS) / (durationWeeks * 7));
+  const goalType = gw < cw ? 'cut' : gw > cw ? 'bulk' : 'maintain';
+  const maxDeficit = Math.round(Math.min(1000, Math.max(250, tdee * 0.25)));
+  const maxSurplus = Math.round(Math.min(500, Math.max(150, tdee * 0.15)));
+  const dailyAdjustment = goalType === 'cut'
+    ? clampNumber(rawDailyAdjustment, 0, maxDeficit)
+    : goalType === 'bulk'
+      ? clampNumber(rawDailyAdjustment, -maxSurplus, 0)
+      : 0;
+  const targetFloor = gender === 'female' ? 1200 : 1500;
+  const targetCeiling = Math.max(targetFloor + 200, Math.round(tdee + maxSurplus));
+  const target = Math.round(clampNumber(tdee - dailyAdjustment, targetFloor, targetCeiling));
+  const proteinFactor = goalType === 'cut' ? 2.2 : goalType === 'bulk' ? 1.8 : 1.7;
+  const proteinG = Math.round(cw * proteinFactor);
+  const fatFloor = Math.round(cw * 0.6);
+  const fatTarget = Math.round(target * 0.25 / 9);
+  const fatG = Math.max(fatFloor, fatTarget);
+  const carbsG = Math.max(0, Math.round((target - proteinG * 4 - fatG * 9) / 4));
+  const baseTotalWater = gender === 'female' ? 2700 : 3700;
+  const referenceWeight = gender === 'female' ? 62 : 78;
+  const sizeAdjustment = (cw - referenceWeight) * 12;
+  const activityWater = { sedentary: 0, light: 200, moderate: 400, active: 700, veryactive: 1000 }[activityLevel] || 400;
+  const waterMl = Math.round(clampNumber((baseTotalWater * 0.8) + sizeAdjustment + activityWater, 1600, 5500) / 100) * 100;
+  const capped = Math.abs(rawDailyAdjustment - dailyAdjustment) > 25 || target !== Math.round(tdee - dailyAdjustment);
+
+  return {
+    bmr: Math.round(bmr),
+    tdee,
+    target,
+    rawDailyAdjustment,
+    dailyAdjustment,
+    protein: proteinG,
+    carbs: carbsG,
+    fat: fatG,
+    waterMl,
+    goalType,
+    capped,
   };
 }
 
@@ -2766,14 +2837,44 @@ export default function App() {
   const exerciseOptions = useMemo(() => [...new Set([...Object.values(sections).flat(), ...workouts.map((w) => w.exercise), ...customExercises.map(e => e.name)])].sort(), [workouts, customExercises]);
   const selectedWorkouts = useMemo(() => workouts.filter((w) => w.exercise === selectedExercise).sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id), [selectedExercise, workouts]);
   const sortedWorkouts = useMemo(() => [...workouts].sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id), [workouts]);
-  const overall = useMemo(() => workouts.reduce((a, w) => ({ workouts: a.workouts + 1, sets: a.sets + getSetCount(w), reps: a.reps + getTotalReps(w), volumeKg: a.volumeKg + getVolume(w), bestKg: Math.max(a.bestKg, w.weight) }), { workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }), [workouts]);
-  const selectedStats = useMemo(() => selectedWorkouts.reduce((a, w) => ({ workouts: a.workouts + 1, sets: a.sets + getSetCount(w), reps: a.reps + getTotalReps(w), volumeKg: a.volumeKg + getVolume(w), bestKg: Math.max(a.bestKg, w.weight) }), { workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }), [selectedWorkouts]);
-  const perExercise = useMemo(() => Object.values(workouts.reduce((map, w) => { const item = map[w.exercise] ?? { name: w.exercise, workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }; item.workouts += 1; item.sets += getSetCount(w); item.reps += getTotalReps(w); item.volumeKg += getVolume(w); item.bestKg = Math.max(item.bestKg, w.weight); map[w.exercise] = item; return map; }, {})).sort((a, b) => b.volumeKg - a.volumeKg), [workouts]);
   const backupDue = useMemo(() => !settings.lastBackupAt || Math.floor((Date.now() - new Date(settings.lastBackupAt).getTime()) / 86400000) >= Number(settings.backupReminderDays), [settings.backupReminderDays, settings.lastBackupAt]);
   const selectedFormExerciseInfo = getExerciseInfo(formData.exercise);
   const calorieEntriesSorted = useMemo(() => [...calorieEntries].sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id), [calorieEntries]);
   const selectedDayEntries = useMemo(() => calorieEntries.filter((entry) => entry.date === calorieForm.date), [calorieEntries, calorieForm.date]);
   const selectedDayTotals = useMemo(() => selectedDayEntries.reduce((acc, entry) => ({ calories: acc.calories + Number(entry.calories || 0), protein: acc.protein + Number(entry.protein || 0), carbs: acc.carbs + Number(entry.carbs || 0), fat: acc.fat + Number(entry.fat || 0) }), { calories: 0, protein: 0, carbs: 0, fat: 0 }), [selectedDayEntries]);
+  const dashboardBodyWeightKg = useMemo(() => getLatestBodyWeightKg(bodyWeightEntries, settings.gender || 'male'), [bodyWeightEntries, settings.gender]);
+  const todayKey = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const todayWorkouts = useMemo(() => workouts.filter((workout) => workout.date === todayKey), [todayKey, workouts]);
+  const todayCalories = useMemo(() => calorieEntries.filter((entry) => entry.date === todayKey), [calorieEntries, todayKey]);
+  const todayTotals = useMemo(() => todayCalories.reduce((acc, entry) => ({ calories: acc.calories + Number(entry.calories || 0), protein: acc.protein + Number(entry.protein || 0), carbs: acc.carbs + Number(entry.carbs || 0), fat: acc.fat + Number(entry.fat || 0) }), { calories: 0, protein: 0, carbs: 0, fat: 0 }), [todayCalories]);
+  const waterGoalMl = Math.max(1000, Number(tdeeResult?.waterMl || settings.waterGoalMl || defaultSettings.waterGoalMl));
+  const dailyControl = useMemo(() => {
+    const lastWorkoutDate = sortedWorkouts[0]?.date || '';
+    const daysSinceWorkout = lastWorkoutDate ? Math.max(0, Math.floor((new Date(todayKey) - new Date(lastWorkoutDate)) / 86400000)) : null;
+    const trainedToday = todayWorkouts.length > 0;
+    const restToday = restDays.includes(todayKey);
+    const calorieGoal = Math.max(1, Number(settings.calorieGoal) || defaultSettings.calorieGoal);
+    const calorieDelta = Math.round(calorieGoal - todayTotals.calories);
+    const calorieAccuracy = todayTotals.calories > 0 ? Math.max(0, 100 - Math.min(100, Math.abs(calorieDelta) / calorieGoal * 100)) : 35;
+    const hydrationPct = Math.min(100, Math.round((waterToday / waterGoalMl) * 100));
+    const trainingScore = trainedToday ? 100 : restToday ? 82 : daysSinceWorkout === null ? 45 : daysSinceWorkout <= 1 ? 70 : daysSinceWorkout <= 3 ? 55 : 35;
+    const score = Math.round(clampNumber(trainingScore * 0.4 + hydrationPct * 0.3 + calorieAccuracy * 0.3, 0, 100));
+    const label = score >= 85 ? 'locked in' : score >= 65 ? 'on track' : score >= 45 ? 'needs attention' : 'reset day';
+    const isSl = settings.language === 'sl';
+    const trainingText = trainedToday
+      ? isSl
+        ? `${todayWorkouts.length} ${todayWorkouts.length === 1 ? 'trening' : 'treningov'} danes`
+        : `${todayWorkouts.length} ${todayWorkouts.length === 1 ? 'session' : 'sessions'} logged`
+      : restToday
+        ? (isSl ? 'pocitek oznacen' : 'rest day marked')
+        : daysSinceWorkout === null
+          ? (isSl ? 'se brez treningov' : 'no sessions yet')
+          : (isSl ? `${daysSinceWorkout} dni od treninga` : `${daysSinceWorkout}d since training`);
+    return { score, label, hydrationPct, calorieDelta, trainingText, waterGoalMl };
+  }, [restDays, settings.calorieGoal, settings.language, sortedWorkouts, todayKey, todayTotals.calories, todayWorkouts, waterGoalMl, waterToday]);
+  const overall = useMemo(() => workouts.reduce((a, w) => ({ workouts: a.workouts + 1, sets: a.sets + getSetCount(w), reps: a.reps + getTotalReps(w), volumeKg: a.volumeKg + getWorkoutVolumeKg(w, dashboardBodyWeightKg, customExercises), bestKg: Math.max(a.bestKg, w.weight) }), { workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }), [customExercises, dashboardBodyWeightKg, workouts]);
+  const selectedStats = useMemo(() => selectedWorkouts.reduce((a, w) => ({ workouts: a.workouts + 1, sets: a.sets + getSetCount(w), reps: a.reps + getTotalReps(w), volumeKg: a.volumeKg + getWorkoutVolumeKg(w, dashboardBodyWeightKg, customExercises), bestKg: Math.max(a.bestKg, w.weight) }), { workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }), [customExercises, dashboardBodyWeightKg, selectedWorkouts]);
+  const perExercise = useMemo(() => Object.values(workouts.reduce((map, w) => { const item = map[w.exercise] ?? { name: w.exercise, workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }; item.workouts += 1; item.sets += getSetCount(w); item.reps += getTotalReps(w); item.volumeKg += getWorkoutVolumeKg(w, dashboardBodyWeightKg, customExercises); item.bestKg = Math.max(item.bestKg, w.weight); map[w.exercise] = item; return map; }, {})).sort((a, b) => b.volumeKg - a.volumeKg), [customExercises, dashboardBodyWeightKg, workouts]);
   const analyticsDays = analyticsRange === 'week' ? 7 : 30;
   const analyticsCutoff = useMemo(() => {
     const date = new Date();
@@ -2783,7 +2884,7 @@ export default function App() {
   }, [analyticsDays]);
   const analyticsWorkouts = useMemo(() => workouts.filter((workout) => new Date(workout.date) >= analyticsCutoff), [analyticsCutoff, workouts]);
   const analyticsCalories = useMemo(() => calorieEntries.filter((entry) => new Date(entry.date) >= analyticsCutoff), [analyticsCutoff, calorieEntries]);
-  const analyticsTraining = useMemo(() => analyticsWorkouts.reduce((acc, workout) => ({ workouts: acc.workouts + 1, sets: acc.sets + getSetCount(workout), volumeKg: acc.volumeKg + getVolume(workout) }), { workouts: 0, sets: 0, volumeKg: 0 }), [analyticsWorkouts]);
+  const analyticsTraining = useMemo(() => analyticsWorkouts.reduce((acc, workout) => ({ workouts: acc.workouts + 1, sets: acc.sets + getSetCount(workout), volumeKg: acc.volumeKg + getWorkoutVolumeKg(workout, dashboardBodyWeightKg, customExercises) }), { workouts: 0, sets: 0, volumeKg: 0 }), [analyticsWorkouts, customExercises, dashboardBodyWeightKg]);
   const analyticsFood = useMemo(() => analyticsCalories.reduce((acc, entry) => ({ entries: acc.entries + 1, calories: acc.calories + Number(entry.calories || 0), protein: acc.protein + Number(entry.protein || 0) }), { entries: 0, calories: 0, protein: 0 }), [analyticsCalories]);
   const personalRecords = useMemo(() => workouts.reduce((map, w) => { if (!map[w.exercise] || w.weight > map[w.exercise]) map[w.exercise] = w.weight; return map; }, {}), [workouts]);
   const bwSorted = useMemo(() => [...bodyWeightEntries].sort((a, b) => new Date(a.date) - new Date(b.date)).slice(-30), [bodyWeightEntries]);
@@ -2873,7 +2974,7 @@ export default function App() {
   const muscleStats = useMemo(() => getAllMuscleVolumeData(workouts, bodyWeightEntries, settings, customExercises), [workouts, bodyWeightEntries, settings, customExercises]);
   const overallMuscleRankData = useMemo(() => getOverallMuscleRankData(muscleStats, settings.language), [muscleStats, settings.language]);
 
-  const chartData = useMemo(() => ({ labels: selectedWorkouts.map((w, i) => `${formatDateValue(w.date, settings.dateFormat)} #${i + 1}`), datasets: [{ data: selectedWorkouts.map((w) => Math.round(convertWeight(getVolume(w), settings.units))), borderColor: '#60a5fa', backgroundColor: 'rgba(59,130,246,0.18)', fill: true, tension: 0.3, borderWidth: 3, pointRadius: 4 }] }), [selectedWorkouts, settings.dateFormat, settings.units]);
+  const chartData = useMemo(() => ({ labels: selectedWorkouts.map((w, i) => `${formatDateValue(w.date, settings.dateFormat)} #${i + 1}`), datasets: [{ data: selectedWorkouts.map((w) => Math.round(convertWeight(getWorkoutVolumeKg(w, dashboardBodyWeightKg, customExercises), settings.units))), borderColor: '#60a5fa', backgroundColor: 'rgba(59,130,246,0.18)', fill: true, tension: 0.3, borderWidth: 3, pointRadius: 4 }] }), [customExercises, dashboardBodyWeightKg, selectedWorkouts, settings.dateFormat, settings.units]);
   const chartOptions = useMemo(() => {
     const prev = previousCountRef.current;
     const same = previousExerciseRef.current === selectedExercise;
@@ -2907,6 +3008,11 @@ export default function App() {
   useEffect(() => {
     document.documentElement.dataset.accent = settings.backgroundAccent || defaultSettings.backgroundAccent;
   }, [settings.backgroundAccent]);
+  useEffect(() => {
+    if (tdeeForm.currentWeight || !bodyWeightEntries.length) return;
+    const latest = getLatestBodyWeightKg(bodyWeightEntries, settings.gender || 'male');
+    if (latest) setTdeeForm((current) => ({ ...current, currentWeight: String(latest) }));
+  }, [bodyWeightEntries, settings.gender, tdeeForm.currentWeight]);
   useEffect(() => {
     if (!currentUser) return;
     localStorage.setItem(SESSION_KEY, currentUser);
@@ -3604,22 +3710,22 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
     const dailyKcal = Number(reverseCalDailyKcal);
     const goalWeight = Number(tdeeForm.goalWeight);
     const currentWeight = Number(tdeeForm.currentWeight);
-    const age = Number(tdeeForm.age || settings.age);
-    const height = Number(tdeeForm.height || settings.height);
-    const gender = tdeeForm.gender || settings.gender || 'male';
-    const activity = tdeeForm.activityLevel;
     if (!dailyKcal || !goalWeight || !currentWeight) return;
-    const mult = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, veryactive: 1.9 }[activity] || 1.55;
-    const bmr = (age && height)
-      ? (gender === 'female' ? 10 * currentWeight + 6.25 * height - 5 * age - 161 : 10 * currentWeight + 6.25 * height - 5 * age + 5)
-      : (gender === 'female' ? 10 * currentWeight + 6.25 * 168 - 5 * 28 - 161 : 10 * currentWeight + 6.25 * 176 - 5 * 28 + 5);
-    const tdee = Math.round(bmr * mult);
-    const dailyDiff = tdee - dailyKcal;
-    const totalKcalNeeded = (currentWeight - goalWeight) * 7700;
-    if (Math.abs(dailyDiff) < 10) { setReverseCalResult({ error: 'noDiff' }); return; }
-    const days = totalKcalNeeded / dailyDiff;
-    const weeks = Math.round(Math.abs(days) / 7);
-    setReverseCalResult({ weeks, tdee, dailyDiff, gaining: totalKcalNeeded < 0 });
+    const plan = getNutritionPlan({
+      currentWeight,
+      goalWeight,
+      weeks: Number(tdeeForm.weeks) || 12,
+      age: tdeeForm.age || settings.age,
+      height: tdeeForm.height || settings.height,
+      gender: tdeeForm.gender || settings.gender || 'male',
+      activityLevel: tdeeForm.activityLevel,
+    });
+    const dailyDelta = dailyKcal - plan.tdee;
+    const totalDeltaKg = goalWeight - currentWeight;
+    if (Math.abs(dailyDelta) < 10 || dailyDelta * totalDeltaKg <= 0) { setReverseCalResult({ error: 'noDiff' }); return; }
+    const days = Math.abs((totalDeltaKg * KCAL_PER_KG_BODY_MASS) / dailyDelta);
+    const weeks = Math.max(1, Math.round(days / 7));
+    setReverseCalResult({ weeks, tdee: plan.tdee, dailyDiff: dailyDelta, gaining: totalDeltaKg > 0 });
   }
 
   function saveBodyWeight(event) {
@@ -3635,36 +3741,18 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
     const cw = Number(tdeeForm.currentWeight);
     const gw = Number(tdeeForm.goalWeight);
     const weeks = Number(tdeeForm.weeks);
-    const age = Number(tdeeForm.age);
-    const height = Number(tdeeForm.height);
     if (!cw || !gw || !weeks) return;
-    const mult = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, veryactive: 1.9 }[tdeeForm.activityLevel] || 1.55;
-    let bmr;
-    if (age && height) {
-      bmr = tdeeForm.gender === 'female'
-        ? 10 * cw + 6.25 * height - 5 * age - 161
-        : 10 * cw + 6.25 * height - 5 * age + 5;
-    } else {
-      const legacyFactors = { sedentary: 26, light: 30, moderate: 33, active: 37, veryactive: 40 };
-      bmr = cw * (legacyFactors[tdeeForm.activityLevel] || 33) / mult;
-    }
-    const tdee = Math.round(bmr * mult);
-    const totalKcal = (cw - gw) * 7700;
-    const dailyAdjustment = Math.round(totalKcal / (weeks * 7));
-    const target = tdee - dailyAdjustment;
-    // Macros based on goal
-    const goalType = gw < cw ? 'cut' : gw > cw ? 'bulk' : 'maintain';
-    const proteinG = Math.round(cw * (goalType === 'bulk' ? 2.2 : goalType === 'cut' ? 2.5 : 2.0));
-    const fatG = Math.round(target * 0.25 / 9);
-    const carbsG = Math.max(0, Math.round((target - proteinG * 4 - fatG * 9) / 4));
-    // Water (ml) — Mifflin formula adjusted for activity & gender
-    const waterBase = cw * 33;
-    const waterActivity = { sedentary: 0, light: 250, moderate: 500, active: 750, veryactive: 1000 }[tdeeForm.activityLevel] || 500;
-    const waterGender = tdeeForm.gender === 'male' ? 350 : 0;
-    const waterAge = age > 55 ? 200 : 0;
-    const waterMl = Math.round((waterBase + waterActivity + waterGender + waterAge) / 100) * 100;
-    if (tdeeForm.age) setSettings(c => ({ ...c, gender: tdeeForm.gender, age: tdeeForm.age, height: tdeeForm.height }));
-    setTdeeResult({ tdee, target, dailyAdjustment, protein: proteinG, carbs: carbsG, fat: fatG, waterMl, goalType });
+    const plan = getNutritionPlan({
+      currentWeight: cw,
+      goalWeight: gw,
+      weeks,
+      age: tdeeForm.age,
+      height: tdeeForm.height,
+      gender: tdeeForm.gender,
+      activityLevel: tdeeForm.activityLevel,
+    });
+    setSettings(c => ({ ...c, gender: tdeeForm.gender, age: tdeeForm.age, height: tdeeForm.height, calorieGoal: plan.target, waterGoalMl: plan.waterMl }));
+    setTdeeResult(plan);
   }
   function startTimer(seconds) {
     requestNotificationPermission();
@@ -3930,6 +4018,34 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow"><Dumbbell size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.workouts}</p><h3 className="stat-value">{overall.workouts}</h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow"><ClipboardList size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.totalSets}</p><h3 className="stat-value">{overall.sets}</h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow"><Trophy size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.totalVolume}</p><h3 className="stat-value">{formatVolume(overall.volumeKg, settings.units)}</h3></div></article>
+            <section className="glass-panel daily-control-panel fade-in-up">
+              <div className="panel-header">
+                <h3>{settings.language === 'sl' ? 'Dnevni center' : 'Daily Control'}</h3>
+                <span className="history-count">{dailyControl.score}%</span>
+              </div>
+              <div className="daily-control-grid">
+                <article>
+                  <span>{settings.language === 'sl' ? 'Status' : 'Status'}</span>
+                  <strong>{settings.language === 'sl' ? (dailyControl.label === 'locked in' ? 'odlicno' : dailyControl.label === 'on track' ? 'v ritmu' : dailyControl.label === 'needs attention' ? 'potrebuje fokus' : 'reset dan') : dailyControl.label}</strong>
+                  <small>{settings.language === 'sl' ? 'Skupni signal za danes' : 'Today at a glance'}</small>
+                </article>
+                <article>
+                  <span>{settings.language === 'sl' ? 'Trening' : 'Training'}</span>
+                  <strong>{dailyControl.trainingText}</strong>
+                  <small>{settings.language === 'sl' ? 'Trening ali oznacen pocitek stejeta pozitivno' : 'Training or a marked rest day both count'}</small>
+                </article>
+                <article>
+                  <span>{settings.language === 'sl' ? 'Kalorije' : 'Calories'}</span>
+                  <strong style={{color: dailyControl.calorieDelta < 0 ? 'var(--error)' : 'var(--secondary-glow)'}}>{dailyControl.calorieDelta >= 0 ? '+' : ''}{dailyControl.calorieDelta} kcal</strong>
+                  <small>{settings.language === 'sl' ? 'Preostanek glede na dnevni cilj' : 'Remaining against daily goal'}</small>
+                </article>
+                <article>
+                  <span>{settings.language === 'sl' ? 'Voda' : 'Water'}</span>
+                  <strong>{dailyControl.hydrationPct}%</strong>
+                  <small>{(waterToday / 1000).toFixed(1)} / {(dailyControl.waterGoalMl / 1000).toFixed(1)} L</small>
+                </article>
+              </div>
+            </section>
             <section className="glass-panel chart-panel fade-in-up">
               <div className="panel-header"><h3>{copy.chart}</h3><button className={`action-btn-${settings.weightDrop ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem',marginLeft:'auto'}} title={copy.weightDropDesc} onClick={() => setSettings(c => ({ ...c, weightDrop: !c.weightDrop }))}>⚖️ {copy.weightDrop}</button></div>
               <div style={{display:'flex',flexWrap:'wrap',gap:'0.4rem',marginBottom:'0.75rem'}}>
@@ -4038,7 +4154,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
               <div className="stats-block"><div className="stats-list"><div className="stats-row"><span>{copy.totalReps}</span><strong>{overall.reps}</strong></div><div className="stats-row"><span>{copy.bestWeight}</span><strong>{formatWeight(overall.bestKg, settings.units)}</strong></div><div className="stats-row"><span>{copy.streak}</span><strong>{calculateStreak(workouts)}</strong></div></div></div>
               <div className="stats-block"><div className="stats-list"><div className="stats-row"><span>{copy.analytics}</span><strong>{analyticsRange === 'week' ? copy.weekly : copy.monthly}</strong></div><div className="stats-row"><span>{copy.trainingLoad}</span><strong>{formatVolume(analyticsTraining.volumeKg, settings.units)}</strong></div><div className="stats-row"><span>{copy.workouts}</span><strong>{analyticsTraining.workouts}</strong></div><div className="stats-row"><span>{copy.totalSets}</span><strong>{analyticsTraining.sets}</strong></div></div></div>
             </div>
-            <div className="exercise-stats-grid">{perExercise.map((item) => <article className="exercise-stats-card" key={item.name}><div className="exercise-stats-top"><h4>{getExerciseName(item.name, settings.language)}</h4><span className="exercise-badge">{sectionNames[findSection(item.name)]}</span></div><div className="exercise-stats-body"><p><strong>{copy.workouts}:</strong> {item.workouts}</p><p><strong>{copy.totalSets}:</strong> {item.sets}</p><p><strong>{copy.totalReps}:</strong> {item.reps}</p><p><strong>{copy.bestWeight}:</strong> {formatWeight(item.bestKg, settings.units)}</p></div></article>)}</div>
+            <div className="exercise-stats-grid">{perExercise.map((item) => <article className="exercise-stats-card" key={item.name}><div className="exercise-stats-top"><h4>{getExerciseName(item.name, settings.language)}</h4><span className="exercise-badge">{sectionNames[findSection(item.name)]}</span></div><div className="exercise-stats-body"><p><strong>{copy.workouts}:</strong> {item.workouts}</p><p><strong>{copy.totalSets}:</strong> {item.sets}</p><p><strong>{copy.totalReps}:</strong> {item.reps}</p><p><strong>{copy.totalVolume}:</strong> {formatVolume(item.volumeKg, settings.units)}</p><p><strong>{copy.bestWeight}:</strong> {formatWeight(item.bestKg, settings.units)}</p></div></article>)}</div>
           </section>
 
           <section className="glass-panel fade-in-up" style={{padding:'1.25rem 1.5rem'}}>
@@ -4067,7 +4183,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                     <div className="history-avatar">{getExerciseName(w.exercise, settings.language)[0]}</div>
                     <div><h3>{getExerciseName(w.exercise, settings.language)}{personalRecords[w.exercise] === w.weight ? <span className="pr-badge">{copy.prBadge}</span> : null}</h3><p>{formatDateValue(w.date, settings.dateFormat)}</p></div>
                   </div>
-                  <div className="history-metrics"><span>{formatWeight(w.weight, settings.units)}</span><span>{getSetCount(w)} {copy.sets.toLowerCase()}</span><span>{formatSetDetails(w)}</span></div>
+                  <div className="history-metrics"><span>{formatWeight(w.weight, settings.units)}</span><span>{getSetCount(w)} {copy.sets.toLowerCase()}</span><span>{formatSetDetails(w)}</span><span>{formatVolume(getWorkoutVolumeKg(w, dashboardBodyWeightKg, customExercises), settings.units)}</span></div>
                   <div className="settings-button-row">
                     <button className="action-btn-outline" type="button" onClick={() => repeatWorkout(w)}>{copy.repeatWorkout}</button>
                     <button className="action-btn-outline" type="button" onClick={() => startEditWorkout(w)}>{copy.edit}</button>
@@ -4654,7 +4770,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
             <section className="glass-panel action-panel fade-in-up">
               <div className="panel-header"><h3>{copy.waterTitle}</h3></div>
               {(() => {
-                const waterGoal = tdeeResult?.waterMl || 2500;
+                const waterGoal = waterGoalMl;
                 const pct = Math.min(100, Math.round(waterToday / waterGoal * 100));
                 return (
                   <>
@@ -4676,7 +4792,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                       <button className="action-btn-outline" type="button" style={{flexShrink:0}} onClick={() => { const ml = Number(waterCustomMl); if (ml > 0) { addWater(ml); setWaterCustomMl(''); } }}>+</button>
                     </div>
                     <button className="action-btn-outline danger-button full-width" type="button" onClick={resetWater}>{copy.waterReset}</button>
-                    {!tdeeResult && <p style={{fontSize:'0.72rem', opacity:0.45, marginTop:'0.6rem', textAlign:'center'}}>{copy.waterNoGoal}</p>}
+                    {!tdeeResult && <p style={{fontSize:'0.72rem', opacity:0.45, marginTop:'0.6rem', textAlign:'center'}}>{settings.language === 'sl' ? 'Cilj nastavis v Settings ali ga posodobis s TDEE kalkulatorjem.' : 'Set this target in Settings or update it from the TDEE calculator.'}</p>}
                   </>
                 );
               })()}
@@ -4698,6 +4814,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
               {tdeeResult && (
                 <div style={{marginTop:'1rem'}}>
                   <div className="stats-list">
+                    {tdeeResult.bmr && <div className="stats-row"><span>BMR</span><strong>{tdeeResult.bmr} kcal</strong></div>}
                     <div className="stats-row"><span>{copy.tdeeTDEE}</span><strong>{tdeeResult.tdee} kcal</strong></div>
                     <div className="stats-row"><span>{copy.tdeeAdjustment}</span><strong style={{color: tdeeResult.dailyAdjustment > 0 ? 'var(--error)' : 'var(--secondary-glow)'}}>{tdeeResult.dailyAdjustment > 0 ? '-' : '+'}{Math.abs(tdeeResult.dailyAdjustment)} kcal</strong></div>
                     <div className="stats-row"><span>{copy.tdeeTarget}</span><strong style={{fontSize:'1.1rem'}}>{tdeeResult.target} kcal</strong></div>
@@ -4706,6 +4823,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                     {tdeeResult.fat && <div className="stats-row"><span>{copy.macrosFat}</span><strong style={{color:'#34d399'}}>{tdeeResult.fat} g</strong></div>}
                     {tdeeResult.waterMl && <div className="stats-row"><span>{copy.macrosWater}</span><strong style={{color:'#38bdf8'}}>{(tdeeResult.waterMl/1000).toFixed(1)} L</strong></div>}
                   </div>
+                  {tdeeResult.capped && <p className="settings-copy" style={{marginTop:'0.75rem'}}>{settings.language === 'sl' ? 'Cilj je bil omejen na bolj varen dnevni razpon, ker je izbrana hitrost spremembe zelo agresivna.' : 'The target was capped to a safer daily range because the selected rate of change is very aggressive.'}</p>}
                   <button className="action-btn-outline full-width" style={{marginTop:'0.75rem',color:'var(--secondary-glow)',borderColor:'var(--secondary-glow)'}} type="button" onClick={() => { setSettings(c => ({...c, calorieGoal: String(tdeeResult.target)})); alert(copy.goalSet); }}>
                     {copy.setAsGoal}
                   </button>
@@ -4727,6 +4845,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                     <p style={{margin:0,fontSize:'1.1rem',fontWeight:700}}>{reverseCalResult.weeks} {copy.reverseCalWeeks} <span style={{fontSize:'0.85rem',fontWeight:400,opacity:0.7}}>({reverseCalResult.gaining ? copy.reverseCalGaining : copy.reverseCalLosing})</span></p>
                   </div>
                 )}
+                {reverseCalResult?.error && <p className="settings-copy" style={{marginTop:'0.75rem'}}>{settings.language === 'sl' ? 'Ta vnos kalorij ne vodi proti izbranemu cilju. Za izgubo mora biti pod TDEE, za pridobivanje nad TDEE.' : 'That calorie intake does not move toward the selected goal. For loss it must be below TDEE; for gain it must be above TDEE.'}</p>}
               </div>
             </section>
             <section className="glass-panel history-section fade-in-up">
@@ -4889,7 +5008,27 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
         })()}
 
         {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}>{LANGUAGE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></article><article className="settings-card settings-card-wide"><div className="settings-actions settings-actions-stacked"><div><span className="settings-title">{copy.backgroundAccent}</span><p className="settings-copy">{copy.backgroundAccentDesc}</p></div><div className="accent-picker" role="radiogroup" aria-label={copy.backgroundAccent}>{BACKGROUND_PRESETS.map((preset) => <button key={preset.id} className={`accent-choice ${settings.backgroundAccent === preset.id ? 'active' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, backgroundAccent: preset.id }))} aria-pressed={settings.backgroundAccent === preset.id}><span className="accent-swatch" style={{ background: preset.color }} />{getLocalizedLabel(preset.label, settings.language)}</button>)}</div></div></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.installApp}</span><p className="settings-copy">{copy.installAppDesc}</p></div><div>{isInStandaloneMode ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installDone}</span> : isIos ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installIos}</span> : <button className="action-btn-outline" type="button" onClick={triggerInstall} disabled={!installPrompt}>{copy.installBtn}</button>}</div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.showFeedbackBtn}</span><p className="settings-copy">{copy.showFeedbackBtnDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => setSettings(c => ({...c, showFeedbackBtn: !c.showFeedbackBtn}))}>{settings.showFeedbackBtn ? '✓ On' : 'Off'}</button></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.tutorialOpen}</span><p className="settings-copy">{copy.tutorialOpenDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => { setTutorialStep(0); setShowTutorial(true); }}>{copy.tutorialOpen}</button></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
+        {activeSection === 'settings' && (
+          <section className="glass-panel settings-section fade-in-up">
+            <div className="panel-header"><h3>{settings.language === 'sl' ? 'Osebni cilji' : 'Personal targets'}</h3></div>
+            <div className="settings-grid">
+              <article className="settings-card">
+                <label className="settings-label" htmlFor="waterGoal">{copy.macrosWater}</label>
+                <input id="waterGoal" type="number" min="1000" max="8000" step="100" value={settings.waterGoalMl || defaultSettings.waterGoalMl} onChange={(e) => setSettings((c) => ({ ...c, waterGoalMl: Number(e.target.value) || defaultSettings.waterGoalMl }))} />
+                <p className="settings-copy" style={{marginTop:'0.5rem'}}>{settings.language === 'sl' ? 'Uporabi svoj cilj ali ga posodobi iz TDEE kalkulatorja.' : 'Use your own target or update it from the TDEE calculator.'}</p>
+              </article>
+              <article className="settings-card">
+                <span className="settings-label">{settings.language === 'sl' ? 'Shranjena prehrana' : 'Saved nutrition'}</span>
+                <div className="stats-list">
+                  <div className="stats-row"><span>{copy.calorieGoal}</span><strong>{Math.round(settings.calorieGoal)} kcal</strong></div>
+                  <div className="stats-row"><span>{copy.macrosWater}</span><strong>{((settings.waterGoalMl || defaultSettings.waterGoalMl) / 1000).toFixed(1)} L</strong></div>
+                </div>
+              </article>
+            </div>
+          </section>
+        )}
       </main>
+
       {currentUser && settings.showFeedbackBtn !== false && (
         <div className="feedback-widget">
           {feedbackOpen && (

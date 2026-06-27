@@ -3763,6 +3763,7 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
+  const [helpTopic, setHelpTopic] = useState(null);
   const [customExercises, setCustomExercises] = useState(() => loadCustomExercises(localStorage.getItem(SESSION_KEY) || ''));
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [addExForm, setAddExForm] = useState({ name: '', section: 'Back' });
@@ -3799,6 +3800,227 @@ export default function App() {
     ratings: settings.language === 'sl' ? 'Oceni aplikacijo z zvezdami in napiši predlog za izboljšavo.' : 'Rate the app with stars and write a suggestion for improvement.',
     admin: settings.language === 'sl' ? 'Nadzorni center za app kontrole, uporabnike, feedback, varnost in podatke.' : 'Control center for app settings, users, feedback, security and data.',
   };
+  const guidedTutorialSteps = useMemo(() => {
+    const sl = settings.language === 'sl';
+    const t = (slText, enText) => (sl ? slText : enText);
+    const steps = [
+      {
+        section: 'dashboard',
+        target: 'section-intro',
+        title: t('PowerGraph v 3 minutah', 'PowerGraph in 3 minutes'),
+        body: t('Ta vodič ni samo tekst. Sam odpira pravi zavihek, oznaci funkcijo in ti pove, zakaj jo uporabljas.', 'This guide is not only text. It opens the right tab, highlights the feature, and explains why you use it.'),
+        bullets: [t('Kjerkoli vidis ?, klikni za kratko razlago.', 'Wherever you see ?, click it for a short explanation.'), t('Naprej te bo vodil cez cel app.', 'Next walks you through the whole app.')],
+      },
+      {
+        section: 'dashboard',
+        target: 'navigation',
+        title: t('Navigacija', 'Navigation'),
+        body: t('Levi meni na racunalniku in spodnji meni na telefonu sta glavni zemljevid aplikacije.', 'The left menu on desktop and bottom menu on phone are the main map of the app.'),
+        bullets: [t('Domov je hiter vnos treninga.', 'Home is fast workout logging.'), t('Teza, Obroki, Isci in Rang so povezani s cilji in napredkom.', 'Weight, Meals, Search, and Rank connect to goals and progress.')],
+      },
+      {
+        section: 'dashboard',
+        target: 'dashboard-overview',
+        title: t('Domov in dnevni center', 'Home and daily control'),
+        body: t('Tukaj vidis danasnji status: trening, kalorije, voda in osnovne statistike. To je najhitrejsi pogled na dan.', 'Here you see today: training, calories, water, and base stats. It is the fastest daily overview.'),
+      },
+      {
+        section: 'dashboard',
+        target: 'add-workout',
+        title: t('Dodaj trening', 'Add a workout'),
+        body: t('Izberi vajo, vnesi serije, ponovitve in tezo. Ta vnos hrani zgodovino, graf, osebne rekorde in misicne range.', 'Choose an exercise, enter sets, reps, and weight. This powers history, charts, personal records, and muscle ranks.'),
+        bullets: [t('Weight-drop nacin omogoci razlicno tezo za vsak set.', 'Weight-drop mode lets each set have its own weight.'), t('Zadnja uporabljena teza se ponudi za hitrejsi vnos.', 'Last used weight is offered for faster logging.')],
+      },
+      {
+        section: 'dashboard',
+        target: 'timer-rest',
+        title: t('Timer in pocitek', 'Timer and rest'),
+        body: t('Timer je za pavze med seti. Rest day oznaka pove appu, da je danes nacrtovan pocitek, ne pozabljen trening.', 'The timer is for rest between sets. Rest day tells the app today is planned recovery, not a missed workout.'),
+      },
+      {
+        section: 'history',
+        target: 'history-log',
+        title: t('Zgodovina treningov', 'Workout history'),
+        body: t('Zgodovina je mesto za popravljanje, ponavljanje in brisanje treningov. Vsaka sprememba se odrazi v statistiki in rangih.', 'History is where you edit, repeat, and delete workouts. Every change updates stats and ranks.'),
+      },
+      {
+        section: 'exercises',
+        target: 'exercise-library',
+        title: t('Knjiznica vaj', 'Exercise library'),
+        body: t('Vaje so razdeljene na gym in calisthenics. Vsaka ima target, opremo, zahtevnost, izvedbo in cue-je.', 'Exercises are split into gym and calisthenics. Each has targets, equipment, difficulty, instructions, and cues.'),
+        bullets: [t('Iskanje najde vaje po imenu.', 'Search finds exercises by name.'), t('Dodaj lahko tudi svojo vajo.', 'You can add your own exercise too.')],
+      },
+      {
+        section: 'bodyweight',
+        target: 'bodyweight-tracker',
+        title: t('Telesna teza', 'Body weight'),
+        body: t('Teza hrani trend in pomaga kalkulatorjem pri bolj realnih ciljih. Redni vnosi so boljsi kot en sam popoln vnos.', 'Weight stores your trend and helps calculators make more realistic targets. Regular entries beat one perfect entry.'),
+      },
+      {
+        section: 'bodyweight',
+        target: 'water-tracker',
+        title: t('Voda', 'Water'),
+        body: t('Voda ima hiter vnos po 250/500/750/1000 ml in osebni cilj. Cilj se lahko nastavi rocno ali iz kalkulatorja kalorij.', 'Water has quick 250/500/750/1000 ml logging and a personal goal. The goal can be manual or updated from the calorie calculator.'),
+      },
+      {
+        section: 'bodyweight',
+        target: 'calorie-calculator',
+        title: t('Calorie calculator', 'Calorie calculator'),
+        body: t('Kalkulator uporablja BMR, aktivnost, cilj, rok in varnostne omejitve. Ce je izbran rok preagresiven, prikaze varen cilj in razlozi zakaj.', 'The calculator uses BMR, activity, goal, timeframe, and safety caps. If the timeframe is too aggressive, it shows a safe target and explains why.'),
+        bullets: [t('Izbran rok je se vedno prikazan v rezultatu.', 'Your selected timeframe is still shown in the result.'), t('Set as my goal shrani kalorije v Settings.', 'Set as my goal saves calories to Settings.')],
+      },
+      {
+        section: 'calories',
+        target: 'calorie-progress',
+        title: t('Dnevni obroki', 'Daily meals'),
+        body: t('Obroki primerjajo vnos s tvojim dnevnim ciljem. Advanced nacin prikaze se protein, ogljikove hidrate in mascobe.', 'Meals compare intake with your daily goal. Advanced mode also shows protein, carbs, and fat.'),
+      },
+      {
+        section: 'calories',
+        target: 'add-meal',
+        title: t('Rocni vnos obroka', 'Manual meal entry'),
+        body: t('Tukaj dodas obrok, popravis prejsnji vnos ali ponovno uporabis star obrok iz zgodovine.', 'Here you add a meal, edit an old entry, or reuse a previous meal from history.'),
+      },
+      {
+        section: 'ocenjevalec',
+        target: 'ingredient-tracker',
+        title: t('AI / offline ocena hrane', 'AI / offline food estimate'),
+        body: t('Quick nacin sprejme normalen opis hrane. Precise nacin je boljsi, ko poznas sestavine in grame. Ce AI ni povezan, app uporabi lokalno bazo.', 'Quick mode accepts a normal food description. Precise mode is better when you know ingredients and grams. If AI is not connected, the app uses the local database.'),
+      },
+      {
+        section: 'ocenjevalec',
+        target: 'body-fat-estimator',
+        title: t('Body fat estimate', 'Body fat estimate'),
+        body: t('Najboljsi rezultat dobis z visino, tezo, pasom, vratom, boki in 1-3 fotografijami. Rezultat je ocena, ne medicinska diagnoza.', 'Best results come from height, weight, waist, neck, hips, and 1-3 photos. The result is an estimate, not a medical diagnosis.'),
+      },
+      {
+        section: 'rankings',
+        target: 'muscle-rankings',
+        title: t('Misicni rangi', 'Muscle ranks'),
+        body: t('Klik na telo ali chip izbere misicno skupino. Barva in rang prideta iz tehtanega volumna vaj, ki dejansko trenirajo ta del.', 'Clicking the body or a chip selects a muscle group. Color and rank come from weighted volume of exercises that actually train that area.'),
+      },
+      {
+        section: 'rankings',
+        target: 'overall-rank',
+        title: t('Skupni rang', 'Overall rank'),
+        body: t('Skupni rang ni nakljucen. Je povprecje vseh misicnih skupin, zato neuravnotezen trening ne dvigne vsega na silo.', 'Overall rank is not random. It is the average of all muscle groups, so uneven training cannot drag everything up unfairly.'),
+      },
+      {
+        section: 'advisor',
+        target: 'advisor-panel',
+        title: t('Advisor', 'Advisor'),
+        body: t('Advisor predlaga trening glede na zadnje vnose in manj trenirane skupine. Uporabi ga, ko ne ves, kaj bi treniral danes.', 'Advisor suggests training based on recent logs and undertrained groups. Use it when you are not sure what to train today.'),
+      },
+      {
+        section: 'settings',
+        target: 'settings-main',
+        title: t('Settings', 'Settings'),
+        body: t('Settings je kontrolna soba: enote, jezik, barva ozadja, backup, calorie goal, tracker mode in install app.', 'Settings is the control room: units, language, background color, backup, calorie goal, tracker mode, and install app.'),
+      },
+      {
+        section: 'settings',
+        target: 'settings-appearance',
+        title: t('Izgled in jezik', 'Appearance and language'),
+        body: t('Tu izberes accent ozadja, jezik, format datuma in enote. Te nastavitve so shranjene na uporabnika.', 'Here you choose background accent, language, date format, and units. These settings are saved per user.'),
+      },
+      {
+        section: 'settings',
+        target: 'settings-data',
+        title: t('Backup in podatki', 'Backup and data'),
+        body: t('Export shrani kopijo podatkov, import jo nalozi nazaj, clear pa brise lokalne podatke. To so pomembne kontrole.', 'Export saves a copy of your data, import loads it back, and clear deletes local data. These are important controls.'),
+      },
+      {
+        section: 'settings',
+        target: 'settings-help',
+        title: t('Tutorial in ? pomoc', 'Tutorial and ? help'),
+        body: t('Ta vodič lahko vedno ponovno odpres tukaj. Za hitre razlage pa klikni ? ob funkcijah po aplikaciji.', 'You can always reopen this guide here. For quick explanations, click ? next to features across the app.'),
+      },
+      {
+        section: 'settings',
+        target: 'personal-targets',
+        title: t('Osebni cilji', 'Personal targets'),
+        body: t('Osebni cilji povezejo kalkulatorje z vsakodnevno uporabo: kalorije in voda se uporabljajo na dashboardu in trackerjih.', 'Personal targets connect calculators to daily use: calories and water are used on the dashboard and trackers.'),
+      },
+    ];
+    if (currentUser === ADMIN_EMAIL) {
+      steps.push({
+        section: 'admin',
+        target: 'admin-command-center',
+        title: t('Admin center', 'Admin center'),
+        body: t('Admin panel je viden samo tebi. Od tu upravljas nastavitve appa, uporabnike, feedback, maintenance in exporte.', 'The admin panel is visible only to you. From here you manage app settings, users, feedback, maintenance, and exports.'),
+      });
+    }
+    return steps;
+  }, [currentUser, settings.language]);
+  const activeTutorialStep = guidedTutorialSteps[Math.min(tutorialStep, Math.max(0, guidedTutorialSteps.length - 1))] || null;
+  const helpTopics = useMemo(() => {
+    const sl = settings.language === 'sl';
+    const t = (slText, enText) => (sl ? slText : enText);
+    return {
+      sectionIntro: { title: t('Opis trenutnega zavihka', 'Current tab summary'), body: t('Ta kartica pove, kaj je namen odprtega zavihka in kdaj ga uporabis.', 'This card tells you what the open tab is for and when to use it.') },
+      navigation: { title: t('Navigacija', 'Navigation'), body: t('Menijem se premikas med glavnimi funkcijami. Na telefonu je isti sistem optimiziran za hitro tapkanje.', 'Use the menu to move between core features. On phone the same system is optimized for quick taps.') },
+      dashboardOverview: { title: t('Dnevni center', 'Daily control'), body: t('Zdruzi trening, kalorije in vodo v en signal, da hitro vidis ali je dan pod kontrolo.', 'Combines training, calories, and water into one signal so you can quickly see if the day is on track.') },
+      chart: { title: t('Graf napredka', 'Progress chart'), body: t('Graf prikazuje volumen izbrane vaje skozi cas. Filtri po misicah pomagajo hitro najti pravo vajo.', 'The chart shows selected exercise volume over time. Muscle filters help you find the right exercise fast.') },
+      addWorkout: { title: t('Dodaj trening', 'Add workout'), body: t('To je najpomembnejsi vnos za napredek. Shrani vajo, datum, serije, ponovitve in tezo.', 'This is the most important progress entry. It saves exercise, date, sets, reps, and weight.') },
+      timerRest: { title: t('Timer in rest day', 'Timer and rest day'), body: t('Timer vodi pavze med seti. Rest day pove appu, da je pocitek nacrtovan in naj ne kvari dnevnega signala.', 'Timer guides rest between sets. Rest day tells the app recovery is planned and should not hurt the daily signal.') },
+      history: { title: t('Zgodovina', 'History'), body: t('Vsi treningi so tukaj. Lahko jih ponovis, uredjas, izbrises ali dodas komentar.', 'All workouts are here. You can repeat, edit, delete, or comment on them.') },
+      exercises: { title: t('Vaje', 'Exercises'), body: t('Knjiznica razlozi izvedbo in target vsake vaje. Gym/calisthenics preklop spremeni katalog.', 'The library explains execution and targets for each exercise. Gym/calisthenics toggles change the catalog.') },
+      advisor: { title: t('Advisor', 'Advisor'), body: t('Predlaga trening glede na zgodovino, premalo trenirane skupine in izbran split.', 'Suggests training based on history, undertrained groups, and selected split.') },
+      calories: { title: t('Kalorije', 'Calories'), body: t('Primerja obroke s ciljem. Simple je hiter, advanced doda makrote.', 'Compares meals to your target. Simple is fast, advanced adds macros.') },
+      addMeal: { title: t('Dodaj obrok', 'Add meal'), body: t('Rocno shrani obrok. V advanced nacinu dodas protein, carbs in fat.', 'Manually saves a meal. In advanced mode you add protein, carbs, and fat.') },
+      ingredient: { title: t('Ingredient tracker', 'Ingredient tracker'), body: t('Quick sprejme navaden opis hrane, precise sprejme sestavine z grami. Rezultat lahko dodas v obroke.', 'Quick accepts normal food text, precise accepts ingredients with grams. The result can be added to meals.') },
+      bodyFat: { title: t('Body fat estimate', 'Body fat estimate'), body: t('Uporablja mere in po zelji slike za boljso oceno. Za tocnost vnesi pas in vrat, pri zenskah tudi boke.', 'Uses measurements and optional photos for a better estimate. For accuracy enter waist and neck, and hips for women.') },
+      rankings: { title: t('Misicni ranking', 'Muscle ranking'), body: t('Rang vsake misice temelji na tehtanem volumnu vaj za to misico. Model je samo interaktivni prikaz izracuna.', 'Each muscle rank is based on weighted volume for that muscle. The model is an interactive view of the calculation.') },
+      overallRank: { title: t('Skupni rang', 'Overall rank'), body: t('Skupni rang je povprecje vseh misicnih skupin. To nagrajuje uravnotezen trening.', 'Overall rank is the average of all muscle groups. This rewards balanced training.') },
+      bodyweight: { title: t('Telesna teza', 'Body weight'), body: t('Shranjuje trend teze in pomaga pri kalkulatorjih. Vnosi so lokalno shranjeni na tvoj profil.', 'Stores weight trend and helps calculators. Entries are saved locally to your profile.') },
+      water: { title: t('Voda', 'Water'), body: t('Hitri gumbi pospesijo vnos. Cilj vode lahko nastavis rocno ali iz TDEE rezultata.', 'Quick buttons speed up logging. Water target can be set manually or from the TDEE result.') },
+      tdee: { title: t('Calorie calculator', 'Calorie calculator'), body: t('Izracuna BMR, TDEE, cilj, makrote, vodo in realen cas do cilja. Varnostne omejitve preprecujejo ekstremne cilje.', 'Calculates BMR, TDEE, target, macros, water, and realistic time to goal. Safety caps prevent extreme targets.') },
+      settings: { title: t('Settings', 'Settings'), body: t('Tu spreminjas jezik, enote, ozadje, backup, tracker mode, feedback gumb, tutorial in osebne cilje.', 'Here you change language, units, background, backup, tracker mode, feedback button, tutorial, and personal goals.') },
+      appearance: { title: t('Izgled', 'Appearance'), body: t('Accent barva spremeni vizualni obcutek appa brez spreminjanja funkcij.', 'Accent color changes the feel of the app without changing features.') },
+      data: { title: t('Backup', 'Backup'), body: t('Export je tvoja varnostna kopija. Import jo vrne. Clear uporabljaj samo, ko res zelis zaceti znova.', 'Export is your backup. Import restores it. Use Clear only when you really want to start over.') },
+      tutorial: { title: t('Tutorial in pomoc', 'Tutorial and help'), body: t('Odpre celoten vodeni tutorial. Vsak ? gumb odpre samo hitro razlago trenutne funkcije.', 'Opens the full guided tutorial. Each ? button opens a quick explanation for that feature.') },
+      admin: { title: t('Admin center', 'Admin center'), body: t('Vidno samo adminu. Omogoca upravljanje aplikacije, uporabnikov, feedbacka, maintenance in exportov.', 'Visible only to admin. Allows management of the app, users, feedback, maintenance, and exports.') },
+      personalTargets: { title: t('Osebni cilji', 'Personal targets'), body: t('Kalorije in voda iz nastavitev poganjajo dashboard, water tracker in meal tracker.', 'Calories and water from settings power the dashboard, water tracker, and meal tracker.') },
+    };
+  }, [settings.language]);
+  const getHelpTopic = (key) => helpTopics[key] || {
+    title: settings.language === 'sl' ? 'Pomoc' : 'Help',
+    body: settings.language === 'sl' ? 'Ta funkcija pomaga pri uporabi aplikacije.' : 'This feature helps you use the app.',
+  };
+  const helpButton = (topic, extraClass = '') => (
+    <button
+      className={`context-help-btn ${extraClass}`.trim()}
+      type="button"
+      aria-label={settings.language === 'sl' ? 'Razlozi funkcijo' : 'Explain this feature'}
+      title={settings.language === 'sl' ? 'Razlozi funkcijo' : 'Explain this feature'}
+      onClick={(event) => {
+        event.stopPropagation();
+        setHelpTopic(topic);
+      }}
+    >
+      ?
+    </button>
+  );
+  const tourAttrs = (id) => ({
+    'data-tour': id,
+    'data-tour-active': showTutorial && activeTutorialStep?.target === id ? 'true' : undefined,
+  });
+  useEffect(() => {
+    if (!showTutorial || !activeTutorialStep) return;
+    if (activeTutorialStep.section && activeTutorialStep.section !== activeSection) {
+      setActiveSection(activeTutorialStep.section);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      const target = document.querySelector(`[data-tour="${activeTutorialStep.target}"]`);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [activeSection, activeTutorialStep, showTutorial]);
+  useEffect(() => {
+    if (!showTutorial) return;
+    if (tutorialStep >= guidedTutorialSteps.length) setTutorialStep(Math.max(0, guidedTutorialSteps.length - 1));
+  }, [guidedTutorialSteps.length, showTutorial, tutorialStep]);
   const exerciseOptions = useMemo(() => [...new Set([...Object.values(sections).flat(), ...Object.values(calisthenicsSections).flat(), ...workouts.map((w) => w.exercise), ...customExercises.map(e => e.name)])].sort(), [workouts, customExercises]);
   const selectedWorkouts = useMemo(() => workouts.filter((w) => w.exercise === selectedExercise).sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id), [selectedExercise, workouts]);
   const sortedWorkouts = useMemo(() => [...workouts].sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id), [workouts]);
@@ -5309,7 +5531,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
 
   return (
     <div className="app-container">
-      <aside className="glass-panel sidebar">
+      <aside className="glass-panel sidebar" {...tourAttrs('navigation')}>
         <div className="brand"><div className="logo-icon">P</div><h2>{adminConfig.appName || copy.app}</h2></div>
         <nav className="nav-menu">{nav.map(([id, label]) => <button key={id} className={`nav-btn ${activeSection === id ? 'active' : ''}`} type="button" onClick={() => setActiveSection(id)}><span className="nav-icon">{NAV_ICONS[id]}</span><span className="nav-label-full">{label}</span><span className="nav-label-short">{NAV_SHORT[id]}</span></button>)}</nav>
       </aside>
@@ -5332,16 +5554,18 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               </button>
             )}
             {syncing && <span className="sync-indicator" title={settings.language === 'sl' ? 'Sinhroniziram...' : 'Syncing...'}>↻</span>}
+            <button className="context-help-btn topbar-help-btn" type="button" onClick={() => setHelpTopic('tutorial')} title={copy.tutorialOpen} aria-label={copy.tutorialOpen}>?</button>
             <span className="user-chip">{getUserBadge(currentUser)}</span>
             <button className="theme-toggle" type="button" onClick={() => setTheme((c) => (c === 'dark' ? 'light' : 'dark'))}>{theme === 'dark' ? 'L' : 'D'}</button>
             <button className="action-btn-outline" type="button" onClick={logout}>{copy.logout}</button>
           </div>
         </header>
-        <section className="glass-panel section-intro fade-in-up">
+        <section className="glass-panel section-intro fade-in-up" {...tourAttrs('section-intro')}>
           <div>
             <p className="exercise-category"><span className="nav-icon" style={{marginRight:'0.4rem'}}>{NAV_ICONS[activeSection]}</span>{nav.find(([id]) => id === activeSection)?.[1]}</p>
             <p>{sectionDescriptions[activeSection]}</p>
           </div>
+          {helpButton('sectionIntro')}
         </section>
         {adminConfig.announcementEnabled && adminConfig.announcementText && <section className="glass-panel admin-announcement-banner fade-in-up"><strong>{settings.language === 'sl' ? 'Admin obvestilo' : 'Admin notice'}</strong><span>{adminConfig.announcementText}</span></section>}
         {backupDue && adminConfig.backupBannerEnabled && <section className="glass-panel backup-banner fade-in-up"><div><h3>{copy.backupTitle}</h3><p>{copy.backupText}</p></div><button className="action-btn-primary" type="button" onClick={exportData}>{copy.export}</button></section>}
@@ -5351,10 +5575,10 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow"><Dumbbell size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.workouts}</p><h3 className="stat-value">{overall.workouts}</h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow"><ClipboardList size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.totalSets}</p><h3 className="stat-value">{overall.sets}</h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow"><Trophy size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.totalVolume}</p><h3 className="stat-value">{formatVolume(overall.volumeKg, settings.units)}</h3></div></article>
-            <section className="glass-panel daily-control-panel fade-in-up">
+            <section className="glass-panel daily-control-panel fade-in-up" {...tourAttrs('dashboard-overview')}>
               <div className="panel-header">
                 <h3>{settings.language === 'sl' ? 'Dnevni center' : 'Daily Control'}</h3>
-                <span className="history-count">{dailyControl.score}%</span>
+                <div className="settings-button-row panel-help-row">{helpButton('dashboardOverview')}<span className="history-count">{dailyControl.score}%</span></div>
               </div>
               <div className="daily-control-grid">
                 <article>
@@ -5379,7 +5603,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                 </article>
               </div>
             </section>
-            <section className="glass-panel chart-panel fade-in-up">
+            <section className="glass-panel chart-panel fade-in-up" {...tourAttrs('chart-progress')}>
               <div className="panel-header"><h3>{copy.chart}</h3><button className={`action-btn-${settings.weightDrop ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem',marginLeft:'auto'}} title={copy.weightDropDesc} onClick={() => setSettings(c => ({ ...c, weightDrop: !c.weightDrop }))}>⚖️ {copy.weightDrop}</button></div>
               <div style={{display:'flex',flexWrap:'wrap',gap:'0.4rem',marginBottom:'0.75rem'}}>
                 {Object.keys(sections).map(sec => (
@@ -5400,8 +5624,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               <div className="chart-container">{selectedWorkouts.length ? <Line data={chartData} options={chartOptions} /> : <div className="empty-state"><h4>{copy.chart}</h4><p>{copy.noChart}</p></div>}</div>
             </section>
 
-            <section className="glass-panel action-panel fade-in-up">
-              <div className="panel-header"><h3>{copy.addWorkout}</h3></div>
+            <section className="glass-panel action-panel fade-in-up" {...tourAttrs('add-workout')}>
+              <div className="panel-header"><h3>{copy.addWorkout}</h3>{helpButton('addWorkout')}</div>
               <form className="premium-form" onSubmit={editingWorkoutId ? (e) => { e.preventDefault(); saveWorkoutEdit(); } : saveWorkout}>
                 <div className="input-group"><label htmlFor="date">{copy.date}</label><input id="date" type="date" value={formData.date} onChange={(e) => setFormData((c) => ({ ...c, date: e.target.value }))} /></div>
                 <div className="input-group"><label>{copy.exercise}</label><div className="ex-search-wrap"><input type="text" className="ex-search-input" placeholder={`${getExerciseName(formData.exercise, settings.language)} — ${copy.searchExercise}`} value={formExSearch} onChange={(e) => setFormExSearch(e.target.value)} />{formExSearch && (<div className="ex-search-results">{(() => { const hits = exerciseOptions.filter(n => getExerciseName(n, settings.language).toLowerCase().includes(formExSearch.toLowerCase()) || n.toLowerCase().includes(formExSearch.toLowerCase())); return hits.length ? hits.slice(0, 10).map(n => (<button key={n} type="button" className={`ex-search-item${formData.exercise === n ? ' selected' : ''}`} onClick={() => { setFormData(c => ({...c, exercise: n})); setFormExSearch(''); }}><span className="ex-search-section">{sectionNames[findSection(n)]}</span>{getExerciseName(n, settings.language)}</button>)) : <div className="ex-search-empty">{copy.noExerciseResults}</div>; })()}</div>)}</div></div>
@@ -5434,8 +5658,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               const dash = circ * (1 - Math.min(1, Math.max(0, pct)));
               const urgent = timerSeconds <= 5 && timerActive && timerSeconds > 0;
               return (
-                <section className="glass-panel action-panel fade-in-up">
-                  <div className="panel-header"><h3>{copy.timerTitle}</h3></div>
+                <section className="glass-panel action-panel fade-in-up" {...tourAttrs('timer-rest')}>
+                  <div className="panel-header"><h3>{copy.timerTitle}</h3>{helpButton('timerRest')}</div>
                   <div className="timer-display" style={{textAlign:'center',padding:'1rem 0'}}>
                     <svg width="140" height="140" viewBox="0 0 140 140" style={{display:'block',margin:'0 auto'}}>
                       <circle cx="70" cy="70" r={r} fill="none" stroke="var(--glass-border)" strokeWidth="8"/>
@@ -5501,9 +5725,10 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
         </>}
 
         {activeSection === 'history' && (
-          <section className="glass-panel history-section fade-in-up">
+          <section className="glass-panel history-section fade-in-up" {...tourAttrs('history-log')}>
             <div className="panel-header">
               <h3>{copy.recent}</h3>
+              {helpButton('history')}
               <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
                 <input className="history-search-input" type="search" placeholder={settings.language === 'sl' ? 'Išči vajo…' : 'Search exercise…'} value={historySearch} onChange={e => setHistorySearch(e.target.value)} />
                 <span className="history-count">{sortedWorkouts.filter(w => !historySearch || getExerciseName(w.exercise, settings.language).toLowerCase().includes(historySearch.toLowerCase())).length}</span>
@@ -5539,7 +5764,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           </section>
         )}
 
-        {activeSection === 'exercises' && <section className="glass-panel exercise-section fade-in-up">
+        {activeSection === 'exercises' && <section className="glass-panel exercise-section fade-in-up" {...tourAttrs('exercise-library')}>
           <div className="panel-header"><h3>{copy.exercises}</h3><div style={{display:'flex',gap:'0.4rem',marginLeft:'auto',alignItems:'center'}}><button className={`action-btn-${advisorMode === 'gym' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem'}} onClick={() => setAdvisorMode('gym')}>🏋️ {copy.gymMode}</button><button className={`action-btn-${advisorMode === 'calisthenics' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem'}} onClick={() => setAdvisorMode('calisthenics')}>🤸 {copy.calisthenicsMode}</button></div><input className="history-search-input" type="search" placeholder={copy.searchExercise} value={exerciseSearch} onChange={e => setExerciseSearch(e.target.value)} /></div>
           {(() => {
             const q = exerciseSearch.toLowerCase().trim();
@@ -5625,9 +5850,10 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           })()}
         </section>}
 
-        {activeSection === 'advisor' && <section className="glass-panel stats-section fade-in-up">
+        {activeSection === 'advisor' && <section className="glass-panel stats-section fade-in-up" {...tourAttrs('advisor-panel')}>
           <div className="panel-header">
             <h3>{copy.advisorTitle}</h3>
+            {helpButton('advisor')}
             <div style={{display:'flex',gap:'0.4rem',marginLeft:'auto'}}>
               <button className={`action-btn-${advisorMode === 'gym' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem'}} onClick={() => { setAdvisorMode('gym'); setAdvisorSplitId('auto'); }}>🏋️ {copy.gymMode}</button>
               <button className={`action-btn-${advisorMode === 'calisthenics' ? 'primary' : 'outline'}`} type="button" style={{fontSize:'0.75rem',padding:'0.2rem 0.55rem'}} onClick={() => { setAdvisorMode('calisthenics'); setAdvisorSplitId('auto'); }}>🤸 {copy.calisthenicsMode}</button>
@@ -5709,8 +5935,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow"><Target size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.calorieGoal}</p><h3 className="stat-value">{Math.round(settings.calorieGoal)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow"><Flame size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.caloriesRemaining}</p><h3 className="stat-value">{Math.round(settings.calorieGoal - selectedDayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
 
-            <section className="glass-panel chart-panel fade-in-up">
-              <div className="panel-header"><h3>{copy.caloriesProgress}</h3><div className="settings-button-row"><button className={`action-btn-outline ${settings.calorieTrackerMode === 'simple' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'simple' }))}>{copy.simpleTracker}</button><button className={`action-btn-outline ${settings.calorieTrackerMode === 'advanced' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'advanced' }))}>{copy.advancedTracker}</button><input type="date" value={calorieForm.date} onChange={(e) => setCalorieForm((c) => ({ ...c, date: e.target.value }))} /></div></div>
+            <section className="glass-panel chart-panel fade-in-up" {...tourAttrs('calorie-progress')}>
+              <div className="panel-header"><h3>{copy.caloriesProgress}</h3><div className="settings-button-row panel-help-row">{helpButton('calories')}<button className={`action-btn-outline ${settings.calorieTrackerMode === 'simple' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'simple' }))}>{copy.simpleTracker}</button><button className={`action-btn-outline ${settings.calorieTrackerMode === 'advanced' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'advanced' }))}>{copy.advancedTracker}</button><input type="date" value={calorieForm.date} onChange={(e) => setCalorieForm((c) => ({ ...c, date: e.target.value }))} /></div></div>
               <div className="calorie-progress-card">
                 <div className="progress-rail"><div className="progress-fill" style={{ width: `${Math.min((selectedDayTotals.calories / Math.max(settings.calorieGoal, 1)) * 100, 100)}%` }} /></div>
                 {settings.calorieTrackerMode === 'advanced' ? <div className="stats-list mt-1">
@@ -5721,8 +5947,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               </div>
             </section>
 
-            <section className="glass-panel action-panel fade-in-up">
-              <div className="panel-header"><h3>{copy.addMeal}</h3></div>
+            <section className="glass-panel action-panel fade-in-up" {...tourAttrs('add-meal')}>
+              <div className="panel-header"><h3>{copy.addMeal}</h3>{helpButton('addMeal')}</div>
               <form className="premium-form" onSubmit={editingMealId ? (e) => { e.preventDefault(); saveMealEdit(); } : saveMeal}>
                 <div className="input-group"><label htmlFor="meal-date">{copy.date}</label><input id="meal-date" type="date" value={calorieForm.date} onChange={(e) => setCalorieForm((c) => ({ ...c, date: e.target.value }))} /></div>
                 <div className="input-group"><label htmlFor="meal-type">{copy.mealType}</label><select id="meal-type" className="premium-select" value={calorieForm.mealType} onChange={(e) => setCalorieForm((c) => ({ ...c, mealType: e.target.value }))}><option value="breakfast">{copy.breakfast}</option><option value="lunch">{copy.lunch}</option><option value="dinner">{copy.dinner}</option><option value="snack">{copy.snack}</option></select></div>
@@ -5774,8 +6000,9 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
 
         {activeSection === 'ocenjevalec' && (<>
           {/* Ingredient Tracker */}
-          <section className="glass-panel action-panel fade-in-up">
+          <section className="glass-panel action-panel fade-in-up" {...tourAttrs('ingredient-tracker')}>
             <div className="panel-header"><h3>{copy.ingredientTracker}</h3>
+              {helpButton('ingredient')}
               <div style={{display:'flex',gap:'0.5rem'}}>
                 <button type="button" className={`action-btn-${ingredientMode === 'quick' ? 'primary' : 'outline'}`} style={{fontSize:'0.8rem',padding:'0.25rem 0.7rem'}} onClick={() => setIngredientMode('quick')}>{copy.quickMode}</button>
                 <button type="button" className={`action-btn-${ingredientMode === 'precise' ? 'primary' : 'outline'}`} style={{fontSize:'0.8rem',padding:'0.25rem 0.7rem'}} onClick={() => setIngredientMode('precise')}>{copy.preciseMode}</button>
@@ -5858,8 +6085,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           </section>
 
           {/* Body Fat Estimation */}
-          <section className="glass-panel action-panel fade-in-up">
-            <div className="panel-header"><h3>{copy.bodyFatTitle}</h3></div>
+          <section className="glass-panel action-panel fade-in-up" {...tourAttrs('body-fat-estimator')}>
+            <div className="panel-header"><h3>{copy.bodyFatTitle}</h3>{helpButton('bodyFat')}</div>
             <p className="settings-copy" style={{marginBottom:'1rem'}}>{copy.bodyFatDesc}</p>
             <div className="body-fat-input-grid">
               <div className="input-group">
@@ -5978,8 +6205,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
         {activeSection === 'rankings' && (
           <div className="dashboard-grid">
             {/* Muscle-specific ranking section */}
-            <section className="glass-panel chart-panel fade-in-up muscle-rank-section" style={{gridColumn:'span 2'}}>
-              <div className="panel-header"><h3>{copy.muscleRankTitle}</h3></div>
+            <section className="glass-panel chart-panel fade-in-up muscle-rank-section" style={{gridColumn:'span 2'}} {...tourAttrs('muscle-rankings')}>
+              <div className="panel-header"><h3>{copy.muscleRankTitle}</h3>{helpButton('rankings')}</div>
               <p className="settings-copy" style={{marginBottom:'1rem'}}>{settings.language === 'sl' ? 'Klikni misico na modelu. Rang in barva sta izracunana iz tehtanega volumna vaj, ki dejansko trenirajo ta del telesa.' : 'Click a muscle on the model. Rank and color are calculated from weighted volume of exercises that actually train that body part.'}</p>
               {(() => {
                 const muscleData = muscleStats[selectedRankMuscle] || getMuscleVolumeData(selectedRankMuscle, workouts, bodyWeightEntries, settings, customExercises);
@@ -6051,8 +6278,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                 );
               })()}
             </section>
-            <section className="glass-panel chart-panel fade-in-up" style={{gridColumn:'span 2'}}>
-              <div className="panel-header"><h3>{copy.rankCurrentLabel}</h3></div>
+            <section className="glass-panel chart-panel fade-in-up" style={{gridColumn:'span 2'}} {...tourAttrs('overall-rank')}>
+              <div className="panel-header"><h3>{copy.rankCurrentLabel}</h3>{helpButton('overallRank')}</div>
               {(() => {
                 const overall = overallMuscleRankData;
                 const rank = overall.rank;
@@ -6150,8 +6377,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
 
         {activeSection === 'bodyweight' && <>
           <div className="dashboard-grid">
-            <section className="glass-panel chart-panel fade-in-up">
-              <div className="panel-header"><h3>{copy.bwTitle}</h3></div>
+            <section className="glass-panel chart-panel fade-in-up" {...tourAttrs('bodyweight-tracker')}>
+              <div className="panel-header"><h3>{copy.bwTitle}</h3>{helpButton('bodyweight')}</div>
               <div className="chart-container">{bwSorted.length ? <Line data={bodyWeightChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8' } }, y: { beginAtZero: false, grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8' } } } }} /> : <div className="empty-state"><p>{copy.bwNoData}</p></div>}</div>
             </section>
             <section className="glass-panel action-panel fade-in-up">
@@ -6164,8 +6391,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             </section>
           </div>
           <div className="dashboard-grid">
-            <section className="glass-panel action-panel fade-in-up">
-              <div className="panel-header"><h3>{copy.waterTitle}</h3></div>
+            <section className="glass-panel action-panel fade-in-up" {...tourAttrs('water-tracker')}>
+              <div className="panel-header"><h3>{copy.waterTitle}</h3>{helpButton('water')}</div>
               {(() => {
                 const waterGoal = waterGoalMl;
                 const pct = Math.min(100, Math.round(waterToday / waterGoal * 100));
@@ -6206,8 +6433,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                 );
               })()}
             </section>
-            <section className="glass-panel action-panel fade-in-up calorie-calculator-panel">
-              <div className="panel-header"><h3>{copy.tdeeTitle}</h3><span className="calc-method-pill">{settings.language === 'sl' ? 'MSJ + dinamicni model' : 'MSJ + dynamic model'}</span></div>
+            <section className="glass-panel action-panel fade-in-up calorie-calculator-panel" {...tourAttrs('calorie-calculator')}>
+              <div className="panel-header"><h3>{copy.tdeeTitle}</h3><div className="settings-button-row panel-help-row">{helpButton('tdee')}<span className="calc-method-pill">{settings.language === 'sl' ? 'MSJ + dinamicni model' : 'MSJ + dynamic model'}</span></div></div>
               <form className="premium-form calorie-calculator-form" onSubmit={calculateTDEE}>
                 <div className="input-group"><label>{copy.tdeeGender}</label><select className="premium-select" value={tdeeForm.gender} onChange={(e) => setTdeeForm((c) => ({ ...c, gender: e.target.value }))}><option value="male">{copy.tdeeMale}</option><option value="female">{copy.tdeeFemale}</option></select></div>
                 <div className="form-row triple">
@@ -6386,13 +6613,14 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           const recentAudit = adminAudit.slice(0, 12);
           return (
             <>
-              <section className="glass-panel admin-hero-panel fade-in-up">
+              <section className="glass-panel admin-hero-panel fade-in-up" {...tourAttrs('admin-command-center')}>
                 <div>
                   <p className="exercise-category">ADMIN ONLY</p>
                   <h2>{t.title}</h2>
                   <p>{t.subtitle}</p>
                 </div>
                 <div className="admin-hero-actions">
+                  {helpButton('admin')}
                   <button className="action-btn-primary" type="button" onClick={saveAdminPanelConfig}>{t.save}</button>
                   <button className="action-btn-outline" type="button" onClick={exportAdminSnapshot}>{t.exportSnapshot}</button>
                 </div>
@@ -6558,10 +6786,33 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           );
         })()}
 
+        {activeSection === 'settings' && (
+          <section className="glass-panel settings-guide-panel fade-in-up" {...tourAttrs('settings-main')}>
+            <div className="panel-header">
+              <h3>{settings.language === 'sl' ? 'Vodic po nastavitvah' : 'Settings guide'}</h3>
+              {helpButton('settings')}
+            </div>
+            <div className="settings-guide-grid">
+              <button className="settings-guide-card" type="button" onClick={() => setHelpTopic('appearance')} {...tourAttrs('settings-appearance')}>
+                <span>{settings.language === 'sl' ? 'Izgled in jezik' : 'Appearance and language'}</span>
+                <small>{settings.language === 'sl' ? 'Barva, enote, jezik in format datuma.' : 'Color, units, language, and date format.'}</small>
+              </button>
+              <button className="settings-guide-card" type="button" onClick={() => setHelpTopic('data')} {...tourAttrs('settings-data')}>
+                <span>{settings.language === 'sl' ? 'Backup in podatki' : 'Backup and data'}</span>
+                <small>{settings.language === 'sl' ? 'Export, import, install, clear in varnostne kopije.' : 'Export, import, install, clear, and backups.'}</small>
+              </button>
+              <button className="settings-guide-card" type="button" onClick={() => { setTutorialStep(0); setShowTutorial(true); }} {...tourAttrs('settings-help')}>
+                <span>{copy.tutorialOpen}</span>
+                <small>{settings.language === 'sl' ? 'Ponovno odpri celoten vodeni tutorial.' : 'Open the full guided tutorial again.'}</small>
+              </button>
+            </div>
+          </section>
+        )}
+
         {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}>{LANGUAGE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></article><article className="settings-card settings-card-wide"><div className="settings-actions settings-actions-stacked"><div><span className="settings-title">{copy.backgroundAccent}</span><p className="settings-copy">{copy.backgroundAccentDesc}</p></div><div className="accent-picker" role="radiogroup" aria-label={copy.backgroundAccent}>{BACKGROUND_PRESETS.map((preset) => <button key={preset.id} className={`accent-choice ${settings.backgroundAccent === preset.id ? 'active' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, backgroundAccent: preset.id }))} aria-pressed={settings.backgroundAccent === preset.id}><span className="accent-swatch" style={{ background: preset.color }} />{getLocalizedLabel(preset.label, settings.language)}</button>)}</div></div></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.installApp}</span><p className="settings-copy">{copy.installAppDesc}</p></div><div>{isInStandaloneMode ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installDone}</span> : isIos ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installIos}</span> : <button className="action-btn-outline" type="button" onClick={triggerInstall} disabled={!installPrompt}>{copy.installBtn}</button>}</div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.showFeedbackBtn}</span><p className="settings-copy">{copy.showFeedbackBtnDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => setSettings(c => ({...c, showFeedbackBtn: !c.showFeedbackBtn}))}>{settings.showFeedbackBtn ? '✓ On' : 'Off'}</button></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.tutorialOpen}</span><p className="settings-copy">{copy.tutorialOpenDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => { setTutorialStep(0); setShowTutorial(true); }}>{copy.tutorialOpen}</button></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
         {activeSection === 'settings' && (
-          <section className="glass-panel settings-section fade-in-up">
-            <div className="panel-header"><h3>{settings.language === 'sl' ? 'Osebni cilji' : 'Personal targets'}</h3></div>
+          <section className="glass-panel settings-section fade-in-up" {...tourAttrs('personal-targets')}>
+            <div className="panel-header"><h3>{settings.language === 'sl' ? 'Osebni cilji' : 'Personal targets'}</h3>{helpButton('personalTargets')}</div>
             <div className="settings-grid">
               <article className="settings-card">
                 <label className="settings-label" htmlFor="waterGoal">{copy.macrosWater}</label>
@@ -6627,37 +6878,67 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           </div>
         </div>
       )}
-      {showTutorial && (() => {
-        const steps = [
-          { title: copy.tutorialStep1Title, desc: copy.tutorialStep1 },
-          { title: copy.tutorialStep2Title, desc: copy.tutorialStep2 },
-          { title: copy.tutorialStep3Title, desc: copy.tutorialStep3 },
-          { title: copy.tutorialStep4Title, desc: copy.tutorialStep4 },
-          { title: copy.tutorialStep5Title, desc: copy.tutorialStep5 },
-          { title: copy.tutorialStep6Title, desc: copy.tutorialStep6 },
-          { title: copy.tutorialStep7Title, desc: copy.tutorialStep7 },
-          { title: copy.tutorialStep8Title, desc: copy.tutorialStep8 },
-        ];
-        const step = steps[tutorialStep];
-        const isLast = tutorialStep === steps.length - 1;
+      {showTutorial && activeTutorialStep && (() => {
+        const isLast = tutorialStep >= guidedTutorialSteps.length - 1;
+        const progress = Math.round(((tutorialStep + 1) / guidedTutorialSteps.length) * 100);
         return (
-          <div className="recap-overlay" onClick={() => setShowTutorial(false)}>
-            <div className="recap-modal glass-panel" style={{maxWidth:'28rem',textAlign:'center'}} onClick={e => e.stopPropagation()}>
-              <h2 style={{fontSize:'1.3rem',marginBottom:'0.75rem',lineHeight:1.3}}>{step.title}</h2>
-              <p style={{opacity:0.8,marginBottom:'1.5rem',lineHeight:1.6,fontSize:'0.95rem'}}>{step.desc}</p>
-              <div style={{display:'flex',justifyContent:'center',gap:'0.4rem',marginBottom:'1.5rem'}}>
-                {steps.map((_, i) => (
-                  <button key={i} type="button" onClick={() => setTutorialStep(i)} style={{width:'0.55rem',height:'0.55rem',borderRadius:'50%',border:'none',padding:0,cursor:'pointer',background: i === tutorialStep ? 'var(--accent)' : 'var(--border-color)',transition:'background 0.2s'}} />
-                ))}
+          <>
+            <div className="tutorial-soft-scrim" aria-hidden="true" />
+            <aside className="guided-tutorial-card glass-panel" role="dialog" aria-live="polite" aria-label={activeTutorialStep.title}>
+              <div className="tutorial-card-top">
+                <span>{tutorialStep + 1} / {guidedTutorialSteps.length}</span>
+                <button className="context-help-btn" type="button" onClick={() => setShowTutorial(false)} aria-label={settings.language === 'sl' ? 'Zapri vodic' : 'Close guide'}>x</button>
               </div>
-              <div style={{display:'flex',gap:'0.75rem',justifyContent:'center'}}>
-                {tutorialStep > 0 && <button className="action-btn-outline" type="button" style={{minWidth:'7rem'}} onClick={() => setTutorialStep(s => s - 1)}>{copy.tutorialBack}</button>}
+              <h2>{activeTutorialStep.title}</h2>
+              <p>{activeTutorialStep.body}</p>
+              {activeTutorialStep.bullets?.length ? (
+                <ul className="tutorial-bullet-list">
+                  {activeTutorialStep.bullets.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              ) : null}
+              <div className="tutorial-progress-track" aria-label={`${progress}%`}>
+                <span style={{ width: `${progress}%` }} />
+              </div>
+              <div className="tutorial-control-row">
+                <button className="action-btn-outline" type="button" disabled={tutorialStep === 0} onClick={() => setTutorialStep((step) => Math.max(0, step - 1))}>{copy.tutorialBack}</button>
+                <button className="action-btn-outline" type="button" onClick={() => setShowTutorial(false)}>{settings.language === 'sl' ? 'Preskoci' : 'Skip'}</button>
                 {isLast
-                  ? <button className="action-btn-primary" type="button" style={{minWidth:'10rem'}} onClick={() => setShowTutorial(false)}>{copy.tutorialClose}</button>
-                  : <button className="action-btn-primary" type="button" style={{minWidth:'7rem'}} onClick={() => setTutorialStep(s => s + 1)}>{copy.tutorialNext}</button>
+                  ? <button className="action-btn-primary" type="button" onClick={() => setShowTutorial(false)}>{copy.tutorialClose}</button>
+                  : <button className="action-btn-primary" type="button" onClick={() => setTutorialStep((step) => Math.min(guidedTutorialSteps.length - 1, step + 1))}>{copy.tutorialNext}</button>
                 }
               </div>
-            </div>
+              <div className="tutorial-jump-row">
+                {guidedTutorialSteps.map((step, index) => (
+                  <button
+                    key={`${step.target}-${index}`}
+                    type="button"
+                    className={index === tutorialStep ? 'active' : ''}
+                    aria-label={`${index + 1}. ${step.title}`}
+                    onClick={() => setTutorialStep(index)}
+                  />
+                ))}
+              </div>
+            </aside>
+          </>
+        );
+      })()}
+      {helpTopic && (() => {
+        const topic = getHelpTopic(helpTopic);
+        return (
+          <div className="help-popover-overlay" onClick={() => setHelpTopic(null)}>
+            <section className="help-popover-card glass-panel" onClick={(event) => event.stopPropagation()} role="dialog" aria-label={topic.title}>
+              <div className="panel-header">
+                <h3>{topic.title}</h3>
+                <button className="context-help-btn" type="button" onClick={() => setHelpTopic(null)} aria-label={settings.language === 'sl' ? 'Zapri pomoc' : 'Close help'}>x</button>
+              </div>
+              <p>{topic.body}</p>
+              <div className="settings-button-row help-action-row">
+                {helpTopic === 'tutorial' && (
+                  <button className="action-btn-outline" type="button" onClick={() => { setHelpTopic(null); setTutorialStep(0); setShowTutorial(true); }}>{copy.tutorialOpen}</button>
+                )}
+                <button className="action-btn-primary" type="button" onClick={() => setHelpTopic(null)}>{settings.language === 'sl' ? 'Razumem' : 'Got it'}</button>
+              </div>
+            </section>
           </div>
         );
       })()}

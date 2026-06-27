@@ -304,6 +304,249 @@ function normalizeFoodQuery(s) {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 }
 
+const FOOD_NUTRITION_LIBRARY = [
+  { aliases: ['chicken', 'chicken breast', 'piscancje prsi', 'piscanec'], name: 'Chicken breast', kcal: 165, protein: 31, carbs: 0, fat: 3.6, fiber: 0, sugar: 0, servingG: 150 },
+  { aliases: ['chicken thigh'], name: 'Chicken thigh', kcal: 209, protein: 26, carbs: 0, fat: 10.9, fiber: 0, sugar: 0, servingG: 150 },
+  { aliases: ['turkey', 'puran'], name: 'Turkey breast', kcal: 135, protein: 29, carbs: 0, fat: 1.6, fiber: 0, sugar: 0, servingG: 150 },
+  { aliases: ['beef', 'steak', 'govedina'], name: 'Beef', kcal: 250, protein: 26, carbs: 0, fat: 15, fiber: 0, sugar: 0, servingG: 150 },
+  { aliases: ['pork', 'svinjina'], name: 'Pork', kcal: 242, protein: 27, carbs: 0, fat: 14, fiber: 0, sugar: 0, servingG: 150 },
+  { aliases: ['salmon', 'losos'], name: 'Salmon', kcal: 208, protein: 20, carbs: 0, fat: 13, fiber: 0, sugar: 0, servingG: 150 },
+  { aliases: ['tuna', 'tuna in water', 'tunina'], name: 'Tuna in water', kcal: 116, protein: 26, carbs: 0, fat: 1, fiber: 0, sugar: 0, servingG: 120, canG: 120 },
+  { aliases: ['tuna in oil', 'tuna v olju'], name: 'Tuna in oil', kcal: 198, protein: 29, carbs: 0, fat: 8, fiber: 0, sugar: 0, servingG: 120, canG: 120 },
+  { aliases: ['egg', 'eggs', 'jajce', 'jajca', 'boiled egg'], name: 'Egg', kcal: 155, protein: 13, carbs: 1.1, fat: 11, fiber: 0, sugar: 1.1, servingG: 50, countG: 50 },
+  { aliases: ['egg white', 'beljak'], name: 'Egg white', kcal: 52, protein: 11, carbs: 0.7, fat: 0.2, fiber: 0, sugar: 0.7, servingG: 33, countG: 33 },
+  { aliases: ['rice', 'white rice', 'riz', 'kuhan riz'], name: 'Cooked white rice', kcal: 130, protein: 2.7, carbs: 28, fat: 0.3, fiber: 0.4, sugar: 0.1, servingG: 160, cupG: 158 },
+  { aliases: ['brown rice', 'rjavi riz'], name: 'Cooked brown rice', kcal: 112, protein: 2.6, carbs: 23, fat: 0.9, fiber: 1.8, sugar: 0.4, servingG: 160, cupG: 195 },
+  { aliases: ['pasta', 'spaghetti', 'testenine'], name: 'Cooked pasta', kcal: 131, protein: 5, carbs: 25, fat: 1.1, fiber: 1.8, sugar: 0.6, servingG: 180, cupG: 140 },
+  { aliases: ['bread', 'white bread', 'kruh'], name: 'White bread', kcal: 265, protein: 9, carbs: 49, fat: 3.2, fiber: 2.7, sugar: 5, servingG: 35, sliceG: 35 },
+  { aliases: ['whole wheat bread', 'whole grain bread', 'polnozrnat kruh'], name: 'Whole wheat bread', kcal: 247, protein: 13, carbs: 41, fat: 4.2, fiber: 7, sugar: 6, servingG: 35, sliceG: 35 },
+  { aliases: ['oats', 'oatmeal', 'ovseni kosmici'], name: 'Rolled oats', kcal: 389, protein: 16.9, carbs: 66.3, fat: 6.9, fiber: 10.6, sugar: 0.9, servingG: 45, cupG: 80 },
+  { aliases: ['potato', 'krompir'], name: 'Boiled potato', kcal: 77, protein: 2, carbs: 17, fat: 0.1, fiber: 2.2, sugar: 0.8, servingG: 180 },
+  { aliases: ['sweet potato', 'sladki krompir'], name: 'Sweet potato', kcal: 86, protein: 1.6, carbs: 20, fat: 0.1, fiber: 3, sugar: 4.2, servingG: 180 },
+  { aliases: ['broccoli', 'brokoli'], name: 'Broccoli', kcal: 34, protein: 2.8, carbs: 6.6, fat: 0.4, fiber: 2.6, sugar: 1.7, servingG: 90, cupG: 91 },
+  { aliases: ['asparagus', 'sparglji'], name: 'Asparagus', kcal: 20, protein: 2.2, carbs: 3.9, fat: 0.1, fiber: 2.1, sugar: 1.9, servingG: 90, cupG: 134 },
+  { aliases: ['tomato', 'tomatoes', 'paradiznik'], name: 'Tomato', kcal: 18, protein: 0.9, carbs: 3.9, fat: 0.2, fiber: 1.2, sugar: 2.6, servingG: 120 },
+  { aliases: ['banana'], name: 'Banana', kcal: 89, protein: 1.1, carbs: 22.8, fat: 0.3, fiber: 2.6, sugar: 12.2, servingG: 118, countG: 118 },
+  { aliases: ['apple', 'jabolko'], name: 'Apple', kcal: 52, protein: 0.3, carbs: 14, fat: 0.2, fiber: 2.4, sugar: 10.4, servingG: 180, countG: 180 },
+  { aliases: ['avocado', 'avokado'], name: 'Avocado', kcal: 160, protein: 2, carbs: 8.5, fat: 14.7, fiber: 6.7, sugar: 0.7, servingG: 150, countG: 150 },
+  { aliases: ['milk', 'mleko'], name: 'Whole milk', kcal: 61, protein: 3.2, carbs: 4.8, fat: 3.3, fiber: 0, sugar: 5, servingG: 244, cupG: 244 },
+  { aliases: ['greek yogurt', 'grski jogurt'], name: 'Greek yogurt', kcal: 97, protein: 9, carbs: 3.6, fat: 5, fiber: 0, sugar: 3.2, servingG: 170, cupG: 245 },
+  { aliases: ['yogurt', 'jogurt'], name: 'Plain yogurt', kcal: 59, protein: 10, carbs: 3.6, fat: 0.4, fiber: 0, sugar: 3.2, servingG: 170, cupG: 245 },
+  { aliases: ['cheese', 'sir'], name: 'Hard cheese', kcal: 402, protein: 25, carbs: 1.3, fat: 33, fiber: 0, sugar: 0.5, servingG: 30, sliceG: 25 },
+  { aliases: ['olive oil', 'olivno olje'], name: 'Olive oil', kcal: 884, protein: 0, carbs: 0, fat: 100, fiber: 0, sugar: 0, servingG: 14, tbspG: 14, tspG: 4.5 },
+  { aliases: ['butter', 'maslo'], name: 'Butter', kcal: 717, protein: 0.9, carbs: 0.1, fat: 81, fiber: 0, sugar: 0.1, servingG: 14, tbspG: 14, tspG: 4.7 },
+  { aliases: ['peanut butter', 'arasidovo maslo'], name: 'Peanut butter', kcal: 588, protein: 25, carbs: 20, fat: 50, fiber: 6, sugar: 9, servingG: 32, tbspG: 16 },
+  { aliases: ['pizza', 'pica'], name: 'Pizza margherita', kcal: 266, protein: 11, carbs: 33, fat: 10, fiber: 2.3, sugar: 3.6, servingG: 250, sliceG: 110 },
+  { aliases: ['burger', 'hamburger'], name: 'Hamburger', kcal: 295, protein: 17, carbs: 30, fat: 14, fiber: 1.5, sugar: 5, servingG: 220 },
+];
+
+const NUMBER_WORDS = {
+  half: 0.5, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  ena: 1, en: 1, dve: 2, dva: 2, tri: 3, stiri: 4, pet: 5, sest: 6,
+};
+
+function parseAmountToken(token) {
+  if (!token) return null;
+  const clean = normalizeFoodQuery(token).replace(',', '.');
+  if (NUMBER_WORDS[clean] !== undefined) return NUMBER_WORDS[clean];
+  if (/^\d+\/\d+$/.test(clean)) {
+    const [a, b] = clean.split('/').map(Number);
+    return b ? a / b : null;
+  }
+  const value = Number(clean);
+  return Number.isFinite(value) ? value : null;
+}
+
+function findNutritionFood(rawName) {
+  const normalized = normalizeFoodQuery(rawName).replace(/\b(of|with|and|in|cooked|raw|fresh)\b/g, ' ').replace(/\s+/g, ' ').trim();
+  const library = FOOD_NUTRITION_LIBRARY
+    .flatMap((food) => food.aliases.map((alias) => ({ food, alias: normalizeFoodQuery(alias) })))
+    .sort((a, b) => b.alias.length - a.alias.length);
+  const exact = library.find(({ alias }) => alias === normalized);
+  if (exact) return exact.food;
+  const included = library.find(({ alias }) => normalized.includes(alias) || alias.includes(normalized));
+  if (included) return included.food;
+  const local = LOCAL_FOODS[normalized] || Object.entries(LOCAL_FOODS).find(([key]) => normalized.includes(key) || key.includes(normalized))?.[1];
+  if (!local) return null;
+  return { name: local.name, kcal: local.kcal, servingG: 100, fallback: true };
+}
+
+function inferMacrosFromCalories(name, kcal) {
+  const normalized = normalizeFoodQuery(name);
+  let proteinPct = 0.2, carbsPct = 0.5, fatPct = 0.3;
+  if (/(oil|olje|butter|maslo|mayo|majoneza)/.test(normalized)) { proteinPct = 0; carbsPct = 0; fatPct = 1; }
+  else if (/(chicken|beef|pork|tuna|salmon|fish|meat|puran|govedina|svinjina|losos)/.test(normalized)) { proteinPct = 0.55; carbsPct = 0; fatPct = 0.45; }
+  else if (/(rice|bread|pasta|potato|oats|riz|kruh|testenine|krompir)/.test(normalized)) { proteinPct = 0.12; carbsPct = 0.78; fatPct = 0.1; }
+  else if (/(fruit|apple|banana|jabolko|sadje)/.test(normalized)) { proteinPct = 0.03; carbsPct = 0.94; fatPct = 0.03; }
+  return {
+    protein: (kcal * proteinPct) / 4,
+    carbs: (kcal * carbsPct) / 4,
+    fat: (kcal * fatPct) / 9,
+    fiber: 0,
+    sugar: 0,
+  };
+}
+
+function getServingGrams(food, quantity = 1, unit = '') {
+  const q = Math.max(0.05, Number(quantity) || 1);
+  const u = normalizeFoodQuery(unit);
+  if (u === 'kg' || u.startsWith('kilogram')) return q * 1000;
+  if (u === 'g' || u.startsWith('gram')) return q;
+  if (u === 'l' || u.startsWith('liter') || u.startsWith('litre')) return q * 1000;
+  if (u === 'ml' || u.startsWith('milliliter')) return q;
+  if (u.startsWith('cup')) return q * (food.cupG || food.servingG || 150);
+  if (u === 'tbsp' || u.startsWith('tablespoon')) return q * (food.tbspG || 14);
+  if (u === 'tsp' || u.startsWith('teaspoon')) return q * (food.tspG || 5);
+  if (u.startsWith('slice')) return q * (food.sliceG || food.servingG || 35);
+  if (u.startsWith('can')) return q * (food.canG || food.servingG || 120);
+  if (u.startsWith('piece') || u === 'pcs' || u.startsWith('serving')) return q * (food.countG || food.servingG || 100);
+  return q * (food.countG || food.servingG || 100);
+}
+
+function parseIngredientPhrase(raw) {
+  let text = raw.trim().replace(/\s+/g, ' ');
+  if (!text) return null;
+  const unitPattern = '(kg|kilograms?|g|grams?|ml|milliliters?|l|liters?|litres?|cups?|tbsp|tablespoons?|tsp|teaspoons?|slices?|pieces?|pcs|cans?|servings?)';
+  let quantity = null;
+  let unit = '';
+  let name = text;
+  const trailing = text.match(new RegExp(`^(.+?)\\s+(\\d+(?:[,.]\\d+)?|\\d+\\/\\d+)\\s*${unitPattern}$`, 'i'));
+  const leading = text.match(new RegExp(`^(\\d+(?:[,.]\\d+)?|\\d+\\/\\d+|half|one|two|three|four|five|six|seven|eight|nine|ten|ena|en|dve|dva|tri|stiri|pet|sest)\\s*${unitPattern}?\\s+(.+)$`, 'i'));
+  if (trailing) {
+    name = trailing[1];
+    quantity = parseAmountToken(trailing[2]);
+    unit = trailing[3] || '';
+  } else if (leading) {
+    quantity = parseAmountToken(leading[1]);
+    unit = leading[2] || '';
+    name = leading[3];
+  }
+  name = name.replace(/^of\s+/i, '').trim();
+  const food = findNutritionFood(name);
+  if (!food) return { raw, unmatched: true };
+  const grams = Math.round(getServingGrams(food, quantity || 1, unit));
+  const kcal = Math.round((food.kcal * grams) / 100);
+  const macros = food.protein === undefined ? inferMacrosFromCalories(food.name, kcal) : food;
+  return {
+    name: food.name,
+    raw,
+    grams,
+    kcal,
+    protein: Number(((macros.protein || 0) * grams / 100).toFixed(1)),
+    carbs: Number(((macros.carbs || 0) * grams / 100).toFixed(1)),
+    fat: Number(((macros.fat || 0) * grams / 100).toFixed(1)),
+    fiber: Number(((macros.fiber || 0) * grams / 100).toFixed(1)),
+    sugar: Number(((macros.sugar || 0) * grams / 100).toFixed(1)),
+    kcalPer100: food.kcal,
+    confidence: food.fallback ? 'low' : 'moderate',
+  };
+}
+
+function buildNutritionResult(items, source = 'local') {
+  const total = items.reduce((acc, item) => ({
+    kcal: acc.kcal + Number(item.kcal || 0),
+    protein: acc.protein + Number(item.protein || 0),
+    carbs: acc.carbs + Number(item.carbs || 0),
+    fat: acc.fat + Number(item.fat || 0),
+    fiber: acc.fiber + Number(item.fiber || 0),
+    sugar: acc.sugar + Number(item.sugar || 0),
+  }), { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 });
+  return {
+    source,
+    confidence: items.every((item) => item.confidence !== 'low') ? 'moderate' : 'low',
+    total: Object.fromEntries(Object.entries(total).map(([key, value]) => [key, key === 'kcal' ? Math.round(value) : Number(value.toFixed(1))])),
+    items: items.map((item) => ({ ...item, kcal: Math.round(item.kcal) })),
+  };
+}
+
+function analyzeIngredientsLocally({ mode, query, preciseItems }) {
+  const phrases = mode === 'quick'
+    ? query.split(/,|\n|;|\+|\s+and\s+/i).map((item) => item.trim()).filter(Boolean)
+    : preciseItems.filter((item) => item.name.trim() && Number(item.grams) > 0).map((item) => `${item.grams} g ${item.name}`);
+  const parsed = phrases.map(parseIngredientPhrase);
+  const matched = parsed.filter((item) => item && !item.unmatched);
+  const unmatched = parsed.filter((item) => item?.unmatched).map((item) => item.raw);
+  if (!matched.length) return null;
+  return { ...buildNutritionResult(matched, 'offline'), unmatched };
+}
+
+function sanitizeIngredientResult(parsed, source = 'ai') {
+  if (!parsed?.total || !Array.isArray(parsed.items)) return null;
+  const items = parsed.items.map((item) => ({
+    name: String(item.name || 'Food').slice(0, 80),
+    grams: Math.max(0, Math.round(Number(item.grams) || 0)),
+    kcal: Math.max(0, Math.round(Number(item.kcal) || 0)),
+    protein: Number((Number(item.protein) || 0).toFixed(1)),
+    carbs: Number((Number(item.carbs) || 0).toFixed(1)),
+    fat: Number((Number(item.fat) || 0).toFixed(1)),
+    fiber: Number((Number(item.fiber) || 0).toFixed(1)),
+    sugar: Number((Number(item.sugar) || 0).toFixed(1)),
+    confidence: item.confidence || 'moderate',
+  })).filter((item) => item.name && (item.kcal || item.grams));
+  return items.length ? buildNutritionResult(items, source) : null;
+}
+
+function getBodyFatCategory(percent, gender = 'male') {
+  const p = Number(percent);
+  if (gender === 'female') {
+    if (p < 12) return 'Essential fat';
+    if (p <= 20) return 'Athletes';
+    if (p <= 24) return 'Fitness';
+    if (p <= 31) return 'Average';
+    return 'High';
+  }
+  if (p < 5) return 'Essential fat';
+  if (p <= 13) return 'Athletes';
+  if (p <= 17) return 'Fitness';
+  if (p <= 24) return 'Average';
+  return 'High';
+}
+
+function getMeasurementBodyFatMethods({ gender = 'male', age, height, weight, waist, neck, hip }) {
+  const methods = [];
+  const h = Number(height), w = Number(weight), a = Number(age), waistCm = Number(waist), neckCm = Number(neck), hipCm = Number(hip);
+  const sex = gender === 'male' ? 1 : 0;
+  if (h > 80 && w > 20 && a > 5) {
+    const bmi = w / ((h / 100) ** 2);
+    const value = a < 18
+      ? (1.51 * bmi) - (0.7 * a) - (3.6 * sex) + 1.4
+      : (1.2 * bmi) + (0.23 * a) - (10.8 * sex) - 5.4;
+    methods.push({ name: 'BMI-age', value: clampNumber(value, 3, 60), weight: 0.16 });
+  }
+  if (h > 80 && waistCm > 40) {
+    const value = gender === 'female' ? 76 - (20 * h / waistCm) : 64 - (20 * h / waistCm);
+    methods.push({ name: 'RFM', value: clampNumber(value, 3, 60), weight: 0.24 });
+  }
+  if (h > 80 && waistCm > 40 && neckCm > 20) {
+    const hi = h / 2.54, wi = waistCm / 2.54, ni = neckCm / 2.54, hipi = hipCm / 2.54;
+    const value = gender === 'female' && hipCm > 50
+      ? (163.205 * Math.log10(wi + hipi - ni)) - (97.684 * Math.log10(hi)) - 78.387
+      : (86.01 * Math.log10(wi - ni)) - (70.041 * Math.log10(hi)) + 36.76;
+    if (Number.isFinite(value)) methods.push({ name: 'US Navy circumference', value: clampNumber(value, 3, 60), weight: 0.6 });
+  }
+  return methods;
+}
+
+function combineBodyFatMethods(methods, photoEstimate = null, photoCount = 0) {
+  const usable = methods.filter((method) => Number.isFinite(method.value));
+  if (photoEstimate && Number.isFinite(photoEstimate.bodyFatPercent)) {
+    const measurementAvg = usable.length ? usable.reduce((s, m) => s + m.value * m.weight, 0) / usable.reduce((s, m) => s + m.weight, 0) : null;
+    const conflict = measurementAvg !== null && Math.abs(photoEstimate.bodyFatPercent - measurementAvg) > 8;
+    usable.push({ name: 'AI photo', value: clampNumber(photoEstimate.bodyFatPercent, 3, 60), weight: conflict ? 0.12 : (photoCount >= 3 ? 0.3 : 0.2) });
+  }
+  if (!usable.length) return null;
+  const totalWeight = usable.reduce((sum, method) => sum + method.weight, 0);
+  const bodyFatPercent = usable.reduce((sum, method) => sum + method.value * method.weight, 0) / totalWeight;
+  const confidence = usable.some((m) => m.name === 'US Navy circumference') && usable.length >= 3
+    ? (photoCount >= 2 ? 'high' : 'moderate')
+    : usable.length >= 2 ? 'moderate' : 'low';
+  return {
+    bodyFatPercent: Number(bodyFatPercent.toFixed(1)),
+    confidence,
+    methods: usable.map((method) => ({ name: method.name, value: Number(method.value.toFixed(1)) })),
+  };
+}
+
 function getCalHistoryKey(email) { return `${CAL_HISTORY_KEY_PREFIX}${email}`; }
 function getBodyWeightKey(email) { return `${BODYWEIGHT_KEY_PREFIX}${email}`; }
 function getRecapKey(email) { return `${RECAP_KEY_PREFIX}${email}`; }
@@ -3524,6 +3767,7 @@ export default function App() {
   const [ingredientLoading, setIngredientLoading] = useState(false);
   const [ingredientError, setIngredientError] = useState('');
   const [bodyFatImages, setBodyFatImages] = useState({ front: null, side: null, back: null });
+  const [bodyFatMetrics, setBodyFatMetrics] = useState({ gender: settings.gender || 'male', age: settings.age || '', height: settings.height || '', weight: '', waist: '', neck: '', hip: '' });
   const [bodyFatResult, setBodyFatResult] = useState(null);
   const [bodyFatLoading, setBodyFatLoading] = useState(false);
   const [bodyFatError, setBodyFatError] = useState('');
@@ -3730,6 +3974,16 @@ export default function App() {
     const latest = getLatestBodyWeightKg(bodyWeightEntries, settings.gender || 'male');
     if (latest) setTdeeForm((current) => ({ ...current, currentWeight: String(latest) }));
   }, [bodyWeightEntries, settings.gender, tdeeForm.currentWeight]);
+  useEffect(() => {
+    const latest = getLatestBodyWeightKg(bodyWeightEntries, settings.gender || 'male');
+    setBodyFatMetrics((current) => ({
+      ...current,
+      gender: current.gender || settings.gender || 'male',
+      age: current.age || settings.age || '',
+      height: current.height || settings.height || '',
+      weight: current.weight || (latest ? String(latest) : ''),
+    }));
+  }, [bodyWeightEntries, settings.age, settings.gender, settings.height]);
   useEffect(() => {
     if (!currentUser) return;
     localStorage.setItem(SESSION_KEY, currentUser);
@@ -4529,36 +4783,60 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
 
   async function analyzeIngredients(e) {
     e.preventDefault();
-    if (!aiEnabled) { setIngredientError('noKey'); return; }
     setIngredientLoading(true);
     setIngredientError('');
     setIngredientResults(null);
+    const localFallback = analyzeIngredientsLocally({ mode: ingredientMode, query: ingredientQuery, preciseItems: ingredientItems });
     try {
       let prompt;
       if (ingredientMode === 'quick') {
         if (!ingredientQuery.trim()) { setIngredientLoading(false); return; }
-        prompt = `You are a nutritionist. Analyze these foods and estimate typical portions:\n"${ingredientQuery.trim()}"\n\nFor each item, estimate a reasonable typical serving and compute nutrition values.\nReturn ONLY this JSON object (no markdown, no extra text):\n{"total":{"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0},"items":[{"name":"...","grams":0,"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0}]}\nAll values are numbers. Protein/carbs/fat/fiber/sugar are grams for the estimated portion. Use average generic values.`;
+        prompt = `You are a precise nutrition estimator using generic USDA-style average foods. Analyze these foods and estimate realistic portions:
+"${ingredientQuery.trim()}"
+
+Rules:
+- Treat quantities like "2 eggs", "200g chicken", "1 cup rice" literally.
+- If no quantity is given, use a normal serving size.
+- Return JSON only, no markdown.
+{"total":{"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0},"items":[{"name":"...","grams":0,"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"confidence":"low|moderate|high"}]}`;
       } else {
         const valid = ingredientItems.filter(i => i.name.trim() && Number(i.grams) > 0);
         if (!valid.length) { setIngredientLoading(false); return; }
         const list = valid.map(i => `- ${i.name.trim()} (${i.grams}g)`).join('\n');
-        prompt = `You are a nutritionist. Calculate exact nutrition for these ingredients:\n${list}\n\nReturn ONLY this JSON object (no markdown, no extra text):\n{"total":{"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0},"items":[{"name":"...","grams":0,"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0}]}\nAll values are numbers. Use average generic values per given grams.`;
+        prompt = `You are a precise nutrition estimator using generic USDA-style average foods. Calculate exact nutrition for these ingredients:
+${list}
+
+Return JSON only, no markdown:
+{"total":{"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0},"items":[{"name":"...","grams":0,"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"confidence":"low|moderate|high"}]}`;
       }
-      const text = await callGemini(currentUser, [{ text: prompt }]);
-      if (text) {
-        const m = text.match(/\{[\s\S]*\}/);
+      let result = null;
+      if (aiEnabled) {
+        const text = await callGemini(currentUser, [{ text: prompt }]);
+        const m = text?.match(/\{[\s\S]*\}/);
         if (m) {
-          const parsed = JSON.parse(m[0]);
-          if (parsed.total && Array.isArray(parsed.items)) {
-            setIngredientResults(parsed);
-            const totalKcal = Math.round(parsed.total.kcal);
-            const label = ingredientMode === 'quick' ? ingredientQuery.trim() : ingredientItems.filter(i => i.name.trim()).map(i => i.name.trim()).join(', ');
-            setCalHistory(prev => [{ id: Date.now(), name: label, grams: ingredientMode === 'quick' ? 0 : ingredientItems.reduce((s, i) => s + Number(i.grams || 0), 0), kcalPer100: 0, total: totalKcal, date: new Date().toISOString().slice(0, 10) }, ...prev]);
-            setToast(copy.calEstSaved);
-          } else { setIngredientError('error'); }
-        } else { setIngredientError('error'); }
-      } else { setIngredientError('error'); }
-    } catch { setIngredientError('error'); }
+          result = sanitizeIngredientResult(JSON.parse(m[0]), 'ai');
+        }
+      }
+      if (!result) result = localFallback;
+      if (!result) { setIngredientError('error'); return; }
+      setIngredientResults(result);
+      const totalKcal = Math.round(result.total.kcal);
+      const label = ingredientMode === 'quick' ? ingredientQuery.trim() : ingredientItems.filter(i => i.name.trim()).map(i => i.name.trim()).join(', ');
+      const totalGrams = result.items.reduce((sum, item) => sum + Number(item.grams || 0), 0);
+      setCalHistory(prev => [{ id: Date.now(), name: label, grams: totalGrams, kcalPer100: totalGrams ? Math.round(totalKcal / totalGrams * 100) : 0, total: totalKcal, date: new Date().toISOString().slice(0, 10) }, ...prev]);
+      setToast(copy.calEstSaved);
+    } catch {
+      if (localFallback) {
+        setIngredientResults(localFallback);
+        const totalKcal = Math.round(localFallback.total.kcal);
+        const label = ingredientMode === 'quick' ? ingredientQuery.trim() : ingredientItems.filter(i => i.name.trim()).map(i => i.name.trim()).join(', ');
+        const totalGrams = localFallback.items.reduce((sum, item) => sum + Number(item.grams || 0), 0);
+        setCalHistory(prev => [{ id: Date.now(), name: label, grams: totalGrams, kcalPer100: totalGrams ? Math.round(totalKcal / totalGrams * 100) : 0, total: totalKcal, date: new Date().toISOString().slice(0, 10) }, ...prev]);
+        setToast(copy.calEstSaved);
+      } else {
+        setIngredientError('error');
+      }
+    }
     finally { setIngredientLoading(false); }
   }
 
@@ -4588,26 +4866,51 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
 
   async function estimateBodyFat() {
     const photos = Object.entries(bodyFatImages).filter(([, img]) => img !== null);
-    if (!photos.length) return;
-    if (!aiEnabled) { setBodyFatError('noKey'); return; }
+    const metrics = {
+      ...bodyFatMetrics,
+      gender: bodyFatMetrics.gender || settings.gender || 'male',
+      age: Number(bodyFatMetrics.age || settings.age) || 0,
+      height: Number(bodyFatMetrics.height || settings.height) || 0,
+      weight: Number(bodyFatMetrics.weight || dashboardBodyWeightKg) || 0,
+      waist: Number(bodyFatMetrics.waist) || 0,
+      neck: Number(bodyFatMetrics.neck) || 0,
+      hip: Number(bodyFatMetrics.hip) || 0,
+    };
+    const measurementMethods = getMeasurementBodyFatMethods(metrics);
+    if (!photos.length && !measurementMethods.length) return;
     setBodyFatLoading(true); setBodyFatError(''); setBodyFatResult(null);
     try {
-      const parts = [];
-      photos.forEach(([pose, img]) => {
-        parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } });
-        parts.push({ text: `This is the ${pose} view.` });
-      });
-      const lang = settings.language;
-      parts.push({ text: `You are a body composition expert. Estimate body fat percentage from the photo(s).\nReturn ONLY this JSON (no markdown):\n{"bodyFatPercent":15.5,"confidence":"moderate","category":"Fitness","description":"..."}\n"confidence" is "low", "moderate", or "high". "category" is one of: "Essential fat (<5%)", "Athletes (6-13%)", "Fitness (14-17%)", "Average (18-24%)", "Obese (25%+)" for males, or "Essential fat (<12%)", "Athletes (14-20%)", "Fitness (21-24%)", "Average (25-31%)", "Obese (32%+)" for females.\n"description" is 1-2 sentences in ${lang === 'sl' ? 'Slovenian' : 'English'}.` });
-      const text = await callGemini(currentUser, parts);
-      if (text) {
-        const m = text.match(/\{[\s\S]*\}/);
+      let photoEstimate = null;
+      if (photos.length && aiEnabled) {
+        const parts = [];
+        photos.forEach(([pose, img]) => {
+          parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } });
+          parts.push({ text: `This is the ${pose} view.` });
+        });
+        parts.push({ text: `Estimate visual body fat percentage from these photos. Use the measurements only as context, not as the final answer.
+Context: gender=${metrics.gender}, age=${metrics.age || 'unknown'}, height_cm=${metrics.height || 'unknown'}, weight_kg=${metrics.weight || 'unknown'}, waist_cm=${metrics.waist || 'unknown'}, neck_cm=${metrics.neck || 'unknown'}, hip_cm=${metrics.hip || 'unknown'}.
+Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","description":"one short reason"}` });
+        const text = await callGemini(currentUser, parts);
+        const m = text?.match(/\{[\s\S]*\}/);
         if (m) {
           const parsed = JSON.parse(m[0]);
-          if (typeof parsed.bodyFatPercent === 'number') setBodyFatResult(parsed);
-          else setBodyFatError('error');
-        } else setBodyFatError('error');
-      } else setBodyFatError('error');
+          if (typeof parsed.bodyFatPercent === 'number') photoEstimate = parsed;
+        }
+      }
+      const combined = combineBodyFatMethods(measurementMethods, photoEstimate, photos.length);
+      if (!combined) { setBodyFatError('error'); return; }
+      const weightKg = Number(metrics.weight) || 0;
+      const fatMassKg = weightKg ? Number((weightKg * combined.bodyFatPercent / 100).toFixed(1)) : null;
+      const leanMassKg = weightKg && fatMassKg !== null ? Number((weightKg - fatMassKg).toFixed(1)) : null;
+      setBodyFatResult({
+        ...combined,
+        category: getBodyFatCategory(combined.bodyFatPercent, metrics.gender),
+        fatMassKg,
+        leanMassKg,
+        description: settings.language === 'sl'
+          ? 'Ocena uporablja obsege telesa, BMI/RFM in fotografije, ce je AI backend povezan. Za najtocnejse rezultate meri pas zjutraj in vnesi vrat ter boke pri zenskah.'
+          : 'Estimate combines circumference formulas, BMI/RFM, and photos when the AI backend is connected. For best accuracy, measure waist in the morning and include neck plus hips for female users.',
+      });
     } catch { setBodyFatError('error'); }
     finally { setBodyFatLoading(false); }
   }
@@ -5419,7 +5722,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                 </div>
               )}
               <button className="action-btn-primary full-width" type="submit" disabled={ingredientLoading}>
-                {ingredientLoading ? copy.ingredientAnalyzing : copy.ingredientAnalyze}
+                {ingredientLoading ? copy.ingredientAnalyzing : (aiEnabled ? copy.ingredientAnalyze : (settings.language === 'sl' ? 'Izracunaj hrano' : 'Analyze food'))}
               </button>
             </form>
             {ingredientError === 'noKey' && <p className="auth-error">{copy.ingredientNoKey}</p>}
@@ -5429,6 +5732,10 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                 {/* Total summary */}
                 <div style={{padding:'1rem',borderRadius:'12px',background:'linear-gradient(135deg,rgba(99,102,241,0.18),rgba(139,92,246,0.12))',marginBottom:'1rem'}}>
                   <h3 style={{margin:'0 0 0.6rem',fontSize:'1rem'}}>{copy.ingredientTotal}</h3>
+                  <p className="settings-copy" style={{margin:'0 0 0.75rem',fontSize:'0.78rem'}}>
+                    {ingredientResults.source === 'ai' ? (settings.language === 'sl' ? 'Vir: AI + validacija makrov' : 'Source: AI + macro validation') : (settings.language === 'sl' ? 'Vir: offline parser in lokalna baza hrane' : 'Source: offline parser and local food database')}
+                    {ingredientResults.unmatched?.length ? ` - ${settings.language === 'sl' ? 'Ni prepoznano' : 'Not recognized'}: ${ingredientResults.unmatched.join(', ')}` : ''}
+                  </p>
                   <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))',gap:'0.5rem'}}>
                     {[['kcal','🔥','#f59e0b'],['protein','💪','#60a5fa'],['carbs','🌾','#fb923c'],['fat','🫙','#34d399'],['fiber','🌿','#86efac'],['sugar','🍬','#f472b6']].map(([key,icon,color]) => (
                       <div key={key} style={{textAlign:'center',padding:'0.4rem',borderRadius:'8px',background:'rgba(148,163,184,0.08)'}}>
@@ -5461,6 +5768,21 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
           <section className="glass-panel action-panel fade-in-up">
             <div className="panel-header"><h3>{copy.bodyFatTitle}</h3></div>
             <p className="settings-copy" style={{marginBottom:'1rem'}}>{copy.bodyFatDesc}</p>
+            <div className="body-fat-input-grid">
+              <div className="input-group">
+                <label>{copy.tdeeGender}</label>
+                <select className="premium-select" value={bodyFatMetrics.gender} onChange={(e) => setBodyFatMetrics((c) => ({ ...c, gender: e.target.value }))}>
+                  <option value="male">{copy.tdeeMale}</option>
+                  <option value="female">{copy.tdeeFemale}</option>
+                </select>
+              </div>
+              <div className="input-group"><label>{copy.tdeeAge}</label><input type="number" min="5" max="100" value={bodyFatMetrics.age} onChange={(e) => setBodyFatMetrics((c) => ({ ...c, age: e.target.value }))} placeholder="17" /></div>
+              <div className="input-group"><label>{copy.tdeeHeight}</label><input type="number" min="100" max="250" value={bodyFatMetrics.height} onChange={(e) => setBodyFatMetrics((c) => ({ ...c, height: e.target.value }))} placeholder="180" /></div>
+              <div className="input-group"><label>{copy.bwWeight}</label><input type="number" min="20" step="0.1" value={bodyFatMetrics.weight} onChange={(e) => setBodyFatMetrics((c) => ({ ...c, weight: e.target.value }))} placeholder="80" /></div>
+              <div className="input-group"><label>{settings.language === 'sl' ? 'Pas (cm)' : 'Waist (cm)'}</label><input type="number" min="40" step="0.1" value={bodyFatMetrics.waist} onChange={(e) => setBodyFatMetrics((c) => ({ ...c, waist: e.target.value }))} placeholder="82" /></div>
+              <div className="input-group"><label>{settings.language === 'sl' ? 'Vrat (cm)' : 'Neck (cm)'}</label><input type="number" min="20" step="0.1" value={bodyFatMetrics.neck} onChange={(e) => setBodyFatMetrics((c) => ({ ...c, neck: e.target.value }))} placeholder="38" /></div>
+              <div className="input-group"><label>{settings.language === 'sl' ? 'Boki (cm)' : 'Hips (cm)'}</label><input type="number" min="50" step="0.1" value={bodyFatMetrics.hip} onChange={(e) => setBodyFatMetrics((c) => ({ ...c, hip: e.target.value }))} placeholder={bodyFatMetrics.gender === 'female' ? '96' : 'optional'} /></div>
+            </div>
             <div style={{display:'flex',gap:'0.75rem',marginBottom:'1rem',flexWrap:'wrap'}}>
               {[['front', copy.bodyFatFront, bodyFatFrontRef], ['side', copy.bodyFatSide, bodyFatSideRef], ['back', copy.bodyFatBack, bodyFatBackRef]].map(([pose, label, ref]) => (
                 <div key={pose} style={{flex:1,minWidth:'100px'}}>
@@ -5479,11 +5801,11 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                 </div>
               ))}
             </div>
-            <button className="action-btn-primary full-width" type="button" disabled={bodyFatLoading || Object.values(bodyFatImages).every(v => v === null)} onClick={estimateBodyFat}>
+            <button className="action-btn-primary full-width" type="button" disabled={bodyFatLoading || (Object.values(bodyFatImages).every(v => v === null) && !(Number(bodyFatMetrics.height) > 80 && Number(bodyFatMetrics.weight) > 20 && Number(bodyFatMetrics.waist) > 40))} onClick={estimateBodyFat}>
               {bodyFatLoading ? copy.bodyFatAnalyzing : copy.bodyFatAnalyze}
             </button>
             {bodyFatError === 'noKey' && <p className="auth-error">{copy.bodyFatNoKey}</p>}
-            {bodyFatError === 'error' && <p className="auth-error">{copy.bodyFatError}</p>}
+            {bodyFatError === 'error' && <p className="auth-error">{settings.language === 'sl' ? 'Dodaj vsaj visino, tezo in pas; za vecjo tocnost dodaj se vrat, boke in fotografije.' : 'Add at least height, weight, and waist; for better accuracy add neck, hips, and photos.'}</p>}
             {bodyFatResult && (
               <div style={{marginTop:'1.5rem',padding:'1.25rem',borderRadius:'12px',background:'linear-gradient(135deg,rgba(99,102,241,0.15),rgba(236,72,153,0.1))'}}>
                 <div style={{display:'flex',alignItems:'center',gap:'1rem',marginBottom:'1rem'}}>
@@ -5494,6 +5816,17 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                     <p style={{margin:0,fontSize:'0.82rem',opacity:0.65}}>{copy.bodyFatConfidence}: {bodyFatResult.confidence}</p>
                   </div>
                 </div>
+                {(bodyFatResult.fatMassKg != null || bodyFatResult.leanMassKg != null) && (
+                  <div className="body-fat-result-grid">
+                    <div><span>{settings.language === 'sl' ? 'Masa mascobe' : 'Fat mass'}</span><strong>{bodyFatResult.fatMassKg ?? '-'} kg</strong></div>
+                    <div><span>{settings.language === 'sl' ? 'Pusta masa' : 'Lean mass'}</span><strong>{bodyFatResult.leanMassKg ?? '-'} kg</strong></div>
+                  </div>
+                )}
+                {bodyFatResult.methods?.length ? (
+                  <div className="body-fat-methods">
+                    {bodyFatResult.methods.map((method) => <span key={method.name}>{method.name}: {method.value}%</span>)}
+                  </div>
+                ) : null}
                 {bodyFatResult.description && <p style={{fontSize:'0.85rem',lineHeight:1.55,opacity:0.8,margin:0}}>{bodyFatResult.description}</p>}
               </div>
             )}

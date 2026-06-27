@@ -3050,6 +3050,63 @@ p {
   font-size: 22px;
 }
 
+.body-fat-input-grid,
+.body-fat-result-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.body-fat-input-grid .input-group {
+  margin: 0;
+}
+
+.body-fat-result-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0 0 12px;
+}
+
+.body-fat-result-grid div {
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.24);
+}
+
+.body-fat-result-grid span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.body-fat-result-grid strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-primary);
+  font-size: 18px;
+}
+
+.body-fat-methods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.body-fat-methods span {
+  padding: 5px 8px;
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: rgba(var(--accent-rgb), 0.08);
+  font-size: 11px;
+  font-weight: 800;
+}
+
 @media (max-width: 1280px) {
   .muscle-rank-layout {
     grid-template-columns: 1fr;
@@ -5998,6 +6055,14 @@ body {
   .calorie-support-grid {
     grid-template-columns: 1fr;
   }
+
+  .body-fat-input-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .body-fat-result-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 380px) {
@@ -6008,7 +6073,8 @@ body {
   }
 
   .hydration-mini-grid,
-  .calorie-metric-grid {
+  .calorie-metric-grid,
+  .body-fat-input-grid {
     grid-template-columns: 1fr;
   }
 }

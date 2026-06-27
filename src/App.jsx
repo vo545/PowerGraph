@@ -2778,6 +2778,7 @@ export default function App() {
   const bodyFatFrontRef = useRef(null);
   const bodyFatSideRef = useRef(null);
   const bodyFatBackRef = useRef(null);
+  const mainContentRef = useRef(null);
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) ?? 'dark');
   const [currentUser, setCurrentUser] = useState(() => localStorage.getItem(SESSION_KEY) || '');
   const aiEnabled = Boolean(API_URL && currentUser && getJwt(currentUser));
@@ -3185,6 +3186,10 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, []);
   useEffect(() => { previousExerciseRef.current = selectedExercise; previousCountRef.current = selectedWorkouts.length; }, [selectedExercise, selectedWorkouts.length]);
+  useEffect(() => {
+    mainContentRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [activeSection]);
   useEffect(() => { if (!toast) return undefined; const id = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(id); }, [toast]);
   useEffect(() => {
     if (activeSection !== 'admin' || currentUser !== ADMIN_EMAIL) return;
@@ -4244,7 +4249,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
         <nav className="nav-menu">{nav.map(([id, label]) => <button key={id} className={`nav-btn ${activeSection === id ? 'active' : ''}`} type="button" onClick={() => setActiveSection(id)}><span className="nav-icon">{NAV_ICONS[id]}</span><span className="nav-label-full">{label}</span><span className="nav-label-short">{NAV_SHORT[id]}</span></button>)}</nav>
       </aside>
 
-      <main className="main-content">
+      <main className="main-content" ref={mainContentRef}>
         <header className="topbar">
           <div className="greeting">
             <h2 data-mobile-title={adminConfig.appName || copy.app}>{activeSection === 'admin' ? (settings.language === 'sl' ? 'Admin center' : 'Admin Center') : copy.title}</h2>
@@ -4277,7 +4282,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
         {backupDue && adminConfig.backupBannerEnabled && <section className="glass-panel backup-banner fade-in-up"><div><h3>{copy.backupTitle}</h3><p>{copy.backupText}</p></div><button className="action-btn-primary" type="button" onClick={exportData}>{copy.export}</button></section>}
 
         {activeSection === 'dashboard' && <>
-          <div className="dashboard-grid">
+          <div className="dashboard-grid dashboard-home-grid">
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow"><Dumbbell size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.workouts}</p><h3 className="stat-value">{overall.workouts}</h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow"><ClipboardList size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.totalSets}</p><h3 className="stat-value">{overall.sets}</h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow"><Trophy size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.totalVolume}</p><h3 className="stat-value">{formatVolume(overall.volumeKg, settings.units)}</h3></div></article>

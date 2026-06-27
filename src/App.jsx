@@ -55,6 +55,8 @@ const SETTINGS_KEY_PREFIX = 'powergraph_settings_';
 const USERS_KEY = 'powergraph_users';
 const SESSION_KEY = 'powergraph_session';
 const ADMIN_EMAIL = 'vid.oreskovic@gmail.com';
+const ADMIN_CONFIG_KEY = 'powergraph_admin_config';
+const ADMIN_AUDIT_KEY = 'powergraph_admin_audit';
 const LOGINS_KEY = 'powergraph_logins';
 const AUTH_THROTTLE_KEY_PREFIX = 'powergraph_auth_throttle_';
 const AUTH_MAX_ATTEMPTS = 5;
@@ -364,6 +366,21 @@ const BACKGROUND_PRESETS = [
 ];
 const SUPPORTED_BACKGROUNDS = BACKGROUND_PRESETS.map((item) => item.id);
 const defaultSettings = { units: 'kg', language: 'en', backgroundAccent: 'blue', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, waterGoalMl: 2500, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
+const defaultAdminConfig = {
+  appName: 'PowerGraph',
+  announcementEnabled: false,
+  announcementText: '',
+  maintenanceMode: false,
+  signupEnabled: true,
+  feedbackEnabled: true,
+  backupBannerEnabled: true,
+  defaultLanguage: 'en',
+  defaultAccent: 'blue',
+  defaultUnits: 'kg',
+  defaultCalorieGoal: 2200,
+  defaultWaterGoalMl: 2500,
+  adminNote: '',
+};
 const RATINGS_KEY = 'powergraph_ratings';
 const BANNED_KEY = 'powergraph_banned';
 const MODS_KEY = 'powergraph_mods';
@@ -1871,6 +1888,37 @@ function loadBanned() { try { return JSON.parse(localStorage.getItem(BANNED_KEY)
 function saveBanned(list) { localStorage.setItem(BANNED_KEY, JSON.stringify(list)); }
 function loadMods() { try { return JSON.parse(localStorage.getItem(MODS_KEY) || '[]'); } catch { return []; } }
 function saveMods(list) { localStorage.setItem(MODS_KEY, JSON.stringify(list)); }
+function sanitizeAdminConfig(input) {
+  const safe = { ...defaultAdminConfig };
+  if (input && typeof input === 'object') {
+    if (typeof input.appName === 'string') safe.appName = input.appName.trim().slice(0, 32) || defaultAdminConfig.appName;
+    if (typeof input.announcementEnabled === 'boolean') safe.announcementEnabled = input.announcementEnabled;
+    if (typeof input.announcementText === 'string') safe.announcementText = input.announcementText.trim().slice(0, 220);
+    if (typeof input.maintenanceMode === 'boolean') safe.maintenanceMode = input.maintenanceMode;
+    if (typeof input.signupEnabled === 'boolean') safe.signupEnabled = input.signupEnabled;
+    if (typeof input.feedbackEnabled === 'boolean') safe.feedbackEnabled = input.feedbackEnabled;
+    if (typeof input.backupBannerEnabled === 'boolean') safe.backupBannerEnabled = input.backupBannerEnabled;
+    if (SUPPORTED_LANGUAGES.includes(input.defaultLanguage)) safe.defaultLanguage = input.defaultLanguage;
+    if (SUPPORTED_BACKGROUNDS.includes(input.defaultAccent)) safe.defaultAccent = input.defaultAccent;
+    if (input.defaultUnits === 'kg' || input.defaultUnits === 'lbs') safe.defaultUnits = input.defaultUnits;
+    if (Number(input.defaultCalorieGoal) >= 1000 && Number(input.defaultCalorieGoal) <= 10000) safe.defaultCalorieGoal = Number(input.defaultCalorieGoal);
+    if (Number(input.defaultWaterGoalMl) >= 1000 && Number(input.defaultWaterGoalMl) <= 8000) safe.defaultWaterGoalMl = Number(input.defaultWaterGoalMl);
+    if (typeof input.adminNote === 'string') safe.adminNote = input.adminNote.trim().slice(0, 420);
+  }
+  return safe;
+}
+function loadAdminConfig() {
+  try { return sanitizeAdminConfig(JSON.parse(localStorage.getItem(ADMIN_CONFIG_KEY) || 'null') || {}); }
+  catch { return { ...defaultAdminConfig }; }
+}
+function saveAdminConfig(config) { localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(sanitizeAdminConfig(config))); }
+function loadAdminAudit() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(ADMIN_AUDIT_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.slice(0, 300) : [];
+  } catch { return []; }
+}
+function saveAdminAudit(list) { localStorage.setItem(ADMIN_AUDIT_KEY, JSON.stringify((Array.isArray(list) ? list : []).slice(0, 300))); }
 
 
 function playTimerAlarm() {
@@ -2096,6 +2144,7 @@ async function pushLoginLog(email, type) {
   recordLogin(email, type);
 }
 
+function loadLoginLogs() { try { return JSON.parse(localStorage.getItem(LOGINS_KEY) || '[]'); } catch { return []; } }
 function loadPresence() { try { return JSON.parse(localStorage.getItem(PRESENCE_KEY) || '[]'); } catch { return []; } }
 function savePresence(list) { localStorage.setItem(PRESENCE_KEY, JSON.stringify(list)); }
 async function pushPresence(email) {
@@ -2776,6 +2825,11 @@ export default function App() {
   const [adminLogs, setAdminLogs] = useState(null);
   const [adminPresence, setAdminPresence] = useState([]);
   const [adminBonus, setAdminBonus] = useState(() => loadAdminBonus(localStorage.getItem(SESSION_KEY) || ''));
+  const [adminConfig, setAdminConfig] = useState(() => loadAdminConfig());
+  const [adminConfigDraft, setAdminConfigDraft] = useState(() => loadAdminConfig());
+  const [adminAudit, setAdminAudit] = useState(() => loadAdminAudit());
+  const [adminSearch, setAdminSearch] = useState('');
+  const [adminSelectedEmail, setAdminSelectedEmail] = useState('');
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [commentText, setCommentText] = useState('');
   const [historySearch, setHistorySearch] = useState('');
@@ -2832,7 +2886,7 @@ export default function App() {
     bodyweight: settings.language === 'sl' ? 'Sledi telesni teži in izračunaj dnevne kalorijske potrebe.' : 'Track your body weight and calculate your daily calorie needs.',
     settings: settings.language === 'sl' ? 'Uredi lokalne nastavitve, backup in prikaz podatkov.' : 'Adjust local preferences, backups, and data display.',
     ratings: settings.language === 'sl' ? 'Oceni aplikacijo z zvezdami in napiši predlog za izboljšavo.' : 'Rate the app with stars and write a suggestion for improvement.',
-    admin: settings.language === 'sl' ? 'Pregled vseh registriranih uporabnikov in njihovih podatkov.' : 'Overview of all registered users and their data.',
+    admin: settings.language === 'sl' ? 'Nadzorni center za app kontrole, uporabnike, feedback, varnost in podatke.' : 'Control center for app settings, users, feedback, security and data.',
   };
   const exerciseOptions = useMemo(() => [...new Set([...Object.values(sections).flat(), ...workouts.map((w) => w.exercise), ...customExercises.map(e => e.name)])].sort(), [workouts, customExercises]);
   const selectedWorkouts = useMemo(() => workouts.filter((w) => w.exercise === selectedExercise).sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id), [selectedExercise, workouts]);
@@ -3009,6 +3063,12 @@ export default function App() {
     document.documentElement.dataset.accent = settings.backgroundAccent || defaultSettings.backgroundAccent;
   }, [settings.backgroundAccent]);
   useEffect(() => {
+    document.title = adminConfig.appName || copy.app;
+  }, [adminConfig.appName, copy.app]);
+  useEffect(() => {
+    if (!adminConfig.signupEnabled && authMode === 'signup') setAuthMode('login');
+  }, [adminConfig.signupEnabled, authMode]);
+  useEffect(() => {
     if (tdeeForm.currentWeight || !bodyWeightEntries.length) return;
     const latest = getLatestBodyWeightKg(bodyWeightEntries, settings.gender || 'male');
     if (latest) setTdeeForm((current) => ({ ...current, currentWeight: String(latest) }));
@@ -3175,6 +3235,14 @@ export default function App() {
       setAuthError(copy.authPasswordRequired);
       return;
     }
+    if (adminConfig.maintenanceMode && email !== ADMIN_EMAIL) {
+      setAuthError(settings.language === 'sl' ? 'Aplikacija je trenutno v maintenance nacinu. Prijava je dovoljena samo adminu.' : 'The app is in maintenance mode. Only admin login is allowed.');
+      return;
+    }
+    if (authMode === 'signup' && !adminConfig.signupEnabled) {
+      setAuthError(settings.language === 'sl' ? 'Registracije so trenutno izklopljene.' : 'Signups are currently disabled.');
+      return;
+    }
     if (authMode === 'signup' && !passwordScore.ok) {
       setAuthError(password.length < 10 ? copy.authShortPassword : copy.authWeakPassword);
       return;
@@ -3205,7 +3273,16 @@ export default function App() {
         const nextUsers = [...users, { email, passwordHash, createdAt: new Date().toISOString() }];
         localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
         localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify([]));
-        localStorage.setItem(getSettingsStorageKey(email), JSON.stringify({ ...defaultSettings, gender: authForm.gender }));
+        localStorage.setItem(getSettingsStorageKey(email), JSON.stringify({
+          ...defaultSettings,
+          language: adminConfig.defaultLanguage,
+          units: adminConfig.defaultUnits,
+          backgroundAccent: adminConfig.defaultAccent,
+          calorieGoal: adminConfig.defaultCalorieGoal,
+          waterGoalMl: adminConfig.defaultWaterGoalMl,
+          showFeedbackBtn: adminConfig.feedbackEnabled,
+          gender: authForm.gender,
+        }));
         clearAuthThrottle(email);
         await pushLoginLog(email, 'signup');
         await hydrateFromBackend(email, password);
@@ -3375,11 +3452,13 @@ export default function App() {
     if (!window.confirm(copy.adminBanConfirm)) return;
     const list = loadBanned();
     if (!list.includes(email)) { list.push(email); saveBanned(list); setBannedUsers([...list]); }
+    writeAdminAudit('Banned user', email);
     setToast(`${copy.adminBan}: ${email}`);
   }
   function unbanUser(email) {
     const list = loadBanned().filter(e => e !== email);
     saveBanned(list); setBannedUsers([...list]);
+    writeAdminAudit('Unbanned user', email);
     setToast(`${copy.adminUnban}: ${email}`);
   }
   function toggleMod(email) {
@@ -3387,6 +3466,7 @@ export default function App() {
     const isMod = list.includes(email);
     const next = isMod ? list.filter(e => e !== email) : [...list, email];
     saveMods(next); setModUsers([...next]);
+    writeAdminAudit(isMod ? 'Removed moderator' : 'Granted moderator', email);
     setToast(isMod ? `${copy.adminRemoveMod}: ${email}` : `${copy.adminSetMod}: ${email}`);
   }
   function adminShowRecap() {
@@ -3419,6 +3499,7 @@ export default function App() {
       const newBonus = currentBonus + (nextRank.min - totalPts);
       saveAdminBonus(email, newBonus);
       if (email === currentUser) setAdminBonus(newBonus);
+      writeAdminAudit('Rank bonus increased', `${email} -> ${newBonus}`);
       setToast(`${copy.adminRankUpDone}: ${email}`);
     } else {
       const rankIdx = RANKS.findIndex(r => r.min > totalPts) - 1;
@@ -3428,8 +3509,173 @@ export default function App() {
       const newBonus = currentBonus - (totalPts - prevRankMin) - 1;
       saveAdminBonus(email, newBonus);
       if (email === currentUser) setAdminBonus(newBonus);
+      writeAdminAudit('Rank bonus decreased', `${email} -> ${newBonus}`);
       setToast(`${copy.adminDemoteDone}: ${email}`);
     }
+  }
+  function writeAdminAudit(action, detail = '') {
+    if (currentUser !== ADMIN_EMAIL) return;
+    const entry = { id: Date.now(), ts: new Date().toISOString(), actor: currentUser, action, detail };
+    const next = [entry, ...loadAdminAudit()].slice(0, 300);
+    saveAdminAudit(next);
+    setAdminAudit(next);
+  }
+  function saveAdminPanelConfig() {
+    const next = sanitizeAdminConfig(adminConfigDraft);
+    saveAdminConfig(next);
+    setAdminConfig(next);
+    setAdminConfigDraft(next);
+    writeAdminAudit('Saved app controls', `${next.appName} | signup=${next.signupEnabled} | maintenance=${next.maintenanceMode}`);
+    setToast(settings.language === 'sl' ? 'Admin kontrole shranjene' : 'Admin controls saved');
+  }
+  function resetAdminPanelConfig() {
+    if (!window.confirm(settings.language === 'sl' ? 'Ponastavim admin kontrole na privzeto?' : 'Reset admin controls to default?')) return;
+    saveAdminConfig(defaultAdminConfig);
+    setAdminConfig(defaultAdminConfig);
+    setAdminConfigDraft(defaultAdminConfig);
+    writeAdminAudit('Reset app controls', 'defaultAdminConfig');
+    setToast(settings.language === 'sl' ? 'Admin kontrole ponastavljene' : 'Admin controls reset');
+  }
+  function applyAdminDefaultsToMe() {
+    const next = sanitizeAdminConfig(adminConfigDraft);
+    setSettings((current) => ({
+      ...current,
+      language: next.defaultLanguage,
+      units: next.defaultUnits,
+      backgroundAccent: next.defaultAccent,
+      calorieGoal: next.defaultCalorieGoal,
+      waterGoalMl: next.defaultWaterGoalMl,
+      showFeedbackBtn: next.feedbackEnabled,
+    }));
+    writeAdminAudit('Applied defaults to admin profile', currentUser);
+    setToast(settings.language === 'sl' ? 'Privzete nastavitve uporabljene na tvojem profilu' : 'Defaults applied to your profile');
+  }
+  function applyAdminDefaultsToAllUsers() {
+    if (!window.confirm(settings.language === 'sl' ? 'Uporabim privzete app nastavitve na vse profile v tem brskalniku?' : 'Apply default app settings to every profile in this browser?')) return;
+    const next = sanitizeAdminConfig(adminConfigDraft);
+    loadUsers().forEach((user) => {
+      const userSettings = loadSettings(user.email);
+      localStorage.setItem(getSettingsStorageKey(user.email), JSON.stringify({
+        ...userSettings,
+        language: next.defaultLanguage,
+        units: next.defaultUnits,
+        backgroundAccent: next.defaultAccent,
+        calorieGoal: next.defaultCalorieGoal,
+        waterGoalMl: next.defaultWaterGoalMl,
+        showFeedbackBtn: next.feedbackEnabled,
+      }));
+    });
+    if (currentUser) setSettings(loadSettings(currentUser));
+    writeAdminAudit('Applied defaults to all local profiles', `${loadUsers().length} profiles`);
+    setToast(settings.language === 'sl' ? 'Privzete nastavitve uporabljene na vseh profilih' : 'Defaults applied to all profiles');
+  }
+  function removeUserLocalData(email) {
+    [
+      getWorkoutStorageKey(email),
+      getCaloriesStorageKey(email),
+      getSettingsStorageKey(email),
+      getCalHistoryKey(email),
+      getBodyWeightKey(email),
+      getRestKey(email),
+      getCheatKey(email),
+      getCustomExKey(email),
+      getAdminBonusKey(email),
+      `${JWT_KEY_PREFIX}${email}`,
+      getRecapKey(email),
+    ].forEach((key) => localStorage.removeItem(key));
+    Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
+      .filter((key) => key && key.startsWith(`${WATER_KEY_PREFIX}${email}_`))
+      .forEach((key) => localStorage.removeItem(key));
+  }
+  function adminExportUser(email) {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      email,
+      settings: loadSettings(email),
+      workouts: loadWorkouts(email),
+      calories: loadCalories(email),
+      bodyWeight: loadBodyWeight(email),
+      calorieHistory: loadCalHistory(email),
+      restDays: loadRestDays(email),
+      cheatDays: loadCheatDays(email),
+      customExercises: loadCustomExercises(email),
+      bonus: loadAdminBonus(email),
+      banned: loadBanned().includes(email),
+      moderator: loadMods().includes(email),
+    };
+    downloadFile(`powergraph-user-${email.replace(/[^a-z0-9]+/gi, '-')}.json`, JSON.stringify(payload, null, 2), 'application/json');
+    writeAdminAudit('Exported user', email);
+  }
+  function adminResetUserData(email) {
+    if (!window.confirm(`${settings.language === 'sl' ? 'Izbrisem treninge, obroke in meritve za' : 'Delete workouts, meals and measurements for'} ${email}?`)) return;
+    const previousSettings = loadSettings(email);
+    removeUserLocalData(email);
+    localStorage.setItem(getSettingsStorageKey(email), JSON.stringify({ ...defaultSettings, gender: previousSettings.gender || 'male' }));
+    if (email === currentUser) {
+      setWorkouts([]);
+      setCalorieEntries([]);
+      setCalHistory([]);
+      setBodyWeightEntries([]);
+      setRestDays([]);
+      setCheatDays([]);
+      setCustomExercises([]);
+      setAdminBonus(0);
+      setSettings(loadSettings(email));
+    }
+    writeAdminAudit('Reset user data', email);
+    setToast(`${settings.language === 'sl' ? 'Podatki izbrisani' : 'Data reset'}: ${email}`);
+  }
+  function adminDeleteUser(email) {
+    if (email === ADMIN_EMAIL) { setToast(settings.language === 'sl' ? 'Admin profila ni dovoljeno izbrisati' : 'Admin profile cannot be deleted'); return; }
+    if (!window.confirm(`${settings.language === 'sl' ? 'Trajno izbrisem uporabnika' : 'Permanently delete user'} ${email}?`)) return;
+    const nextUsers = loadUsers().filter((user) => user.email !== email);
+    localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
+    removeUserLocalData(email);
+    const nextBanned = loadBanned().filter((item) => item !== email);
+    const nextMods = loadMods().filter((item) => item !== email);
+    saveBanned(nextBanned); setBannedUsers(nextBanned);
+    saveMods(nextMods); setModUsers(nextMods);
+    writeAdminAudit('Deleted user', email);
+    setToast(`${settings.language === 'sl' ? 'Uporabnik izbrisan' : 'User deleted'}: ${email}`);
+  }
+  function exportAdminSnapshot() {
+    const users = loadUsers().map((user) => ({
+      email: user.email,
+      createdAt: user.createdAt,
+      settings: loadSettings(user.email),
+      workouts: loadWorkouts(user.email).length,
+      meals: loadCalories(user.email).length,
+      bodyWeight: loadBodyWeight(user.email).length,
+      bonus: loadAdminBonus(user.email),
+      banned: loadBanned().includes(user.email),
+      moderator: loadMods().includes(user.email),
+    }));
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      appConfig: adminConfig,
+      users,
+      ratings: loadRatings(),
+      banned: loadBanned(),
+      moderators: loadMods(),
+      audit: loadAdminAudit(),
+      logins: adminLogs || loadLoginLogs(),
+      presence: adminPresence,
+    };
+    downloadFile(`powergraph-admin-snapshot-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), 'application/json');
+    writeAdminAudit('Exported admin snapshot', `${users.length} users`);
+  }
+  function clearAdminAuditLog() {
+    if (!window.confirm(settings.language === 'sl' ? 'Izbrisem admin audit log?' : 'Clear admin audit log?')) return;
+    saveAdminAudit([]);
+    setAdminAudit([]);
+    setToast(settings.language === 'sl' ? 'Audit log izbrisan' : 'Audit log cleared');
+  }
+  function clearAllFeedback() {
+    if (!window.confirm(settings.language === 'sl' ? 'Izbrisem vse feedback komentarje?' : 'Clear all feedback comments?')) return;
+    saveRatings([]);
+    setRatings([]);
+    writeAdminAudit('Cleared feedback', '');
+    setToast(settings.language === 'sl' ? 'Feedback izbrisan' : 'Feedback cleared');
   }
   function startEditWorkout(workout) { setEditingWorkoutId(workout.id); setFormData({ date: workout.date, exercise: workout.exercise, weight: String(workout.weight), setDetails: workout.setDetails.map(String), setWeights: workout.setWeights ? workout.setWeights.map(String) : workout.setDetails.map(() => String(workout.weight)) }); setActiveSection('dashboard'); }
   function saveWorkoutEdit() {
@@ -3880,7 +4126,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
               <div className="logo-icon auth-logo">P</div>
               <div>
                 <p className="auth-eyebrow">{copy.authEyebrow}</p>
-                <h1>{copy.app}</h1>
+                <h1>{adminConfig.appName || copy.app}</h1>
               </div>
             </div>
             <div className="auth-hero-copy">
@@ -3899,9 +4145,9 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
               <button className={`auth-mode-btn ${authMode === 'login' ? 'active' : ''}`} type="button" role="tab" aria-selected={authMode === 'login'} onClick={() => { setAuthMode('login'); setAuthError(''); }}>
                 {copy.login}
               </button>
-              <button className={`auth-mode-btn ${authMode === 'signup' ? 'active' : ''}`} type="button" role="tab" aria-selected={authMode === 'signup'} onClick={() => { setAuthMode('signup'); setAuthError(''); }}>
+              {adminConfig.signupEnabled && <button className={`auth-mode-btn ${authMode === 'signup' ? 'active' : ''}`} type="button" role="tab" aria-selected={authMode === 'signup'} onClick={() => { setAuthMode('signup'); setAuthError(''); }}>
                 {copy.signup}
-              </button>
+              </button>}
             </div>
 
             <div className="auth-copy">
@@ -3964,12 +4210,28 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
               <button className="action-btn-primary full-width auth-submit" type="submit" disabled={authLoading}>{authLoading ? '...' : authMode === 'signup' ? copy.authCreate : copy.authEnter}</button>
             </form>
 
-            <div className="auth-card-footer">
+            {adminConfig.signupEnabled && <div className="auth-card-footer">
               <span>{authMode === 'signup' ? copy.authSwitchLogin : copy.authSwitchSignup}</span>
               <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAuthError(''); }}>{authMode === 'signup' ? copy.login : copy.signup}</button>
-            </div>
+            </div>}
             <p className="auth-local-note">{copy.authLocalOnly}</p>
           </section>
+        </section>
+      </div>
+    );
+  }
+
+  if (adminConfig.maintenanceMode && currentUser !== ADMIN_EMAIL) {
+    return (
+      <div className="auth-shell auth-shell-premium">
+        <section className="glass-panel auth-card auth-card-premium" style={{maxWidth:'460px',width:'100%'}}>
+          <div className="auth-copy">
+            <p className="auth-eyebrow">{adminConfig.appName || copy.app}</p>
+            <h2>{settings.language === 'sl' ? 'Maintenance mode' : 'Maintenance mode'}</h2>
+            <p>{settings.language === 'sl' ? 'Aplikacija je trenutno zaklenjena za uporabnike. Poskusi kasneje.' : 'The app is temporarily locked for users. Please come back later.'}</p>
+          </div>
+          {adminConfig.announcementText && <p className="auth-local-note">{adminConfig.announcementText}</p>}
+          <button className="action-btn-primary full-width" type="button" onClick={logout}>{copy.logout}</button>
         </section>
       </div>
     );
@@ -3978,14 +4240,14 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
   return (
     <div className="app-container">
       <aside className="glass-panel sidebar">
-        <div className="brand"><div className="logo-icon">P</div><h2>{copy.app}</h2></div>
+        <div className="brand"><div className="logo-icon">P</div><h2>{adminConfig.appName || copy.app}</h2></div>
         <nav className="nav-menu">{nav.map(([id, label]) => <button key={id} className={`nav-btn ${activeSection === id ? 'active' : ''}`} type="button" onClick={() => setActiveSection(id)}><span className="nav-icon">{NAV_ICONS[id]}</span><span className="nav-label-full">{label}</span><span className="nav-label-short">{NAV_SHORT[id]}</span></button>)}</nav>
       </aside>
 
       <main className="main-content">
         <header className="topbar">
           <div className="greeting">
-            <h2>{copy.title}</h2>
+            <h2 data-mobile-title={adminConfig.appName || copy.app}>{activeSection === 'admin' ? (settings.language === 'sl' ? 'Admin center' : 'Admin Center') : copy.title}</h2>
             <p>{copy.subtitle}</p>
           </div>
           <div className="settings-button-row topbar-actions">
@@ -4011,7 +4273,8 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
             <p>{sectionDescriptions[activeSection]}</p>
           </div>
         </section>
-        {backupDue && <section className="glass-panel backup-banner fade-in-up"><div><h3>{copy.backupTitle}</h3><p>{copy.backupText}</p></div><button className="action-btn-primary" type="button" onClick={exportData}>{copy.export}</button></section>}
+        {adminConfig.announcementEnabled && adminConfig.announcementText && <section className="glass-panel admin-announcement-banner fade-in-up"><strong>{settings.language === 'sl' ? 'Admin obvestilo' : 'Admin notice'}</strong><span>{adminConfig.announcementText}</span></section>}
+        {backupDue && adminConfig.backupBannerEnabled && <section className="glass-panel backup-banner fade-in-up"><div><h3>{copy.backupTitle}</h3><p>{copy.backupText}</p></div><button className="action-btn-primary" type="button" onClick={exportData}>{copy.export}</button></section>}
 
         {activeSection === 'dashboard' && <>
           <div className="dashboard-grid">
@@ -4861,7 +5124,41 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
         </>}
 
         {activeSection === 'admin' && currentUser === ADMIN_EMAIL && (() => {
+          const isSl = settings.language === 'sl';
+          const t = {
+            title: isSl ? 'Admin Command Center' : 'Admin Command Center',
+            subtitle: isSl ? 'Upravljaj aplikacijo, uporabnike, feedback, varnost in lokalne podatke iz enega mesta.' : 'Control the app, users, feedback, security and local data from one place.',
+            appControls: isSl ? 'App controls' : 'App controls',
+            userOps: isSl ? 'User operations' : 'User operations',
+            selectedUser: isSl ? 'Izbran uporabnik' : 'Selected user',
+            feedback: isSl ? 'Feedback inbox' : 'Feedback inbox',
+            activity: isSl ? 'Activity stream' : 'Activity stream',
+            audit: isSl ? 'Admin audit' : 'Admin audit',
+            dataTools: isSl ? 'Data tools' : 'Data tools',
+            save: isSl ? 'Shrani kontrole' : 'Save controls',
+            reset: isSl ? 'Reset controls' : 'Reset controls',
+            applyMe: isSl ? 'Uporabi na meni' : 'Apply to me',
+            applyAll: isSl ? 'Uporabi na vseh' : 'Apply to all',
+            exportSnapshot: isSl ? 'Export admin snapshot' : 'Export admin snapshot',
+            maintenance: isSl ? 'Maintenance mode' : 'Maintenance mode',
+            signups: isSl ? 'Registracije' : 'Signups',
+            feedbackBtn: isSl ? 'Feedback gumb' : 'Feedback button',
+            backups: isSl ? 'Backup banner' : 'Backup banner',
+            announcement: isSl ? 'Obvestilo v appu' : 'In-app announcement',
+            defaults: isSl ? 'Privzete nastavitve za nove profile' : 'Defaults for new profiles',
+            searchUsers: isSl ? 'Isci email, rang ali status' : 'Search email, rank or status',
+            noUser: isSl ? 'Ni uporabnikov za ta filter.' : 'No users match this filter.',
+            exportUser: isSl ? 'Export user' : 'Export user',
+            resetUser: isSl ? 'Reset data' : 'Reset data',
+            deleteUser: isSl ? 'Delete user' : 'Delete user',
+            clearFeedback: isSl ? 'Clear feedback' : 'Clear feedback',
+            clearAudit: isSl ? 'Clear audit' : 'Clear audit',
+            online: isSl ? 'Online' : 'Online',
+            offline: isSl ? 'Offline' : 'Offline',
+          };
           const allUsers = loadUsers();
+          const now = Date.now();
+          const presenceByEmail = adminPresence.reduce((map, item) => ({ ...map, [item.email]: item }), {});
           const userStats = allUsers.map((u) => {
             const wList = loadWorkouts(u.email);
             const cList = loadCalories(u.email);
@@ -4869,138 +5166,195 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
             const rDays = loadRestDays(u.email);
             const cDays = loadCheatDays(u.email);
             const sett = loadSettings(u.email);
+            const custom = loadCustomExercises(u.email);
             const bonus = loadAdminBonus(u.email);
             const basePts = calculatePoints(wList, cList, bwList, rDays, cDays, sett.calorieGoal);
             const totalPts = basePts + bonus;
             const userRank = getRank(totalPts, settings.language);
             const lastW = wList.length ? [...wList].sort((a, b) => new Date(b.date) - new Date(a.date))[0].date : null;
-            return { email: u.email, createdAt: u.createdAt, workouts: wList.length, meals: cList.length, bw: bwList.length, lastWorkout: lastW, rank: userRank, pts: totalPts, bonus };
-          });
+            const presence = presenceByEmail[u.email];
+            const isOnline = presence && now - new Date(presence.ts).getTime() < 3 * 60000;
+            const isBanned = bannedUsers.includes(u.email);
+            const isMod = modUsers.includes(u.email);
+            return { email: u.email, createdAt: u.createdAt, workouts: wList.length, meals: cList.length, bw: bwList.length, custom: custom.length, lastWorkout: lastW, rank: userRank, pts: totalPts, bonus, settings: sett, isOnline, isBanned, isMod, presence };
+          }).sort((a, b) => b.pts - a.pts);
+          const query = adminSearch.trim().toLowerCase();
+          const filteredUsers = userStats.filter((u) => !query || [u.email, u.rank.displayName, u.isOnline ? 'online' : 'offline', u.isBanned ? 'banned' : '', u.isMod ? 'moderator' : ''].join(' ').toLowerCase().includes(query));
+          const selectedUser = userStats.find((u) => u.email === adminSelectedEmail) || filteredUsers[0] || userStats[0] || null;
           const totalWorkouts = userStats.reduce((s, u) => s + u.workouts, 0);
-          const loginLogs = adminLogs || [];
-          const recentLogins = [...loginLogs].reverse().slice(0, 100);
-          const now = Date.now();
-          const allPresence = [...adminPresence].sort((a, b) => new Date(b.ts) - new Date(a.ts));
-          const activeNow = allPresence.filter(p => now - new Date(p.ts).getTime() < 3 * 60000);
-          const allRatings = loadRatings();
+          const totalMeals = userStats.reduce((s, u) => s + u.meals, 0);
+          const activeNow = userStats.filter((u) => u.isOnline);
+          const allRatings = ratings;
+          const recentLogins = [...(adminLogs || loadLoginLogs())].reverse().slice(0, 12);
+          const recentAudit = adminAudit.slice(0, 12);
           return (
             <>
-              <section className="glass-panel action-panel fade-in-up">
-                <div className="panel-header"><h3>{copy.adminCommands}</h3></div>
-                <div style={{display:'flex',flexWrap:'wrap',gap:'0.75rem',padding:'0.5rem 0'}}>
-                  <button className="action-btn-outline" type="button" onClick={adminShowRecap}>{copy.adminShowRecap}</button>
+              <section className="glass-panel admin-hero-panel fade-in-up">
+                <div>
+                  <p className="exercise-category">ADMIN ONLY</p>
+                  <h2>{t.title}</h2>
+                  <p>{t.subtitle}</p>
+                </div>
+                <div className="admin-hero-actions">
+                  <button className="action-btn-primary" type="button" onClick={saveAdminPanelConfig}>{t.save}</button>
+                  <button className="action-btn-outline" type="button" onClick={exportAdminSnapshot}>{t.exportSnapshot}</button>
                 </div>
               </section>
-              <div className="dashboard-grid">
+
+              <div className="admin-metric-grid">
                 <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow">U</div><div><p className="stat-title">{copy.adminTotalUsers}</p><h3 className="stat-value">{allUsers.length}</h3></div></article>
-                <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">T</div><div><p className="stat-title">{copy.adminTotalWorkouts}</p><h3 className="stat-value">{totalWorkouts}</h3></div></article>
-                <article className="glass-panel stat-card fade-in-up"><div className="stat-icon" style={{background:'#22c55e',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#000'}}>●</div><div><p className="stat-title">{copy.adminActiveUsers}</p><h3 className="stat-value">{activeNow.length}</h3></div></article>
+                <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow">W</div><div><p className="stat-title">{copy.adminTotalWorkouts}</p><h3 className="stat-value">{totalWorkouts}</h3></div></article>
+                <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow">M</div><div><p className="stat-title">{copy.adminMeals}</p><h3 className="stat-value">{totalMeals}</h3></div></article>
+                <article className="glass-panel stat-card fade-in-up"><div className="stat-icon orange-glow">ON</div><div><p className="stat-title">{copy.adminActiveUsers}</p><h3 className="stat-value">{activeNow.length}</h3></div></article>
               </div>
-              <section className="glass-panel history-section fade-in-up">
-                <div className="panel-header"><h3>{copy.adminActiveUsers}</h3><span className="history-count">{activeNow.length}</span></div>
-                {allPresence.length === 0
-                  ? <div className="empty-state"><p>{copy.adminNoActive}</p></div>
-                  : <div className="exercise-grid" style={{padding:'0.5rem 0'}}>
-                      {allPresence.map(p => {
-                        const diffMs = now - new Date(p.ts).getTime();
-                        const mins = Math.floor(diffMs / 60000);
-                        const status = mins < 2 ? copy.adminOnlineNow : mins < 5 ? copy.adminRecentlyActive : copy.adminOffline;
-                        const isMod = modUsers.includes(p.email);
-                        return (
-                          <article className="glass-panel" key={p.email} style={{padding:'0.85rem 1rem',display:'flex',flexDirection:'column',gap:'0.4rem'}}>
-                            <div style={{display:'flex',alignItems:'center',gap:'0.6rem'}}>
-                              <div className="stat-icon blue-glow" style={{width:'1.8rem',height:'1.8rem',fontSize:'0.8rem',flexShrink:0}}>{p.email[0].toUpperCase()}</div>
-                              <div style={{flex:1,minWidth:0}}>
-                                <h4 style={{fontSize:'0.85rem',wordBreak:'break-all',margin:0}}>{p.email}</h4>
-                                {isMod && <span style={{fontSize:'0.72rem',color:'#f59e0b',fontWeight:600}}>Moderator</span>}
-                              </div>
-                            </div>
-                            <p style={{fontSize:'0.78rem',margin:0}}>{status}</p>
-                            <p style={{fontSize:'0.72rem',opacity:0.5,margin:0}}>{copy.adminLastSeen}: {new Date(p.ts).toLocaleTimeString()}</p>
-                            <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap',marginTop:'0.25rem'}}>
-                              <button className="action-btn-outline" style={{fontSize:'0.72rem',padding:'0.2rem 0.5rem'}} type="button" onClick={() => adminChangeRank(p.email, 'up')}>{copy.adminRankUp}</button>
-                              {p.email !== ADMIN_EMAIL && (isMod
-                                ? <button className="action-btn-outline" style={{fontSize:'0.72rem',padding:'0.2rem 0.5rem',color:'#f59e0b',borderColor:'#f59e0b'}} type="button" onClick={() => toggleMod(p.email)}>{copy.adminRemoveMod}</button>
-                                : <button className="action-btn-primary" style={{fontSize:'0.72rem',padding:'0.2rem 0.5rem'}} type="button" onClick={() => toggleMod(p.email)}>{copy.adminSetMod}</button>
-                              )}
-                            </div>
-                          </article>
-                        );
-                      })}
+
+              <section className="glass-panel admin-panel fade-in-up">
+                <div className="panel-header"><h3>{t.appControls}</h3><span className="history-count">{adminConfig.maintenanceMode ? 'maintenance on' : 'live'}</span></div>
+                <div className="admin-control-grid">
+                  <article className="settings-card">
+                    <label className="settings-label" htmlFor="adminAppName">App name</label>
+                    <input id="adminAppName" value={adminConfigDraft.appName} onChange={(e) => setAdminConfigDraft((c) => ({ ...c, appName: e.target.value }))} />
+                  </article>
+                  <article className="settings-card">
+                    <label className="settings-label" htmlFor="adminDefaultLang">{t.defaults}</label>
+                    <select id="adminDefaultLang" className="premium-select full-width" value={adminConfigDraft.defaultLanguage} onChange={(e) => setAdminConfigDraft((c) => ({ ...c, defaultLanguage: e.target.value }))}>{LANGUAGE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select>
+                  </article>
+                  <article className="settings-card">
+                    <label className="settings-label" htmlFor="adminDefaultAccent">Default accent</label>
+                    <select id="adminDefaultAccent" className="premium-select full-width" value={adminConfigDraft.defaultAccent} onChange={(e) => setAdminConfigDraft((c) => ({ ...c, defaultAccent: e.target.value }))}>{BACKGROUND_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{getLocalizedLabel(preset.label, settings.language)}</option>)}</select>
+                  </article>
+                  <article className="settings-card">
+                    <label className="settings-label" htmlFor="adminDefaultUnits">Default units</label>
+                    <select id="adminDefaultUnits" className="premium-select full-width" value={adminConfigDraft.defaultUnits} onChange={(e) => setAdminConfigDraft((c) => ({ ...c, defaultUnits: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select>
+                  </article>
+                  <article className="settings-card">
+                    <label className="settings-label" htmlFor="adminDefaultCalories">Default calories</label>
+                    <input id="adminDefaultCalories" type="number" min="1000" max="10000" step="50" value={adminConfigDraft.defaultCalorieGoal} onChange={(e) => setAdminConfigDraft((c) => ({ ...c, defaultCalorieGoal: Number(e.target.value) || defaultAdminConfig.defaultCalorieGoal }))} />
+                  </article>
+                  <article className="settings-card">
+                    <label className="settings-label" htmlFor="adminDefaultWater">Default water ml</label>
+                    <input id="adminDefaultWater" type="number" min="1000" max="8000" step="100" value={adminConfigDraft.defaultWaterGoalMl} onChange={(e) => setAdminConfigDraft((c) => ({ ...c, defaultWaterGoalMl: Number(e.target.value) || defaultAdminConfig.defaultWaterGoalMl }))} />
+                  </article>
+                  <article className="settings-card settings-card-wide">
+                    <span className="settings-label">{t.appControls}</span>
+                    <div className="admin-toggle-grid">
+                      {[['maintenanceMode', t.maintenance], ['signupEnabled', t.signups], ['feedbackEnabled', t.feedbackBtn], ['backupBannerEnabled', t.backups], ['announcementEnabled', t.announcement]].map(([key, label]) => (
+                        <button key={key} className={`admin-toggle ${adminConfigDraft[key] ? 'active' : ''}`} type="button" onClick={() => setAdminConfigDraft((c) => ({ ...c, [key]: !c[key] }))}>
+                          <span>{label}</span><strong>{adminConfigDraft[key] ? 'ON' : 'OFF'}</strong>
+                        </button>
+                      ))}
                     </div>
-                }
+                  </article>
+                  <article className="settings-card settings-card-wide">
+                    <label className="settings-label" htmlFor="adminAnnouncement">{t.announcement}</label>
+                    <textarea id="adminAnnouncement" className="admin-textarea" value={adminConfigDraft.announcementText} onChange={(e) => setAdminConfigDraft((c) => ({ ...c, announcementText: e.target.value }))} placeholder={isSl ? 'Kratek tekst, ki se prikaze uporabnikom.' : 'Short text shown inside the app.'} />
+                  </article>
+                  <article className="settings-card settings-card-wide">
+                    <label className="settings-label" htmlFor="adminNote">Private admin note</label>
+                    <textarea id="adminNote" className="admin-textarea" value={adminConfigDraft.adminNote} onChange={(e) => setAdminConfigDraft((c) => ({ ...c, adminNote: e.target.value }))} placeholder={isSl ? 'Opombe zate, roadmap, naslednji fixi...' : 'Private notes, roadmap, next fixes...'} />
+                  </article>
+                </div>
+                <div className="admin-action-row">
+                  <button className="action-btn-primary" type="button" onClick={saveAdminPanelConfig}>{t.save}</button>
+                  <button className="action-btn-outline" type="button" onClick={applyAdminDefaultsToMe}>{t.applyMe}</button>
+                  <button className="action-btn-outline" type="button" onClick={applyAdminDefaultsToAllUsers}>{t.applyAll}</button>
+                  <button className="action-btn-outline danger-button" type="button" onClick={resetAdminPanelConfig}>{t.reset}</button>
+                </div>
               </section>
-              <section className="glass-panel history-section fade-in-up">
-                <div className="panel-header"><h3>{copy.adminUsers}</h3><span className="history-count">{allUsers.length}</span></div>
-                <div className="history-list">
-                  {userStats.length === 0 && <div className="empty-state"><p>{copy.adminNoUsers}</p></div>}
-                  {userStats.map((u) => {
-                    const presenceEntry = adminPresence.find(p => p.email === u.email);
-                    const isOnline = presenceEntry && (now - new Date(presenceEntry.ts).getTime()) < 3 * 60000;
-                    return (
-                      <article className="history-item" key={u.email} style={{flexDirection:'column',alignItems:'flex-start',gap:'0.5rem'}}>
-                        <div style={{display:'flex',alignItems:'center',gap:'0.75rem',width:'100%'}}>
-                          <div className="stat-icon blue-glow" style={{width:'2rem',height:'2rem',fontSize:'0.85rem',flexShrink:0}}>{u.email[0].toUpperCase()}</div>
-                          <div style={{flex:1,minWidth:0}}>
-                            <h3 style={{fontSize:'0.95rem',wordBreak:'break-all'}}>{u.email}{isOnline && <span style={{marginLeft:'0.5rem',fontSize:'0.75rem',color:'#22c55e',fontWeight:600}}>● online</span>}</h3>
-                            <p style={{fontSize:'0.78rem',opacity:0.6}}>{copy.adminRegistered}: {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</p>
-                          </div>
-                        </div>
-                        <div className="stats-list" style={{width:'100%',marginTop:'0.25rem'}}>
-                          <div className="stats-row"><span>{copy.adminWorkouts}</span><strong>{u.workouts}</strong></div>
-                          <div className="stats-row"><span>{copy.adminMeals}</span><strong>{u.meals}</strong></div>
-                          <div className="stats-row"><span>{copy.adminBodyWeight}</span><strong>{u.bw}</strong></div>
-                          <div className="stats-row"><span>{copy.adminLastWorkout}</span><strong>{u.lastWorkout ? formatDateValue(u.lastWorkout, settings.dateFormat) : copy.adminNever}</strong></div>
-                          <div className="stats-row"><span>{copy.rankTitle}</span><strong>{u.rank.displayName} ({u.pts} {copy.rankPoints})</strong></div>
-                        </div>
-                        <div style={{display:'flex',gap:'0.5rem',marginTop:'0.25rem',flexWrap:'wrap'}}>
-                          <button className="action-btn-outline" type="button" onClick={() => adminChangeRank(u.email, 'up')}>{copy.adminRankUp}</button>
-                          <button className="action-btn-outline" type="button" onClick={() => adminChangeRank(u.email, 'down')}>{copy.adminDemote}</button>
-                          {u.email !== ADMIN_EMAIL && (bannedUsers.includes(u.email) ? <button className="action-btn-outline" type="button" style={{color:'var(--secondary-glow)',borderColor:'var(--secondary-glow)'}} onClick={() => unbanUser(u.email)}>{copy.adminUnban}</button> : <button className="action-btn-outline danger-button" type="button" onClick={() => banUser(u.email)}>{copy.adminBan}</button>)}
-                          {u.email !== ADMIN_EMAIL && (modUsers.includes(u.email) ? <button className="action-btn-outline" type="button" style={{color:'#f59e0b',borderColor:'#f59e0b'}} onClick={() => toggleMod(u.email)}>{copy.adminRemoveMod}</button> : <button className="action-btn-primary" type="button" onClick={() => toggleMod(u.email)}>{copy.adminSetMod}</button>)}
-                        </div>
-                        {bannedUsers.includes(u.email) && <div style={{fontSize:'0.78rem',color:'var(--error)',fontWeight:600,padding:'0.2rem 0'}}>{copy.adminBanned}</div>}
-                        {modUsers.includes(u.email) && !bannedUsers.includes(u.email) && <div style={{fontSize:'0.78rem',color:'#22c55e',fontWeight:600,padding:'0.2rem 0'}}>{copy.adminMod}</div>}
+
+              <section className="glass-panel admin-panel fade-in-up">
+                <div className="panel-header"><h3>{t.userOps}</h3><input className="history-search-input" type="search" placeholder={t.searchUsers} value={adminSearch} onChange={(e) => setAdminSearch(e.target.value)} /></div>
+                <div className="admin-user-grid">
+                  {filteredUsers.length === 0 && <div className="empty-state"><p>{t.noUser}</p></div>}
+                  {filteredUsers.map((u) => (
+                    <button className={`admin-user-card ${selectedUser?.email === u.email ? 'active' : ''}`} key={u.email} type="button" onClick={() => setAdminSelectedEmail(u.email)}>
+                      <span className={`admin-status-dot ${u.isOnline ? 'online' : ''}`} />
+                      <strong>{u.email}</strong>
+                      <small>{u.rank.displayName} · {u.pts} pts · {u.workouts} workouts</small>
+                      <span>{u.isBanned ? copy.adminBanned : u.isMod ? copy.adminMod : u.isOnline ? t.online : t.offline}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              {selectedUser && <section className="glass-panel admin-panel fade-in-up">
+                <div className="panel-header"><h3>{t.selectedUser}</h3><span className="history-count">{selectedUser.email}</span></div>
+                <div className="admin-user-detail">
+                  <div className="admin-user-summary">
+                    <div className="stat-icon blue-glow">{getUserBadge(selectedUser.email)}</div>
+                    <div>
+                      <h3>{selectedUser.email}</h3>
+                      <p>{copy.adminRegistered}: {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : copy.adminNever}</p>
+                    </div>
+                  </div>
+                  <div className="admin-detail-grid">
+                    <div><span>{copy.rankTitle}</span><strong>{selectedUser.rank.displayName}</strong></div>
+                    <div><span>{copy.rankPoints}</span><strong>{selectedUser.pts}</strong></div>
+                    <div><span>{copy.adminWorkouts}</span><strong>{selectedUser.workouts}</strong></div>
+                    <div><span>{copy.adminMeals}</span><strong>{selectedUser.meals}</strong></div>
+                    <div><span>{copy.adminBodyWeight}</span><strong>{selectedUser.bw}</strong></div>
+                    <div><span>Bonus</span><strong>{selectedUser.bonus}</strong></div>
+                    <div><span>Language</span><strong>{selectedUser.settings.language}</strong></div>
+                    <div><span>Accent</span><strong>{selectedUser.settings.backgroundAccent}</strong></div>
+                  </div>
+                  <div className="admin-action-row">
+                    <button className="action-btn-outline" type="button" onClick={() => adminChangeRank(selectedUser.email, 'up')}>{copy.adminRankUp}</button>
+                    <button className="action-btn-outline" type="button" onClick={() => adminChangeRank(selectedUser.email, 'down')}>{copy.adminDemote}</button>
+                    <button className="action-btn-outline" type="button" onClick={() => adminExportUser(selectedUser.email)}>{t.exportUser}</button>
+                    {selectedUser.email !== ADMIN_EMAIL && (selectedUser.isBanned ? <button className="action-btn-outline" type="button" onClick={() => unbanUser(selectedUser.email)}>{copy.adminUnban}</button> : <button className="action-btn-outline danger-button" type="button" onClick={() => banUser(selectedUser.email)}>{copy.adminBan}</button>)}
+                    {selectedUser.email !== ADMIN_EMAIL && (selectedUser.isMod ? <button className="action-btn-outline" type="button" onClick={() => toggleMod(selectedUser.email)}>{copy.adminRemoveMod}</button> : <button className="action-btn-primary" type="button" onClick={() => toggleMod(selectedUser.email)}>{copy.adminSetMod}</button>)}
+                    <button className="action-btn-outline danger-button" type="button" onClick={() => adminResetUserData(selectedUser.email)}>{t.resetUser}</button>
+                    {selectedUser.email !== ADMIN_EMAIL && <button className="action-btn-outline danger-button" type="button" onClick={() => adminDeleteUser(selectedUser.email)}>{t.deleteUser}</button>}
+                  </div>
+                </div>
+              </section>}
+
+              <div className="admin-two-column">
+                <section className="glass-panel admin-panel fade-in-up">
+                  <div className="panel-header"><h3>{t.feedback}</h3><span className="history-count">{allRatings.length}</span></div>
+                  <div className="admin-feed-list">
+                    {allRatings.length === 0 && <div className="empty-state"><p>{copy.adminNoComments}</p></div>}
+                    {[...allRatings].reverse().slice(0, 8).map((r) => (
+                      <article className="admin-feed-item" key={r.id}>
+                        <strong>{r.email || '-'}</strong>
+                        <span>{'★'.repeat(r.stars)}{'☆'.repeat(5 - r.stars)} · {new Date(r.date).toLocaleDateString()}</span>
+                        {r.comment && <p>{r.comment}</p>}
+                        {r.privateComment && <p className="admin-private-note">{r.privateComment}</p>}
                       </article>
-                    );
-                  })}
-                </div>
-              </section>
-              <section className="glass-panel history-section fade-in-up">
-                <div className="panel-header"><h3>{copy.adminComments}</h3><span className="history-count">{allRatings.length}</span></div>
-                <div className="history-list">
-                  {allRatings.length === 0 && <div className="empty-state"><p>{copy.adminNoComments}</p></div>}
-                  {[...allRatings].reverse().map((r) => (
-                    <article className="history-item" key={r.id} style={{flexDirection:'column',alignItems:'flex-start',gap:'0.35rem'}}>
-                      <div style={{display:'flex',alignItems:'center',gap:'0.6rem',width:'100%'}}>
-                        <div className="stat-icon" style={{width:'2rem',height:'2rem',fontSize:'0.8rem',flexShrink:0,background:'var(--primary-glow)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center'}}>{(r.email || '?')[0].toUpperCase()}</div>
-                        <div style={{flex:1,minWidth:0}}>
-                          <h3 style={{fontSize:'0.9rem',wordBreak:'break-all'}}>{r.email || '—'}</h3>
-                          <p style={{fontSize:'0.75rem',opacity:0.55}}>{new Date(r.date).toLocaleString()} · {'★'.repeat(r.stars)}{'☆'.repeat(5 - r.stars)}</p>
-                        </div>
-                      </div>
-                      {r.comment && <p style={{fontSize:'0.85rem',margin:0,paddingLeft:'0.25rem'}}>{r.comment}</p>}
-                      {r.privateComment && <p style={{fontSize:'0.82rem',margin:0,paddingLeft:'0.25rem',color:'#f59e0b',fontStyle:'italic'}}><strong>{copy.adminPrivateNote}:</strong> {r.privateComment}</p>}
+                    ))}
+                  </div>
+                  <div className="admin-action-row"><button className="action-btn-outline danger-button" type="button" onClick={clearAllFeedback}>{t.clearFeedback}</button></div>
+                </section>
+                <section className="glass-panel admin-panel fade-in-up">
+                  <div className="panel-header"><h3>{t.activity}</h3><span className="history-count">{adminLogs === null ? copy.loading : recentLogins.length}</span></div>
+                  <div className="admin-feed-list">
+                    {recentLogins.length === 0 && <div className="empty-state"><p>{copy.adminNoLogins}</p></div>}
+                    {recentLogins.map((entry, i) => (
+                      <article className="admin-feed-item" key={`${entry.email}-${entry.ts}-${i}`}>
+                        <strong>{entry.email}</strong>
+                        <span>{entry.type === 'signup' ? copy.adminSignupEvent : copy.adminLoginEvent} · {new Date(entry.ts).toLocaleString()}</span>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              </div>
+
+              <section className="glass-panel admin-panel fade-in-up">
+                <div className="panel-header"><h3>{t.audit}</h3><span className="history-count">{adminAudit.length}</span></div>
+                <div className="admin-audit-list">
+                  {recentAudit.length === 0 && <div className="empty-state"><p>{isSl ? 'Ni admin akcij.' : 'No admin actions yet.'}</p></div>}
+                  {recentAudit.map((entry) => (
+                    <article className="admin-audit-item" key={entry.id}>
+                      <strong>{entry.action}</strong>
+                      <span>{entry.detail || '-'}</span>
+                      <small>{new Date(entry.ts).toLocaleString()}</small>
                     </article>
                   ))}
                 </div>
-              </section>
-              <section className="glass-panel history-section fade-in-up">
-                <div className="panel-header"><h3>{copy.adminLoginHistory}</h3><span className="history-count">{adminLogs === null ? '…' : loginLogs.length}</span></div>
-                <div className="history-list">
-                  {adminLogs === null && <div className="empty-state"><p>{copy.loading}</p></div>}
-                  {adminLogs !== null && recentLogins.length === 0 && <div className="empty-state"><p>{copy.adminNoLogins}</p></div>}
-                  {recentLogins.map((entry, i) => (
-                    <article className="history-item" key={i}>
-                      <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
-                        <div className="stat-icon" style={{width:'2rem',height:'2rem',fontSize:'0.75rem',flexShrink:0,background: entry.type === 'signup' ? 'var(--secondary-glow)' : 'var(--primary-glow)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center'}}>{entry.type === 'signup' ? 'R' : 'P'}</div>
-                        <div>
-                          <h3 style={{fontSize:'0.9rem'}}>{entry.email}</h3>
-                          <p style={{fontSize:'0.78rem',opacity:0.6}}>{entry.type === 'signup' ? copy.adminSignupEvent : copy.adminLoginEvent} · {new Date(entry.ts).toLocaleString()}</p>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
+                <div className="admin-action-row">
+                  <button className="action-btn-outline" type="button" onClick={adminShowRecap}>{copy.adminShowRecap}</button>
+                  <button className="action-btn-outline" type="button" onClick={exportAdminSnapshot}>{t.exportSnapshot}</button>
+                  <button className="action-btn-outline danger-button" type="button" onClick={clearAdminAuditLog}>{t.clearAudit}</button>
                 </div>
               </section>
             </>
@@ -5029,7 +5383,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
         )}
       </main>
 
-      {currentUser && settings.showFeedbackBtn !== false && (
+      {currentUser && settings.showFeedbackBtn !== false && adminConfig.feedbackEnabled && (
         <div className="feedback-widget">
           {feedbackOpen && (
             <div className="feedback-popup glass-panel">

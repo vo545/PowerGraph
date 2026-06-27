@@ -46,6 +46,7 @@ const CALORIES_KEY_PREFIX = 'powergraph_calories_';
 const CUSTOM_EX_KEY_PREFIX = 'powergraph_custom_ex_';
 const CAL_HISTORY_KEY_PREFIX = 'powergraph_calhistory_';
 const BODYWEIGHT_KEY_PREFIX = 'powergraph_bodyweight_';
+const BODYFAT_KEY_PREFIX = 'powergraph_bodyfat_';
 const RECAP_KEY_PREFIX = 'powergraph_recap_';
 const REST_KEY_PREFIX = 'powergraph_rest_';
 const CHEAT_KEY_PREFIX = 'powergraph_cheat_';
@@ -549,6 +550,7 @@ function combineBodyFatMethods(methods, photoEstimate = null, photoCount = 0) {
 
 function getCalHistoryKey(email) { return `${CAL_HISTORY_KEY_PREFIX}${email}`; }
 function getBodyWeightKey(email) { return `${BODYWEIGHT_KEY_PREFIX}${email}`; }
+function getBodyFatKey(email) { return `${BODYFAT_KEY_PREFIX}${email}`; }
 function getRecapKey(email) { return `${RECAP_KEY_PREFIX}${email}`; }
 function getRestKey(email) { return `${REST_KEY_PREFIX}${email || ''}`; }
 function getCheatKey(email) { return `${CHEAT_KEY_PREFIX}${email || ''}`; }
@@ -582,6 +584,13 @@ function loadCalHistory(email) {
   if (!email) return [];
   try {
     const stored = JSON.parse(localStorage.getItem(getCalHistoryKey(email)) || '[]');
+    return Array.isArray(stored) ? stored : [];
+  } catch { return []; }
+}
+function loadBodyFatHistory(email) {
+  if (!email) return [];
+  try {
+    const stored = JSON.parse(localStorage.getItem(getBodyFatKey(email)) || '[]');
     return Array.isArray(stored) ? stored : [];
   } catch { return []; }
 }
@@ -3769,6 +3778,7 @@ export default function App() {
   const [bodyFatImages, setBodyFatImages] = useState({ front: null, side: null, back: null });
   const [bodyFatMetrics, setBodyFatMetrics] = useState({ gender: settings.gender || 'male', age: settings.age || '', height: settings.height || '', weight: '', waist: '', neck: '', hip: '' });
   const [bodyFatResult, setBodyFatResult] = useState(null);
+  const [bodyFatHistory, setBodyFatHistory] = useState(() => loadBodyFatHistory(localStorage.getItem(SESSION_KEY) || ''));
   const [bodyFatLoading, setBodyFatLoading] = useState(false);
   const [bodyFatError, setBodyFatError] = useState('');
   const [reverseCalDailyKcal, setReverseCalDailyKcal] = useState('');
@@ -3991,6 +4001,7 @@ export default function App() {
     setCalorieEntries(loadCalories(currentUser));
     setSettings(loadSettings(currentUser));
     setCalHistory(loadCalHistory(currentUser));
+    setBodyFatHistory(loadBodyFatHistory(currentUser));
     setBodyWeightEntries(loadBodyWeight(currentUser));
     setRestDays(loadRestDays(currentUser));
     setCheatDays(loadCheatDays(currentUser));
@@ -4034,6 +4045,10 @@ export default function App() {
     if (!currentUser) return;
     localStorage.setItem(getCalHistoryKey(currentUser), JSON.stringify(calHistory));
   }, [calHistory, currentUser]);
+  useEffect(() => {
+    if (!currentUser) return;
+    localStorage.setItem(getBodyFatKey(currentUser), JSON.stringify(bodyFatHistory));
+  }, [bodyFatHistory, currentUser]);
   useEffect(() => {
     if (!currentUser) return;
     localStorage.setItem(getBodyWeightKey(currentUser), JSON.stringify(bodyWeightEntries));
@@ -4233,6 +4248,7 @@ export default function App() {
     setWorkouts([]);
     setCalorieEntries([]);
     setCalHistory([]);
+    setBodyFatHistory([]);
     setBodyWeightEntries([]);
     setSettings(defaultSettings);
     setAuthError('');
@@ -4272,6 +4288,7 @@ export default function App() {
       calorieEntries,
       settings,
       calHistory,
+      bodyFatHistory,
       bodyWeightEntries,
       restDays,
       cheatDays,
@@ -4312,6 +4329,7 @@ export default function App() {
         if (Array.isArray(parsed.calorieEntries)) setCalorieEntries(parsed.calorieEntries);
         if (parsed.settings) setSettings(sanitizeSettings(parsed.settings));
         if (Array.isArray(parsed.calHistory)) setCalHistory(parsed.calHistory);
+        if (Array.isArray(parsed.bodyFatHistory)) setBodyFatHistory(parsed.bodyFatHistory);
         if (Array.isArray(parsed.bodyWeightEntries)) setBodyWeightEntries(parsed.bodyWeightEntries);
         if (Array.isArray(parsed.restDays)) setRestDays(parsed.restDays);
         if (Array.isArray(parsed.cheatDays)) setCheatDays(parsed.cheatDays);
@@ -4330,6 +4348,7 @@ export default function App() {
     setWorkouts([]);
     setCalorieEntries([]);
     setCalHistory([]);
+    setBodyFatHistory([]);
     setBodyWeightEntries([]);
     setRestDays([]);
     setCheatDays([]);
@@ -4337,6 +4356,7 @@ export default function App() {
     localStorage.removeItem(getRestKey(currentUser));
     localStorage.removeItem(getCheatKey(currentUser));
     localStorage.removeItem(getCustomExKey(currentUser));
+    localStorage.removeItem(getBodyFatKey(currentUser));
     setToast(copy.cleared);
   }
   function deleteWorkout(id) { setWorkouts((current) => current.filter((item) => item.id !== id)); if (editingWorkoutId === id) setEditingWorkoutId(null); }
@@ -4490,6 +4510,7 @@ export default function App() {
       getCaloriesStorageKey(email),
       getSettingsStorageKey(email),
       getCalHistoryKey(email),
+      getBodyFatKey(email),
       getBodyWeightKey(email),
       getRestKey(email),
       getCheatKey(email),
@@ -4510,6 +4531,7 @@ export default function App() {
       workouts: loadWorkouts(email),
       calories: loadCalories(email),
       bodyWeight: loadBodyWeight(email),
+      bodyFatHistory: loadBodyFatHistory(email),
       calorieHistory: loadCalHistory(email),
       restDays: loadRestDays(email),
       cheatDays: loadCheatDays(email),
@@ -4530,6 +4552,7 @@ export default function App() {
       setWorkouts([]);
       setCalorieEntries([]);
       setCalHistory([]);
+      setBodyFatHistory([]);
       setBodyWeightEntries([]);
       setRestDays([]);
       setCheatDays([]);
@@ -4561,6 +4584,7 @@ export default function App() {
       workouts: loadWorkouts(user.email).length,
       meals: loadCalories(user.email).length,
       bodyWeight: loadBodyWeight(user.email).length,
+      bodyFat: loadBodyFatHistory(user.email).length,
       bonus: loadAdminBonus(user.email),
       banned: loadBanned().includes(user.email),
       moderator: loadMods().includes(user.email),
@@ -4821,17 +4845,17 @@ Return JSON only, no markdown:
       if (!result) { setIngredientError('error'); return; }
       setIngredientResults(result);
       const totalKcal = Math.round(result.total.kcal);
-      const label = ingredientMode === 'quick' ? ingredientQuery.trim() : ingredientItems.filter(i => i.name.trim()).map(i => i.name.trim()).join(', ');
+      const label = getIngredientMealLabel();
       const totalGrams = result.items.reduce((sum, item) => sum + Number(item.grams || 0), 0);
-      setCalHistory(prev => [{ id: Date.now(), name: label, grams: totalGrams, kcalPer100: totalGrams ? Math.round(totalKcal / totalGrams * 100) : 0, total: totalKcal, date: new Date().toISOString().slice(0, 10) }, ...prev]);
+      setCalHistory(prev => [{ id: Date.now(), name: label, grams: totalGrams, kcalPer100: totalGrams ? Math.round(totalKcal / totalGrams * 100) : 0, total: totalKcal, protein: Number(result.total.protein) || 0, carbs: Number(result.total.carbs) || 0, fat: Number(result.total.fat) || 0, date: new Date().toISOString().slice(0, 10) }, ...prev]);
       setToast(copy.calEstSaved);
     } catch {
       if (localFallback) {
         setIngredientResults(localFallback);
         const totalKcal = Math.round(localFallback.total.kcal);
-        const label = ingredientMode === 'quick' ? ingredientQuery.trim() : ingredientItems.filter(i => i.name.trim()).map(i => i.name.trim()).join(', ');
+        const label = getIngredientMealLabel();
         const totalGrams = localFallback.items.reduce((sum, item) => sum + Number(item.grams || 0), 0);
-        setCalHistory(prev => [{ id: Date.now(), name: label, grams: totalGrams, kcalPer100: totalGrams ? Math.round(totalKcal / totalGrams * 100) : 0, total: totalKcal, date: new Date().toISOString().slice(0, 10) }, ...prev]);
+        setCalHistory(prev => [{ id: Date.now(), name: label, grams: totalGrams, kcalPer100: totalGrams ? Math.round(totalKcal / totalGrams * 100) : 0, total: totalKcal, protein: Number(localFallback.total.protein) || 0, carbs: Number(localFallback.total.carbs) || 0, fat: Number(localFallback.total.fat) || 0, date: new Date().toISOString().slice(0, 10) }, ...prev]);
         setToast(copy.calEstSaved);
       } else {
         setIngredientError('error');
@@ -4902,7 +4926,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
       const weightKg = Number(metrics.weight) || 0;
       const fatMassKg = weightKg ? Number((weightKg * combined.bodyFatPercent / 100).toFixed(1)) : null;
       const leanMassKg = weightKg && fatMassKg !== null ? Number((weightKg - fatMassKg).toFixed(1)) : null;
-      setBodyFatResult({
+      const nextResult = {
         ...combined,
         category: getBodyFatCategory(combined.bodyFatPercent, metrics.gender),
         fatMassKg,
@@ -4910,7 +4934,16 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
         description: settings.language === 'sl'
           ? 'Ocena uporablja obsege telesa, BMI/RFM in fotografije, ce je AI backend povezan. Za najtocnejse rezultate meri pas zjutraj in vnesi vrat ter boke pri zenskah.'
           : 'Estimate combines circumference formulas, BMI/RFM, and photos when the AI backend is connected. For best accuracy, measure waist in the morning and include neck plus hips for female users.',
-      });
+      };
+      setBodyFatResult(nextResult);
+      setBodyFatHistory((current) => [{
+        id: Date.now(),
+        date: new Date().toISOString().slice(0, 10),
+        result: nextResult,
+        metrics,
+        photoCount: photos.length,
+      }, ...current].slice(0, 24));
+      setToast(settings.language === 'sl' ? 'Ocena telesne mascobe shranjena.' : 'Body fat estimate saved.');
     } catch { setBodyFatError('error'); }
     finally { setBodyFatLoading(false); }
   }
@@ -5052,6 +5085,58 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
   function reuseMeal(entry) {
     setCalorieForm({ date: new Date().toISOString().slice(0, 10), mealType: entry.mealType, name: entry.name, calories: String(entry.calories), protein: String(entry.protein || ''), carbs: String(entry.carbs || ''), fat: String(entry.fat || '') });
     setActiveSection('calories');
+  }
+  function getIngredientMealLabel() {
+    return ingredientMode === 'quick'
+      ? (ingredientQuery.trim() || 'Estimated food')
+      : ingredientItems.filter((item) => item.name.trim()).map((item) => item.name.trim()).join(', ') || 'Estimated food';
+  }
+  function addIngredientResultToMeals(result = ingredientResults) {
+    if (!result?.total) return;
+    const entry = {
+      id: Date.now(),
+      date: calorieForm.date || new Date().toISOString().slice(0, 10),
+      mealType: calorieForm.mealType || 'snack',
+      name: getIngredientMealLabel(),
+      calories: Math.round(Number(result.total.kcal) || 0),
+      protein: Number(result.total.protein) || 0,
+      carbs: Number(result.total.carbs) || 0,
+      fat: Number(result.total.fat) || 0,
+    };
+    setCalorieEntries((current) => [...current, entry]);
+    setToast(settings.language === 'sl' ? 'Ocena dodana v obroke.' : 'Estimate added to meals.');
+  }
+  function editIngredientResultAsMeal(result = ingredientResults) {
+    if (!result?.total) return;
+    setCalorieForm((current) => ({
+      ...current,
+      mealType: current.mealType || 'snack',
+      name: getIngredientMealLabel(),
+      calories: String(Math.round(Number(result.total.kcal) || 0)),
+      protein: String(Number(result.total.protein) || ''),
+      carbs: String(Number(result.total.carbs) || ''),
+      fat: String(Number(result.total.fat) || ''),
+    }));
+    setActiveSection('calories');
+  }
+  function reuseBodyFatEntry(entry) {
+    if (!entry) return;
+    if (entry.metrics) {
+      setBodyFatMetrics({
+        gender: entry.metrics.gender || settings.gender || 'male',
+        age: entry.metrics.age ? String(entry.metrics.age) : '',
+        height: entry.metrics.height ? String(entry.metrics.height) : '',
+        weight: entry.metrics.weight ? String(entry.metrics.weight) : '',
+        waist: entry.metrics.waist ? String(entry.metrics.waist) : '',
+        neck: entry.metrics.neck ? String(entry.metrics.neck) : '',
+        hip: entry.metrics.hip ? String(entry.metrics.hip) : '',
+      });
+    }
+    if (entry.result) setBodyFatResult(entry.result);
+    setToast(settings.language === 'sl' ? 'Meritve so nalozene.' : 'Measurements loaded.');
+  }
+  function deleteBodyFatEntry(id) {
+    setBodyFatHistory((current) => current.filter((entry) => entry.id !== id));
   }
 
   function submitRating(e) {
@@ -5745,6 +5830,14 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                       </div>
                     ))}
                   </div>
+                  <div className="estimator-action-row">
+                    <button className="action-btn-primary" type="button" onClick={() => addIngredientResultToMeals()}>
+                      {settings.language === 'sl' ? 'Dodaj v obroke' : 'Add to meals'}
+                    </button>
+                    <button className="action-btn-outline" type="button" onClick={() => editIngredientResultAsMeal()}>
+                      {settings.language === 'sl' ? 'Uredi pred shranjevanjem' : 'Edit before saving'}
+                    </button>
+                  </div>
                 </div>
                 {/* Per-ingredient breakdown */}
                 {ingredientResults.items?.map((item, i) => (
@@ -5830,6 +5923,32 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                 {bodyFatResult.description && <p style={{fontSize:'0.85rem',lineHeight:1.55,opacity:0.8,margin:0}}>{bodyFatResult.description}</p>}
               </div>
             )}
+            {bodyFatHistory.length ? (
+              <div className="body-fat-history">
+                <div className="panel-header compact-panel-header">
+                  <h3>{settings.language === 'sl' ? 'Body-fat history' : 'Body fat history'}</h3>
+                  <span className="history-count">{bodyFatHistory.length}</span>
+                </div>
+                <div className="history-list">
+                  {bodyFatHistory.slice(0, 6).map((entry) => (
+                    <article className="history-item" key={entry.id}>
+                      <div>
+                        <h3>{entry.result?.bodyFatPercent}%</h3>
+                        <p>{entry.date} · {entry.metrics?.weight ? `${entry.metrics.weight} kg` : '-'} · {entry.photoCount || 0} {settings.language === 'sl' ? 'slik' : 'photos'}</p>
+                      </div>
+                      <div className="history-metrics">
+                        <span>{entry.result?.category}</span>
+                        {entry.result?.leanMassKg != null && <span>{entry.result.leanMassKg} kg lean</span>}
+                      </div>
+                      <div className="settings-button-row">
+                        <button className="action-btn-outline" type="button" onClick={() => reuseBodyFatEntry(entry)}>{settings.language === 'sl' ? 'Nalozi' : 'Load'}</button>
+                        <button className="action-btn-outline danger-button" type="button" onClick={() => deleteBodyFatEntry(entry.id)}>{copy.delete}</button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </section>
 
           {/* Cal history */}
@@ -5847,7 +5966,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                     <span style={{fontWeight:700}}>{entry.total} kcal</span>
                   </div>
                   <div className="settings-button-row">
-                    <button className="action-btn-outline" type="button" onClick={() => reuseMeal({ mealType: 'snack', name: entry.name, calories: String(entry.total), protein: '', carbs: '', fat: '' })}>🔁 {copy.reuseMeal}</button>
+                    <button className="action-btn-outline" type="button" onClick={() => reuseMeal({ mealType: 'snack', name: entry.name, calories: String(entry.total), protein: String(entry.protein || ''), carbs: String(entry.carbs || ''), fat: String(entry.fat || '') })}>🔁 {copy.reuseMeal}</button>
                     <button className="action-btn-outline danger-button" type="button" onClick={() => deleteCalHistoryEntry(entry.id)}>{copy.delete}</button>
                   </div>
                 </article>

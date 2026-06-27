@@ -2899,6 +2899,83 @@ p {
   font-size: 11px;
 }
 
+.timeframe-check-card {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(52, 211, 153, 0.24);
+  border-radius: 14px;
+  background: rgba(6, 78, 59, 0.12);
+}
+
+.timeframe-check-card.warning {
+  border-color: rgba(251, 146, 60, 0.34);
+  background:
+    linear-gradient(135deg, rgba(251, 146, 60, 0.12), rgba(15, 23, 42, 0.32)),
+    rgba(2, 6, 23, 0.26);
+}
+
+.timeframe-check-head,
+.timeframe-check-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.timeframe-check-head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.timeframe-check-head span,
+.timeframe-check-grid span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.timeframe-check-head strong {
+  color: var(--text-primary);
+  font-size: 18px;
+}
+
+.timeframe-check-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 10px;
+}
+
+.timeframe-check-grid div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.24);
+}
+
+.timeframe-check-grid strong,
+.timeframe-check-grid small {
+  display: block;
+}
+
+.timeframe-check-grid strong {
+  margin-top: 5px;
+  color: var(--text-primary);
+  font-size: 17px;
+}
+
+.timeframe-check-grid small {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.timeframe-check-card p {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .calorie-metric-grid .negative {
   color: var(--error);
 }
@@ -2933,7 +3010,7 @@ p {
 }
 
 .calorie-support-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .set-goal-btn {
@@ -5872,13 +5949,15 @@ body {
 
   .hydration-mini-grid div,
   .calorie-metric-grid div,
-  .calorie-support-grid div {
+  .calorie-support-grid div,
+  .timeframe-check-grid div {
     padding: 8px;
   }
 
   .hydration-mini-grid strong,
   .calorie-metric-grid strong,
-  .calorie-support-grid strong {
+  .calorie-support-grid strong,
+  .timeframe-check-grid strong {
     font-size: 15px;
   }
 
@@ -5910,6 +5989,10 @@ body {
 
   .calorie-metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .timeframe-check-grid {
+    grid-template-columns: 1fr;
   }
 
   .calorie-support-grid {

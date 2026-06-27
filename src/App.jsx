@@ -2580,6 +2580,63 @@ function findCaloriesForGoal({ currentWeight, goalWeight, days, age, height, gen
   return Math.round((low + high) / 2);
 }
 
+function getRequestedTimeframePlan({ currentWeight, goalWeight, days, age, height, gender, activityLevel, tdee }) {
+  const gaining = goalWeight > currentWeight;
+  const staticDailyAdjustment = ((currentWeight - goalWeight) * KCAL_PER_KG_BODY_MASS) / Math.max(1, days);
+
+  if (currentWeight === goalWeight) {
+    return {
+      feasible: true,
+      target: tdee,
+      dailyAdjustment: 0,
+      simpleTarget: tdee,
+      boundaryWeight: currentWeight,
+    };
+  }
+
+  const boundaryCalories = gaining ? 10000 : 0;
+  const boundary = simulateWeightFromCalories({
+    startWeight: currentWeight,
+    dailyCalories: boundaryCalories,
+    days,
+    age,
+    height,
+    gender,
+    activityLevel,
+  });
+  const feasible = gaining ? boundary.finalWeight >= goalWeight : boundary.finalWeight <= goalWeight;
+
+  if (!feasible) {
+    return {
+      feasible: false,
+      target: null,
+      dailyAdjustment: Math.round(staticDailyAdjustment),
+      simpleTarget: Math.round(tdee - staticDailyAdjustment),
+      boundaryWeight: Number(boundary.finalWeight.toFixed(1)),
+    };
+  }
+
+  const target = findCaloriesForGoal({
+    currentWeight,
+    goalWeight,
+    days,
+    age,
+    height,
+    gender,
+    activityLevel,
+    minCalories: 0,
+    maxCalories: 10000,
+  });
+
+  return {
+    feasible: true,
+    target,
+    dailyAdjustment: Math.round(tdee - target),
+    simpleTarget: target,
+    boundaryWeight: Number(boundary.finalWeight.toFixed(1)),
+  };
+}
+
 function estimateWeeksToGoalFromCalories({ currentWeight, goalWeight, dailyCalories, age, height, gender, activityLevel, maxWeeks = 260 }) {
   const gaining = goalWeight > currentWeight;
   let weight = currentWeight;
@@ -2627,6 +2684,16 @@ function getNutritionPlan({ currentWeight, goalWeight, weeks, age, height, gende
   const goalMaintenance = Math.round(goalBmr * multiplier);
   const goalType = gw < cw ? 'cut' : gw > cw ? 'bulk' : 'maintain';
   const isTeen = userAge < 18;
+  const requestedPlan = getRequestedTimeframePlan({
+    currentWeight: cw,
+    goalWeight: gw,
+    days: durationDays,
+    age: userAge,
+    height: userHeight,
+    gender,
+    activityLevel,
+    tdee,
+  });
   const targetFloor = isTeen ? (gender === 'female' ? 1600 : 1800) : (gender === 'female' ? 1200 : 1500);
   const targetCeiling = Math.max(targetFloor + 300, Math.round(tdee * 1.2));
   const rawTarget = goalType === 'maintain'
@@ -2699,6 +2766,12 @@ function getNutritionPlan({ currentWeight, goalWeight, weeks, age, height, gende
     goalType,
     capped,
     isTeen,
+    requestedWeeks: durationWeeks,
+    requestedFeasible: requestedPlan.feasible,
+    requestedTarget: requestedPlan.target,
+    requestedDailyAdjustment: requestedPlan.dailyAdjustment,
+    requestedSimpleTarget: requestedPlan.simpleTarget,
+    requestedBoundaryWeight: requestedPlan.boundaryWeight,
     desiredWeeklyChange,
     projectedWeeklyChange,
     predictedWeight: Number(simulated.finalWeight.toFixed(1)),
@@ -5698,9 +5771,9 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
               {tdeeResult && (
                 <div className="calorie-result-card">
                   <div className="calorie-target-hero">
-                    <span>{copy.tdeeTarget}</span>
+                    <span>{tdeeResult.capped ? (settings.language === 'sl' ? 'Varen dnevni cilj' : 'Safe daily target') : copy.tdeeTarget}</span>
                     <strong>{tdeeResult.target.toLocaleString()} kcal</strong>
-                    <p>{settings.language === 'sl' ? 'Vzdrzevanje danes' : 'Current maintenance'}: {tdeeResult.tdee.toLocaleString()} kcal</p>
+                    <p>{settings.language === 'sl' ? 'Izbran rok' : 'Selected timeframe'}: {tdeeResult.requestedWeeks} {copy.reverseCalWeeks} · {settings.language === 'sl' ? 'Vzdrzevanje danes' : 'Current maintenance'}: {tdeeResult.tdee.toLocaleString()} kcal</p>
                   </div>
                   <div className="calorie-metric-grid">
                     <div><span>BMR</span><strong>{tdeeResult.bmr.toLocaleString()}</strong><small>kcal</small></div>
@@ -5708,7 +5781,35 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                     <div><span>{settings.language === 'sl' ? 'Ciljno vzdrz.' : 'Goal maint.'}</span><strong>{tdeeResult.goalMaintenance.toLocaleString()}</strong><small>kcal</small></div>
                     <div><span>{settings.language === 'sl' ? 'Sprememba' : 'Change'}</span><strong className={tdeeResult.dailyAdjustment > 0 ? 'negative' : tdeeResult.dailyAdjustment < 0 ? 'positive' : ''}>{tdeeResult.dailyAdjustment > 0 ? '-' : tdeeResult.dailyAdjustment < 0 ? '+' : ''}{Math.abs(tdeeResult.dailyAdjustment)}</strong><small>kcal/day</small></div>
                     <div><span>{settings.language === 'sl' ? 'Tempo' : 'Pace'}</span><strong>{Math.abs(tdeeResult.projectedWeeklyChange).toFixed(2)}</strong><small>kg/week</small></div>
-                    <div><span>{settings.language === 'sl' ? 'Napoved' : 'Predicted'}</span><strong>{tdeeResult.predictedWeight.toFixed(1)}</strong><small>kg</small></div>
+                    <div><span>{settings.language === 'sl' ? 'Po izbranem roku' : 'After selected time'}</span><strong>{tdeeResult.predictedWeight.toFixed(1)}</strong><small>kg</small></div>
+                  </div>
+                  <div className={`timeframe-check-card ${tdeeResult.capped || !tdeeResult.requestedFeasible ? 'warning' : 'ok'}`}>
+                    <div className="timeframe-check-head">
+                      <span>{settings.language === 'sl' ? 'Tvoj izbran rok' : 'Your selected timeframe'}</span>
+                      <strong>{tdeeResult.requestedWeeks} {copy.reverseCalWeeks}</strong>
+                    </div>
+                    <div className="timeframe-check-grid">
+                      <div>
+                        <span>{settings.language === 'sl' ? 'Za ta rok bi bilo treba' : 'Needed for that date'}</span>
+                        <strong>{tdeeResult.requestedFeasible && tdeeResult.requestedTarget !== null ? `${tdeeResult.requestedTarget.toLocaleString()} kcal` : (settings.language === 'sl' ? 'Ni izvedljivo' : 'Not feasible')}</strong>
+                        <small>{tdeeResult.requestedDailyAdjustment > 0 ? '-' : tdeeResult.requestedDailyAdjustment < 0 ? '+' : ''}{Math.abs(tdeeResult.requestedDailyAdjustment).toLocaleString()} kcal/day</small>
+                      </div>
+                      <div>
+                        <span>{settings.language === 'sl' ? 'App priporoca' : 'App recommends'}</span>
+                        <strong>{tdeeResult.target.toLocaleString()} kcal</strong>
+                        <small>{tdeeResult.capped ? (settings.language === 'sl' ? 'varnostna omejitev' : 'safety cap applied') : (settings.language === 'sl' ? 'rok je upostevan' : 'timeframe matched')}</small>
+                      </div>
+                      <div>
+                        <span>{settings.language === 'sl' ? 'Varen cas' : 'Safe time'}</span>
+                        <strong>{tdeeResult.recommendedWeeks ? `${tdeeResult.recommendedWeeks} ${copy.reverseCalWeeks}` : '-'}</strong>
+                        <small>{settings.language === 'sl' ? 'pri tem cilju' : 'at this target'}</small>
+                      </div>
+                    </div>
+                    <p>{tdeeResult.requestedFeasible
+                      ? (tdeeResult.capped
+                        ? (settings.language === 'sl' ? 'Rok je bil upostevan pri izracunu, ampak zahteva bolj agresiven vnos od varnega razpona, zato je prikazan varen cilj.' : 'The timeframe was calculated, but it requires a more aggressive intake than the safe range, so the safe target is shown.')
+                        : (settings.language === 'sl' ? 'Ta vnos uporablja tvoj izbran rok in naj bi dosegel cilj v tem casu.' : 'This intake uses your selected timeframe and is projected to hit the goal in that time.'))
+                      : (settings.language === 'sl' ? `Tega cilja ni mogoce doseci v izbranem roku brez ekstremnega vnosa. Prikazan je varen cilj; tudi pri 0 kcal bi bila napoved približno ${tdeeResult.requestedBoundaryWeight} kg.` : `This goal cannot be reached in the selected timeframe without an extreme intake. The safe target is shown; even at 0 kcal, the projection is about ${tdeeResult.requestedBoundaryWeight} kg.`)}</p>
                   </div>
                   <div className="macro-result-grid">
                     {[
@@ -5725,7 +5826,8 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                   </div>
                   <div className="calorie-support-grid">
                     <div><span>{copy.macrosWater}</span><strong>{(tdeeResult.waterMl/1000).toFixed(1)} L</strong></div>
-                    <div><span>{settings.language === 'sl' ? 'Realisticen cas' : 'Realistic time'}</span><strong>{tdeeResult.recommendedWeeks ? `${tdeeResult.recommendedWeeks} ${copy.reverseCalWeeks}` : '-'}</strong></div>
+                    <div><span>{settings.language === 'sl' ? 'Izbran rok' : 'Selected time'}</span><strong>{tdeeResult.requestedWeeks} {copy.reverseCalWeeks}</strong></div>
+                    <div><span>{settings.language === 'sl' ? 'Varen cas' : 'Safe time'}</span><strong>{tdeeResult.recommendedWeeks ? `${tdeeResult.recommendedWeeks} ${copy.reverseCalWeeks}` : '-'}</strong></div>
                   </div>
                   {tdeeResult.isTeen && <p className="settings-copy calorie-warning">{settings.language === 'sl' ? 'Ker je starost pod 18, je kalkulator omejil agresivne spremembe. Za hujsanje ali vecji surplus pri mladoletnih osebah naj cilj potrdi zdravnik ali dietetik.' : 'Because age is under 18, aggressive changes are capped. For weight loss or a large surplus in minors, confirm the target with a clinician or registered dietitian.'}</p>}
                   {tdeeResult.capped && <p className="settings-copy calorie-warning">{settings.language === 'sl' ? 'Izbran rok je bil bolj agresiven od varnega razpona, zato je cilj omejen in napovedana teza lahko ne doseze cilja v tem roku.' : 'The selected timeframe was more aggressive than the safe range, so the target was capped and the predicted weight may not fully reach the goal by then.'}</p>}

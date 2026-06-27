@@ -1545,14 +1545,15 @@ const exerciseDifficulty = {
 };
 
 const calisthenicsSections = {
-  Chest: ['Push-Up', 'Wide Push-Up', 'Diamond Push-Up', 'Archer Push-Up', 'Pseudo-Planche Push-Up'],
-  Back: ['Pull-Up', 'Inverted Row', 'Australian Pull-Up', 'Muscle-Up', 'Dead Hang'],
-  Legs: ['Bodyweight Squat', 'Bulgarian Split Squat', 'Pistol Squat', 'Jump Squat', 'Wall Sit'],
-  Triceps: ['Dip', 'Close Grip Push-Up', 'Bench Dip'],
-  Biceps: ['Chin-Up', 'Archer Pull-Up', 'Commando Pull-Up'],
-  Shoulders: ['Pike Push-Up', 'Handstand Push-Up', 'Shoulder Tap'],
-  'Stamina/Cardio': ['Burpee', 'Mountain Climber', 'Jump Rope', 'Box Jump', 'Running'],
-  Abs: ['Plank', 'L-Sit', 'Hollow Body Hold', 'Leg Raise', 'V-Up'],
+  Chest: ['Push-Up', 'Wide Push-Up', 'Archer Push-Up', 'Pseudo-Planche Push-Up', 'Decline Push-Up', 'Deficit Push-Up', 'Ring Push-Up', 'Clap Push-Up', 'Spiderman Push-Up', 'Typewriter Push-Up', 'One-Arm Push-Up', 'Feet-Elevated Push-Up', 'Suspended Push-Up', 'Explosive Push-Up', 'Slow Eccentric Push-Up'],
+  Back: ['Pull-Up', 'Inverted Row', 'Australian Pull-Up', 'Muscle-Up', 'Scapular Pull-Up', 'Wide Grip Pull-Up', 'Close Grip Pull-Up', 'L-Sit Pull-Up', 'Towel Pull-Up', 'Negative Pull-Up', 'Chest-to-Bar Pull-Up', 'Ring Row', 'Front Lever Row', 'Tuck Front Lever Pull', 'Superman Pull'],
+  Legs: ['Bodyweight Squat', 'Bulgarian Split Squat', 'Pistol Squat', 'Jump Squat', 'Wall Sit', 'Reverse Lunge', 'Cossack Squat', 'Shrimp Squat', 'Step-Up', 'Single-Leg Glute Bridge', 'Nordic Curl', 'Calf Raise', 'Skater Squat', 'Sissy Squat', 'Broad Jump'],
+  Triceps: ['Dip', 'Close Grip Push-Up', 'Bench Dip', 'Diamond Push-Up', 'Korean Dip', 'Straight Bar Dip', 'Ring Dip', 'Bodyweight Triceps Extension', 'Tiger Bend Push-Up', 'Sphinx Push-Up', 'Reverse Plank Triceps Dip', 'Bench Triceps Extension', 'Feet-Elevated Close Push-Up', 'Negative Dip', 'Support Hold Dip'],
+  Biceps: ['Chin-Up', 'Archer Pull-Up', 'Commando Pull-Up', 'Close Grip Chin-Up', 'Towel Chin-Up', 'Ring Chin-Up', 'Negative Chin-Up', 'Headbanger Pull-Up', 'Pelican Curl', 'Bodyweight Biceps Curl', 'Inverted Biceps Row', 'Isometric Chin Hold', 'Supinated Australian Row', 'Assisted One-Arm Chin-Up', 'Mixed Grip Chin-Up'],
+  Forearms: ['Dead Hang', 'Active Hang', 'Towel Hang', 'Fingertip Plank', 'Fingertip Push-Up', 'Wrist Push-Up', 'Knuckle Push-Up', 'Palm Pulse', 'Reverse Palm Plank', 'Pronation Push-Up Hold', 'Doorframe Finger Hold', 'False Grip Hang', 'Ring Support Hold', 'Rope Climb Pull', 'Monkey Bar Traverse'],
+  Shoulders: ['Pike Push-Up', 'Handstand Push-Up', 'Shoulder Tap', 'Wall Walk', 'Handstand Hold', 'Frog Stand', 'Planche Lean', 'Dive Bomber Push-Up', 'Hindu Push-Up', 'Wall Handstand Shoulder Tap', 'Elevated Pike Push-Up', 'Tuck Planche Hold', 'Scapular Push-Up', 'Pike Hold', 'Crow Pose Push-Up'],
+  'Stamina/Cardio': ['Burpee', 'Mountain Climber', 'Jump Rope', 'Box Jump', 'Running', 'High Knees', 'Jumping Jacks', 'Skater Hops', 'Squat Thrust', 'Bear Crawl', 'Crab Walk', 'Shuttle Run', 'Tuck Jump', 'Lateral Bounds', 'Sprint Intervals'],
+  Abs: ['Plank', 'L-Sit', 'Hollow Body Hold', 'Leg Raise', 'V-Up', 'Reverse Crunch', 'Bicycle Crunch', 'Dead Bug', 'Flutter Kick', 'Side Plank', 'Hollow Rock', 'Toe Touch', 'Windshield Wiper', 'Dragon Flag', 'Plank Jack'],
 };
 
 const GYM_SPLIT_COMBOS = [
@@ -1588,6 +1589,233 @@ Object.assign(exerciseInfo, {
   'Hollow Body Hold': { sl: 'Votla dr\u017ea', en: 'Hollow Body Hold', targets: { sl: 'Jedro, abs, stabilizatorji', en: 'Core, abs, stabilizers' }, primary: { sl: 'Jedro', en: 'Core' }, howTo: { sl: 'Na hrbtu iztegni roke in noge ter dvigni oba para od tal.', en: 'On back, extend arms and legs, raise both off the floor.' }, cues: { sl: 'Spodnji hrbet pritisni v tla.', en: 'Press lower back into the floor.' } },
   'V-Up': { sl: 'V-dvig', en: 'V-Up', targets: { sl: 'Abs, upogibalke kolka', en: 'Abs, hip flexors' }, primary: { sl: 'Abs', en: 'Abs' }, howTo: { sl: 'Hkrati dvigni ravne noge in trup ter se dotakni prstov na nogah.', en: 'Simultaneously raise straight legs and torso, touch toes.' }, cues: { sl: 'Ne zamahuj z nogami.', en: 'Avoid swinging the legs.' } },
   'Dead Hang': { sl: 'Mrtvo ve\u0161anje', en: 'Dead Hang', targets: { sl: 'Prijem, podlahti, rame, jedro', en: 'Grip, forearms, shoulders, core' }, primary: { sl: 'Prijem', en: 'Grip' }, howTo: { sl: 'Visi na drogu z iztegnjenimi rokami \u010dim dalje.', en: 'Hang from bar with straight arms as long as possible.' }, cues: { sl: 'Rame rahlo aktiviraj, ne visi pasivno.', en: 'Slightly activate shoulders, do not hang passively.' } },
+});
+
+const CAL_DIFFICULTY_LABELS = {
+  Beginner: { sl: 'Zacetniska', en: 'Beginner' },
+  Intermediate: { sl: 'Srednja', en: 'Intermediate' },
+  Advanced: { sl: 'Napredna', en: 'Advanced' },
+};
+
+const CAL_EQUIPMENT_LABELS = {
+  floor: { sl: 'Brez opreme ali podloga', en: 'No equipment or mat' },
+  bar: { sl: 'Drog za zgibe', en: 'Pull-up bar' },
+  lowBar: { sl: 'Nizka precka, miza ali TRX', en: 'Low bar, table, or TRX' },
+  rings: { sl: 'Gimnasticni obroci ali TRX', en: 'Gymnastic rings or TRX' },
+  wall: { sl: 'Stena in podloga', en: 'Wall and mat' },
+  bench: { sl: 'Klop, stopnica ali stabilen stol', en: 'Bench, step, or stable chair' },
+  box: { sl: 'Skatla, stopnica ali ploscad', en: 'Box, step, or platform' },
+  towel: { sl: 'Drog in brisaca', en: 'Pull-up bar and towel' },
+  rope: { sl: 'Vrv, drog ali plezalna konstrukcija', en: 'Rope, bar, or climbing frame' },
+  space: { sl: 'Odprt prostor', en: 'Open space' },
+  timer: { sl: 'Brez opreme, po zelji timer', en: 'No equipment, optional timer' },
+};
+
+const CAL_SECTION_LABELS = {
+  Chest: { sl: 'Prsa', en: 'Chest' },
+  Back: { sl: 'Hrbet', en: 'Back' },
+  Legs: { sl: 'Noge', en: 'Legs' },
+  Triceps: { sl: 'Triceps', en: 'Triceps' },
+  Biceps: { sl: 'Biceps', en: 'Biceps' },
+  Forearms: { sl: 'Podlahti', en: 'Forearms' },
+  Shoulders: { sl: 'Ramena', en: 'Shoulders' },
+  Abs: { sl: 'Trebusne misice', en: 'Abs' },
+  'Stamina/Cardio': { sl: 'Kondicija', en: 'Stamina/Cardio' },
+};
+
+const CAL_SECTION_COPY = {
+  Chest: {
+    howTo: { sl: 'Izvedi variacijo sklece kontrolirano: spusti prsni kos, ohrani napeto jedro in se potisni nazaj.', en: 'Perform the push-up variation under control: lower the chest, keep the core tight, and press back up.' },
+    cues: { sl: 'Rebra zakleni navzdol, lopatice naj se gibajo naravno, komolce vodi stabilno.', en: 'Lock the ribs down, let the shoulder blades move naturally, and keep the elbows stable.' },
+  },
+  Back: {
+    howTo: { sl: 'Zacni iz aktivnih ramen, povleci komolce proti bokom in koncaj z nadzorovanim spustom.', en: 'Start from active shoulders, pull the elbows toward the hips, and finish with a controlled lower.' },
+    cues: { sl: 'Najprej aktiviraj lopatice, ne brcaj z nogami in ne izgubi napetosti v jedru.', en: 'Set the shoulder blades first, avoid kicking, and keep the core braced.' },
+  },
+  Legs: {
+    howTo: { sl: 'Stopalo naj bo stabilno, spusti se skozi kolk in koleno ter se odrini brez izgube ravnotezja.', en: 'Keep the foot stable, descend through the hip and knee, and drive up without losing balance.' },
+    cues: { sl: 'Koleno naj sledi prstom, trup ostane miren, pristanek naj bo mehak.', en: 'Track the knee over the toes, keep the torso quiet, and land softly.' },
+  },
+  Triceps: {
+    howTo: { sl: 'Spusti telo ali roke kontrolirano, nato iztegni komolce do mocnega zakljucka.', en: 'Lower the body or arms under control, then extend the elbows to a strong finish.' },
+    cues: { sl: 'Komolce drzi blizu linije telesa in ne pogrezaj ramen.', en: 'Keep the elbows close to the body line and do not sink into the shoulders.' },
+  },
+  Biceps: {
+    howTo: { sl: 'Uporabi podprijem ali supinirano vleko, povleci prsi proti opori in pocasi spusti.', en: 'Use an underhand or supinated pull, drive the chest toward the support, and lower slowly.' },
+    cues: { sl: 'Komolce vodi proti rebrom, zapestja naj ostanejo cvrsta, ne zanihaj s trupom.', en: 'Drive elbows toward the ribs, keep the wrists firm, and avoid swinging the torso.' },
+  },
+  Forearms: {
+    howTo: { sl: 'Drzi oporo ali polozaj z aktivnim prijemom ter postopno podaljsuj cas pod napetostjo.', en: 'Hold the support or position with an active grip and gradually extend time under tension.' },
+    cues: { sl: 'Stisk naj bo enakomeren, ramena aktivna, zapestja pa brez bolecine.', en: 'Keep the squeeze even, shoulders active, and wrists pain-free.' },
+  },
+  Shoulders: {
+    howTo: { sl: 'Postavi telo v mocno oporo, prenesi tezo cez dlani in potiskaj z rameni.', en: 'Set a strong support, shift weight through the hands, and press with the shoulders.' },
+    cues: { sl: 'Dlani potisni v tla, jedro napni in ne lomi ledvenega dela.', en: 'Push the hands into the floor, brace the core, and avoid over-arching the low back.' },
+  },
+  Abs: {
+    howTo: { sl: 'Zakleni rebra in medenico, izvedi gib iz jedra ter ohrani kontroliran tempo.', en: 'Lock ribs and pelvis, move from the core, and keep the tempo controlled.' },
+    cues: { sl: 'Spodnji hrbet naj ostane pod nadzorom, dihaj kratko in ne hitri.', en: 'Keep the lower back controlled, breathe in short cycles, and do not rush.' },
+  },
+  'Stamina/Cardio': {
+    howTo: { sl: 'Izvedi gib ritmicno v intervalih ali serijah, tako da tempo ostane vzdrzen.', en: 'Perform the movement rhythmically in intervals or sets while keeping a sustainable pace.' },
+    cues: { sl: 'Pristajaj mehko, dihanje naj bo pod kontrolo in tehnika naj ne razpade.', en: 'Land softly, keep breathing under control, and do not let technique break down.' },
+  },
+};
+
+const CAL_SECTION_DEFAULT_WEIGHTS = {
+  Chest: { Chest: 0.7, Triceps: 0.2, Shoulders: 0.1 },
+  Back: { Back: 0.65, Biceps: 0.25, Forearms: 0.1 },
+  Legs: { Legs: 0.88, Abs: 0.12 },
+  Triceps: { Triceps: 0.65, Chest: 0.25, Shoulders: 0.1 },
+  Biceps: { Biceps: 0.5, Back: 0.4, Forearms: 0.1 },
+  Forearms: { Forearms: 0.75, Back: 0.15, Shoulders: 0.1 },
+  Shoulders: { Shoulders: 0.65, Triceps: 0.2, Abs: 0.15 },
+  Abs: { Abs: 0.85, Legs: 0.1, Shoulders: 0.05 },
+  'Stamina/Cardio': { 'Stamina/Cardio': 0.65, Legs: 0.25, Abs: 0.1 },
+};
+
+function makeCalisthenicsTargets(weights, lang) {
+  return Object.keys(weights)
+    .map((key) => CAL_SECTION_LABELS[key]?.[lang] || key)
+    .join(', ');
+}
+
+function makeAdditionalCalisthenicsExercise([section, name, sl, difficulty = 'Intermediate', equipment = 'floor', loadFactor = 0.5, weights]) {
+  const resolvedWeights = weights || CAL_SECTION_DEFAULT_WEIGHTS[section] || { [section]: 1 };
+  const copy = CAL_SECTION_COPY[section] || CAL_SECTION_COPY.Chest;
+  const primary = CAL_SECTION_LABELS[section] || { sl: section, en: section };
+  return {
+    section,
+    name,
+    loadFactor,
+    weights: resolvedWeights,
+    info: {
+      sl,
+      en: name,
+      targets: {
+        sl: makeCalisthenicsTargets(resolvedWeights, 'sl'),
+        en: makeCalisthenicsTargets(resolvedWeights, 'en'),
+      },
+      primary,
+      howTo: {
+        sl: `${sl}: ${copy.howTo.sl}`,
+        en: `${name}: ${copy.howTo.en}`,
+      },
+      cues: copy.cues,
+    },
+    equipment: CAL_EQUIPMENT_LABELS[equipment] || CAL_EQUIPMENT_LABELS.floor,
+    difficulty: CAL_DIFFICULTY_LABELS[difficulty] || CAL_DIFFICULTY_LABELS.Intermediate,
+  };
+}
+
+const ADDITIONAL_CALISTHENICS_EXERCISES = [
+  ['Chest', 'Decline Push-Up', 'Sklece z dvignjenimi nogami', 'Intermediate', 'bench', 0.68],
+  ['Chest', 'Deficit Push-Up', 'Globoke sklece na oporah', 'Intermediate', 'bench', 0.68],
+  ['Chest', 'Ring Push-Up', 'Sklece na obrocih', 'Intermediate', 'rings', 0.7],
+  ['Chest', 'Clap Push-Up', 'Sklece s ploskom', 'Advanced', 'floor', 0.72, { Chest: 0.65, Triceps: 0.2, Shoulders: 0.15 }],
+  ['Chest', 'Spiderman Push-Up', 'Spiderman sklece', 'Intermediate', 'floor', 0.66, { Chest: 0.58, Abs: 0.22, Triceps: 0.12, Shoulders: 0.08 }],
+  ['Chest', 'Typewriter Push-Up', 'Typewriter sklece', 'Advanced', 'floor', 0.74],
+  ['Chest', 'One-Arm Push-Up', 'Skleca z eno roko', 'Advanced', 'floor', 0.82, { Chest: 0.62, Triceps: 0.22, Abs: 0.1, Shoulders: 0.06 }],
+  ['Chest', 'Feet-Elevated Push-Up', 'Sklece z nogami na klopi', 'Intermediate', 'bench', 0.68],
+  ['Chest', 'Suspended Push-Up', 'Sklece na trakovih', 'Intermediate', 'rings', 0.7, { Chest: 0.62, Triceps: 0.18, Shoulders: 0.12, Abs: 0.08 }],
+  ['Chest', 'Explosive Push-Up', 'Eksplozivne sklece', 'Advanced', 'floor', 0.72],
+  ['Chest', 'Slow Eccentric Push-Up', 'Pocasne ekscentricne sklece', 'Beginner', 'floor', 0.64],
+  ['Back', 'Scapular Pull-Up', 'Lopaticni zgib', 'Beginner', 'bar', 0.65, { Back: 0.6, Shoulders: 0.25, Forearms: 0.15 }],
+  ['Back', 'Wide Grip Pull-Up', 'Siroki zgib', 'Intermediate', 'bar', 1],
+  ['Back', 'Close Grip Pull-Up', 'Ozki zgib', 'Intermediate', 'bar', 1, { Back: 0.58, Biceps: 0.3, Forearms: 0.12 }],
+  ['Back', 'L-Sit Pull-Up', 'L-sit zgib', 'Advanced', 'bar', 1.05, { Back: 0.55, Biceps: 0.2, Abs: 0.15, Forearms: 0.1 }],
+  ['Back', 'Towel Pull-Up', 'Zgib z brisaco', 'Advanced', 'towel', 1.05, { Back: 0.55, Biceps: 0.22, Forearms: 0.23 }],
+  ['Back', 'Negative Pull-Up', 'Negativni zgib', 'Beginner', 'bar', 0.9],
+  ['Back', 'Chest-to-Bar Pull-Up', 'Zgib do prsi', 'Advanced', 'bar', 1.05],
+  ['Back', 'Ring Row', 'Veslanje na obrocih', 'Beginner', 'rings', 0.75],
+  ['Back', 'Front Lever Row', 'Front lever veslanje', 'Advanced', 'bar', 0.95, { Back: 0.62, Biceps: 0.16, Abs: 0.12, Forearms: 0.1 }],
+  ['Back', 'Tuck Front Lever Pull', 'Tuck front lever poteg', 'Advanced', 'bar', 0.9, { Back: 0.62, Abs: 0.18, Biceps: 0.1, Forearms: 0.1 }],
+  ['Back', 'Superman Pull', 'Superman poteg na tleh', 'Beginner', 'floor', 0.28, { Back: 0.75, Shoulders: 0.15, Abs: 0.1 }],
+  ['Legs', 'Reverse Lunge', 'Vzvratni izpadni korak', 'Beginner', 'floor', 0.72],
+  ['Legs', 'Cossack Squat', 'Kozaski pocep', 'Intermediate', 'floor', 0.78],
+  ['Legs', 'Shrimp Squat', 'Shrimp pocep', 'Advanced', 'floor', 0.84],
+  ['Legs', 'Step-Up', 'Stopanje na klop', 'Beginner', 'bench', 0.72],
+  ['Legs', 'Single-Leg Glute Bridge', 'Enonozni glute bridge', 'Beginner', 'floor', 0.58, { Legs: 0.82, Abs: 0.18 }],
+  ['Legs', 'Nordic Curl', 'Nordijski upogib', 'Advanced', 'bench', 0.72, { Legs: 0.9, Abs: 0.1 }],
+  ['Legs', 'Calf Raise', 'Dvig na prste', 'Beginner', 'floor', 0.45, { Legs: 0.95, Abs: 0.05 }],
+  ['Legs', 'Skater Squat', 'Skaterski pocep', 'Intermediate', 'floor', 0.8],
+  ['Legs', 'Sissy Squat', 'Sissy pocep', 'Advanced', 'floor', 0.78],
+  ['Legs', 'Broad Jump', 'Skok v daljino z mesta', 'Intermediate', 'space', 0.76, { Legs: 0.75, 'Stamina/Cardio': 0.2, Abs: 0.05 }],
+  ['Triceps', 'Korean Dip', 'Korejski dip', 'Advanced', 'bar', 0.85],
+  ['Triceps', 'Straight Bar Dip', 'Dip na ravnem drogu', 'Advanced', 'bar', 0.86],
+  ['Triceps', 'Ring Dip', 'Dip na obrocih', 'Advanced', 'rings', 0.88],
+  ['Triceps', 'Bodyweight Triceps Extension', 'Triceps izteg z lastno tezo', 'Intermediate', 'lowBar', 0.6, { Triceps: 0.8, Shoulders: 0.12, Abs: 0.08 }],
+  ['Triceps', 'Tiger Bend Push-Up', 'Tiger bend sklece', 'Advanced', 'floor', 0.72],
+  ['Triceps', 'Sphinx Push-Up', 'Sphinx sklece', 'Intermediate', 'floor', 0.62, { Triceps: 0.72, Chest: 0.16, Shoulders: 0.12 }],
+  ['Triceps', 'Reverse Plank Triceps Dip', 'Triceps dip iz obratne deske', 'Beginner', 'floor', 0.55],
+  ['Triceps', 'Bench Triceps Extension', 'Triceps izteg na klopi', 'Intermediate', 'bench', 0.6, { Triceps: 0.82, Shoulders: 0.1, Abs: 0.08 }],
+  ['Triceps', 'Feet-Elevated Close Push-Up', 'Ozke sklece z dvignjenimi nogami', 'Intermediate', 'bench', 0.68],
+  ['Triceps', 'Negative Dip', 'Negativni dip', 'Beginner', 'bar', 0.78],
+  ['Triceps', 'Support Hold Dip', 'Drza opore za dip', 'Beginner', 'bar', 0.45, { Triceps: 0.55, Shoulders: 0.3, Chest: 0.15 }],
+  ['Biceps', 'Close Grip Chin-Up', 'Ozki zgib s podprijemom', 'Intermediate', 'bar', 1],
+  ['Biceps', 'Towel Chin-Up', 'Zgib s podprijemom na brisaci', 'Advanced', 'towel', 1.05, { Biceps: 0.42, Back: 0.35, Forearms: 0.23 }],
+  ['Biceps', 'Ring Chin-Up', 'Zgib s podprijemom na obrocih', 'Intermediate', 'rings', 1],
+  ['Biceps', 'Negative Chin-Up', 'Negativni zgib s podprijemom', 'Beginner', 'bar', 0.9],
+  ['Biceps', 'Headbanger Pull-Up', 'Headbanger zgib', 'Advanced', 'bar', 1.05, { Biceps: 0.45, Back: 0.38, Forearms: 0.12, Abs: 0.05 }],
+  ['Biceps', 'Pelican Curl', 'Pelican pregib na obrocih', 'Advanced', 'rings', 0.75, { Biceps: 0.65, Forearms: 0.15, Shoulders: 0.12, Chest: 0.08 }],
+  ['Biceps', 'Bodyweight Biceps Curl', 'Biceps pregib z lastno tezo', 'Intermediate', 'lowBar', 0.58, { Biceps: 0.7, Forearms: 0.18, Back: 0.12 }],
+  ['Biceps', 'Inverted Biceps Row', 'Obrnjeno biceps veslanje', 'Intermediate', 'lowBar', 0.65],
+  ['Biceps', 'Isometric Chin Hold', 'Izometricna drza v zgibu', 'Intermediate', 'bar', 0.85],
+  ['Biceps', 'Supinated Australian Row', 'Avstralsko veslanje s podprijemom', 'Beginner', 'lowBar', 0.7],
+  ['Biceps', 'Assisted One-Arm Chin-Up', 'Asistirani enorocni zgib s podprijemom', 'Advanced', 'bar', 1.08, { Biceps: 0.48, Back: 0.36, Forearms: 0.12, Abs: 0.04 }],
+  ['Biceps', 'Mixed Grip Chin-Up', 'Zgib z mesanim prijemom', 'Intermediate', 'bar', 1],
+  ['Forearms', 'Active Hang', 'Aktivno visenje', 'Beginner', 'bar', 0.62],
+  ['Forearms', 'Towel Hang', 'Visenje na brisaci', 'Intermediate', 'towel', 0.72, { Forearms: 0.8, Back: 0.12, Shoulders: 0.08 }],
+  ['Forearms', 'Fingertip Plank', 'Deska na prstih', 'Intermediate', 'floor', 0.36, { Forearms: 0.58, Abs: 0.28, Shoulders: 0.14 }],
+  ['Forearms', 'Fingertip Push-Up', 'Sklece na prstih', 'Advanced', 'floor', 0.66, { Forearms: 0.42, Chest: 0.36, Triceps: 0.14, Shoulders: 0.08 }],
+  ['Forearms', 'Wrist Push-Up', 'Sklece za zapestja', 'Advanced', 'floor', 0.5, { Forearms: 0.62, Triceps: 0.18, Shoulders: 0.12, Chest: 0.08 }],
+  ['Forearms', 'Knuckle Push-Up', 'Sklece na clenki', 'Intermediate', 'floor', 0.64, { Forearms: 0.32, Chest: 0.45, Triceps: 0.15, Shoulders: 0.08 }],
+  ['Forearms', 'Palm Pulse', 'Pulziranje dlani', 'Beginner', 'floor', 0.22, { Forearms: 1 }],
+  ['Forearms', 'Reverse Palm Plank', 'Obratna deska na dlaneh', 'Beginner', 'floor', 0.35, { Forearms: 0.55, Shoulders: 0.25, Abs: 0.2 }],
+  ['Forearms', 'Pronation Push-Up Hold', 'Drza v proniranem oporu', 'Intermediate', 'floor', 0.4, { Forearms: 0.65, Shoulders: 0.2, Abs: 0.15 }],
+  ['Forearms', 'Doorframe Finger Hold', 'Drza prstov na podboju', 'Intermediate', 'space', 0.45, { Forearms: 0.9, Back: 0.1 }],
+  ['Forearms', 'False Grip Hang', 'False grip visenje', 'Advanced', 'rings', 0.72, { Forearms: 0.78, Back: 0.12, Shoulders: 0.1 }],
+  ['Forearms', 'Ring Support Hold', 'Drza opore na obrocih', 'Intermediate', 'rings', 0.52, { Forearms: 0.45, Shoulders: 0.3, Triceps: 0.18, Abs: 0.07 }],
+  ['Forearms', 'Rope Climb Pull', 'Poteg pri plezanju po vrvi', 'Advanced', 'rope', 0.95, { Forearms: 0.42, Back: 0.35, Biceps: 0.18, Abs: 0.05 }],
+  ['Forearms', 'Monkey Bar Traverse', 'Premikanje po letveniku', 'Intermediate', 'bar', 0.72, { Forearms: 0.55, Back: 0.25, Shoulders: 0.12, Abs: 0.08 }],
+  ['Shoulders', 'Wall Walk', 'Hoja z nogami po steni', 'Advanced', 'wall', 0.72],
+  ['Shoulders', 'Handstand Hold', 'Drza stoje na rokah', 'Intermediate', 'wall', 0.55, { Shoulders: 0.58, Abs: 0.28, Triceps: 0.14 }],
+  ['Shoulders', 'Frog Stand', 'Zabja stoja', 'Beginner', 'floor', 0.42, { Shoulders: 0.55, Abs: 0.25, Triceps: 0.2 }],
+  ['Shoulders', 'Planche Lean', 'Planche nagib', 'Intermediate', 'floor', 0.52, { Shoulders: 0.55, Chest: 0.22, Abs: 0.15, Triceps: 0.08 }],
+  ['Shoulders', 'Dive Bomber Push-Up', 'Dive bomber sklece', 'Intermediate', 'floor', 0.66, { Shoulders: 0.45, Chest: 0.28, Triceps: 0.17, Abs: 0.1 }],
+  ['Shoulders', 'Hindu Push-Up', 'Hindu sklece', 'Intermediate', 'floor', 0.62],
+  ['Shoulders', 'Wall Handstand Shoulder Tap', 'Tapkanje ramen v stoji ob steni', 'Advanced', 'wall', 0.62],
+  ['Shoulders', 'Elevated Pike Push-Up', 'Pike sklece z dvignjenimi nogami', 'Advanced', 'bench', 0.75],
+  ['Shoulders', 'Tuck Planche Hold', 'Tuck planche drza', 'Advanced', 'floor', 0.58, { Shoulders: 0.52, Abs: 0.25, Triceps: 0.15, Chest: 0.08 }],
+  ['Shoulders', 'Scapular Push-Up', 'Lopaticne sklece', 'Beginner', 'floor', 0.42, { Shoulders: 0.5, Chest: 0.25, Abs: 0.15, Triceps: 0.1 }],
+  ['Shoulders', 'Pike Hold', 'Pike drza', 'Beginner', 'floor', 0.4],
+  ['Shoulders', 'Crow Pose Push-Up', 'Skleca iz crow poze', 'Advanced', 'floor', 0.62, { Shoulders: 0.52, Triceps: 0.22, Abs: 0.18, Chest: 0.08 }],
+  ['Stamina/Cardio', 'High Knees', 'Visoka kolena', 'Beginner', 'space', 0.28],
+  ['Stamina/Cardio', 'Jumping Jacks', 'Poskoki jumping jack', 'Beginner', 'space', 0.28],
+  ['Stamina/Cardio', 'Skater Hops', 'Skaterski poskoki', 'Intermediate', 'space', 0.4, { 'Stamina/Cardio': 0.55, Legs: 0.35, Abs: 0.1 }],
+  ['Stamina/Cardio', 'Squat Thrust', 'Squat thrust', 'Intermediate', 'space', 0.48],
+  ['Stamina/Cardio', 'Bear Crawl', 'Medvedja hoja', 'Intermediate', 'space', 0.42, { 'Stamina/Cardio': 0.4, Shoulders: 0.25, Abs: 0.2, Legs: 0.15 }],
+  ['Stamina/Cardio', 'Crab Walk', 'Racja hoja', 'Beginner', 'space', 0.38, { 'Stamina/Cardio': 0.35, Triceps: 0.22, Shoulders: 0.18, Legs: 0.15, Abs: 0.1 }],
+  ['Stamina/Cardio', 'Shuttle Run', 'Shuttle tek', 'Intermediate', 'space', 0.45],
+  ['Stamina/Cardio', 'Tuck Jump', 'Skok s koleni k prsim', 'Intermediate', 'space', 0.5, { 'Stamina/Cardio': 0.52, Legs: 0.38, Abs: 0.1 }],
+  ['Stamina/Cardio', 'Lateral Bounds', 'Stranski poskoki', 'Intermediate', 'space', 0.46, { 'Stamina/Cardio': 0.5, Legs: 0.4, Abs: 0.1 }],
+  ['Stamina/Cardio', 'Sprint Intervals', 'Sprint intervali', 'Advanced', 'space', 0.55, { 'Stamina/Cardio': 0.65, Legs: 0.3, Abs: 0.05 }],
+  ['Abs', 'Reverse Crunch', 'Obratni trebusnjak', 'Beginner', 'floor', 0.28],
+  ['Abs', 'Bicycle Crunch', 'Kolesarski trebusnjak', 'Beginner', 'floor', 0.28],
+  ['Abs', 'Dead Bug', 'Dead bug', 'Beginner', 'floor', 0.25, { Abs: 0.9, Legs: 0.05, Shoulders: 0.05 }],
+  ['Abs', 'Flutter Kick', 'Flutter kick', 'Beginner', 'floor', 0.3],
+  ['Abs', 'Side Plank', 'Stranska deska', 'Beginner', 'floor', 0.3, { Abs: 0.82, Shoulders: 0.12, Legs: 0.06 }],
+  ['Abs', 'Hollow Rock', 'Hollow rock', 'Intermediate', 'floor', 0.35],
+  ['Abs', 'Toe Touch', 'Dotik prstov na nogah', 'Beginner', 'floor', 0.28],
+  ['Abs', 'Windshield Wiper', 'Brisalci', 'Advanced', 'floor', 0.4, { Abs: 0.82, Legs: 0.12, Shoulders: 0.06 }],
+  ['Abs', 'Dragon Flag', 'Dragon flag', 'Advanced', 'bench', 0.55, { Abs: 0.78, Legs: 0.12, Back: 0.06, Shoulders: 0.04 }],
+  ['Abs', 'Plank Jack', 'Plank jack', 'Intermediate', 'floor', 0.38, { Abs: 0.55, 'Stamina/Cardio': 0.25, Shoulders: 0.12, Legs: 0.08 }],
+].map(makeAdditionalCalisthenicsExercise);
+
+ADDITIONAL_CALISTHENICS_EXERCISES.forEach((exercise) => {
+  if (!exerciseInfo[exercise.name]) exerciseInfo[exercise.name] = exercise.info;
+  if (!exerciseEquipment[exercise.name]) exerciseEquipment[exercise.name] = exercise.equipment;
+  if (!exerciseDifficulty[exercise.name]) exerciseDifficulty[exercise.name] = exercise.difficulty;
 });
 
 
@@ -1705,6 +1933,11 @@ const BODYWEIGHT_LOAD_FACTORS = {
   'V-Up': 0.35,
 };
 
+ADDITIONAL_CALISTHENICS_EXERCISES.forEach((exercise) => {
+  EXERCISE_MUSCLE_WEIGHTS[exercise.name] = exercise.weights;
+  BODYWEIGHT_LOAD_FACTORS[exercise.name] = exercise.loadFactor;
+});
+
 const normalizeWorkout = (w, i = 0) => {
   const setDetails = (Array.isArray(w.setDetails) ? w.setDetails : [])
     .map((v) => Number(v) || 0)
@@ -1728,7 +1961,11 @@ const formatSetDetails = (w) => w.setDetails.join(' / ');
 const convertWeight = (kg, units) => (units === 'lbs' ? kg * 2.20462 : kg);
 const formatWeight = (kg, units) => `${units === 'lbs' ? Math.round(convertWeight(kg, units)) : Number(convertWeight(kg, units).toFixed(1))} ${units}`;
 const formatVolume = (kg, units) => `${Math.round(convertWeight(kg, units)).toLocaleString()} ${units}`;
-const findSection = (exercise) => Object.entries(sections).find(([, items]) => items.includes(exercise))?.[0] ?? 'Chest';
+const findSection = (exercise) => (
+  Object.entries(sections).find(([, items]) => items.includes(exercise))?.[0]
+  ?? Object.entries(calisthenicsSections).find(([, items]) => items.includes(exercise))?.[0]
+  ?? 'Chest'
+);
 function getExerciseSection(exercise, customExercises = []) {
   const builtIn = Object.entries(sections).find(([, items]) => items.includes(exercise))?.[0];
   if (builtIn) return builtIn;
@@ -2889,7 +3126,7 @@ export default function App() {
     ratings: settings.language === 'sl' ? 'Oceni aplikacijo z zvezdami in napiši predlog za izboljšavo.' : 'Rate the app with stars and write a suggestion for improvement.',
     admin: settings.language === 'sl' ? 'Nadzorni center za app kontrole, uporabnike, feedback, varnost in podatke.' : 'Control center for app settings, users, feedback, security and data.',
   };
-  const exerciseOptions = useMemo(() => [...new Set([...Object.values(sections).flat(), ...workouts.map((w) => w.exercise), ...customExercises.map(e => e.name)])].sort(), [workouts, customExercises]);
+  const exerciseOptions = useMemo(() => [...new Set([...Object.values(sections).flat(), ...Object.values(calisthenicsSections).flat(), ...workouts.map((w) => w.exercise), ...customExercises.map(e => e.name)])].sort(), [workouts, customExercises]);
   const selectedWorkouts = useMemo(() => workouts.filter((w) => w.exercise === selectedExercise).sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id), [selectedExercise, workouts]);
   const sortedWorkouts = useMemo(() => [...workouts].sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id), [workouts]);
   const backupDue = useMemo(() => !settings.lastBackupAt || Math.floor((Date.now() - new Date(settings.lastBackupAt).getTime()) / 86400000) >= Number(settings.backupReminderDays), [settings.backupReminderDays, settings.lastBackupAt]);
@@ -4339,7 +4576,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
               <div className="panel-header"><h3>{copy.addWorkout}</h3></div>
               <form className="premium-form" onSubmit={editingWorkoutId ? (e) => { e.preventDefault(); saveWorkoutEdit(); } : saveWorkout}>
                 <div className="input-group"><label htmlFor="date">{copy.date}</label><input id="date" type="date" value={formData.date} onChange={(e) => setFormData((c) => ({ ...c, date: e.target.value }))} /></div>
-                <div className="input-group"><label>{copy.exercise}</label><div className="ex-search-wrap"><input type="text" className="ex-search-input" placeholder={`${getExerciseName(formData.exercise, settings.language)} — ${copy.searchExercise}`} value={formExSearch} onChange={(e) => setFormExSearch(e.target.value)} />{formExSearch && (<div className="ex-search-results">{(() => { const hits = Object.values(sections).flat().filter(n => getExerciseName(n, settings.language).toLowerCase().includes(formExSearch.toLowerCase())); return hits.length ? hits.slice(0, 10).map(n => (<button key={n} type="button" className={`ex-search-item${formData.exercise === n ? ' selected' : ''}`} onClick={() => { setFormData(c => ({...c, exercise: n})); setFormExSearch(''); }}><span className="ex-search-section">{sectionNames[findSection(n)]}</span>{getExerciseName(n, settings.language)}</button>)) : <div className="ex-search-empty">{copy.noExerciseResults}</div>; })()}</div>)}</div></div>
+                <div className="input-group"><label>{copy.exercise}</label><div className="ex-search-wrap"><input type="text" className="ex-search-input" placeholder={`${getExerciseName(formData.exercise, settings.language)} — ${copy.searchExercise}`} value={formExSearch} onChange={(e) => setFormExSearch(e.target.value)} />{formExSearch && (<div className="ex-search-results">{(() => { const hits = exerciseOptions.filter(n => getExerciseName(n, settings.language).toLowerCase().includes(formExSearch.toLowerCase()) || n.toLowerCase().includes(formExSearch.toLowerCase())); return hits.length ? hits.slice(0, 10).map(n => (<button key={n} type="button" className={`ex-search-item${formData.exercise === n ? ' selected' : ''}`} onClick={() => { setFormData(c => ({...c, exercise: n})); setFormExSearch(''); }}><span className="ex-search-section">{sectionNames[findSection(n)]}</span>{getExerciseName(n, settings.language)}</button>)) : <div className="ex-search-empty">{copy.noExerciseResults}</div>; })()}</div>)}</div></div>
                 <div className="helper-card">
                   <p><strong>{sectionNames[findSection(formData.exercise)]}</strong></p>
                   <p>{localize(selectedFormExerciseInfo.targets, settings.language)}</p>

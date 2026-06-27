@@ -2174,6 +2174,7 @@ const formatSetDetails = (w) => w.setDetails.join(' / ');
 const convertWeight = (kg, units) => (units === 'lbs' ? kg * 2.20462 : kg);
 const formatWeight = (kg, units) => `${units === 'lbs' ? Math.round(convertWeight(kg, units)) : Number(convertWeight(kg, units).toFixed(1))} ${units}`;
 const formatVolume = (kg, units) => `${Math.round(convertWeight(kg, units)).toLocaleString()} ${units}`;
+const formatLiters = (ml, digits = 2) => Number((Number(ml) / 1000).toFixed(digits)).toLocaleString(undefined, { maximumFractionDigits: digits });
 const findSection = (exercise) => (
   Object.entries(sections).find(([, items]) => items.includes(exercise))?.[0]
   ?? Object.entries(calisthenicsSections).find(([, items]) => items.includes(exercise))?.[0]
@@ -2526,52 +2527,184 @@ function getMifflinBmr(weightKg, heightCm, age, gender = 'male') {
     : 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
 }
 
+function getActivityMultiplier(activityLevel) {
+  return ACTIVITY_MULTIPLIERS[activityLevel] || ACTIVITY_MULTIPLIERS.moderate;
+}
+
+function simulateWeightFromCalories({ startWeight, dailyCalories, days, age, height, gender = 'male', activityLevel = 'moderate' }) {
+  const multiplier = getActivityMultiplier(activityLevel);
+  let weight = Number(startWeight) || 0;
+  let totalTdee = 0;
+  const totalDays = Math.max(1, Math.round(Number(days) || 1));
+
+  // Recalculate expenditure as projected body weight changes, so the target is not based on a static TDEE.
+  for (let day = 0; day < totalDays; day += 1) {
+    const dayAge = (Number(age) || 28) + (day / 365);
+    const bmr = getMifflinBmr(weight, height, dayAge, gender);
+    const tdee = Math.max(900, bmr * multiplier);
+    totalTdee += tdee;
+    weight += (dailyCalories - tdee) / KCAL_PER_KG_BODY_MASS;
+    weight = clampNumber(weight, 25, 350);
+  }
+
+  return {
+    finalWeight: weight,
+    averageTdee: totalTdee / totalDays,
+  };
+}
+
+function findCaloriesForGoal({ currentWeight, goalWeight, days, age, height, gender, activityLevel, minCalories, maxCalories }) {
+  let low = minCalories;
+  let high = maxCalories;
+  const gaining = goalWeight > currentWeight;
+
+  for (let i = 0; i < 34; i += 1) {
+    const mid = (low + high) / 2;
+    const projected = simulateWeightFromCalories({
+      startWeight: currentWeight,
+      dailyCalories: mid,
+      days,
+      age,
+      height,
+      gender,
+      activityLevel,
+    }).finalWeight;
+
+    if (gaining) {
+      if (projected < goalWeight) low = mid;
+      else high = mid;
+    } else if (projected > goalWeight) high = mid;
+    else low = mid;
+  }
+
+  return Math.round((low + high) / 2);
+}
+
+function estimateWeeksToGoalFromCalories({ currentWeight, goalWeight, dailyCalories, age, height, gender, activityLevel, maxWeeks = 260 }) {
+  const gaining = goalWeight > currentWeight;
+  let weight = currentWeight;
+  const multiplier = getActivityMultiplier(activityLevel);
+  const maxDays = maxWeeks * 7;
+
+  for (let day = 1; day <= maxDays; day += 1) {
+    const bmr = getMifflinBmr(weight, height, (Number(age) || 28) + (day / 365), gender);
+    const tdee = Math.max(900, bmr * multiplier);
+    weight += (dailyCalories - tdee) / KCAL_PER_KG_BODY_MASS;
+    weight = clampNumber(weight, 25, 350);
+    if (gaining ? weight >= goalWeight : weight <= goalWeight) return Math.ceil(day / 7);
+  }
+
+  return null;
+}
+
+function getHydrationPlan({ weightKg, gender = 'male', activityLevel = 'moderate' }) {
+  const weight = Number(weightKg) || (gender === 'female' ? 62 : 78);
+  const referenceWeight = gender === 'female' ? 62 : 78;
+  const nasemBeverageBaseline = gender === 'female' ? 2200 : 3000;
+  const bodySizeMl = weight * 32;
+  const sizeAdjustedBaseline = nasemBeverageBaseline + ((weight - referenceWeight) * 12);
+  const activityWater = { sedentary: 0, light: 250, moderate: 450, active: 700, veryactive: 950 }[activityLevel] || 450;
+  const waterMl = Math.round(clampNumber((sizeAdjustedBaseline * 0.6) + (bodySizeMl * 0.4) + activityWater, 1500, 6000) / 100) * 100;
+
+  return {
+    waterMl,
+    baseMl: Math.round(((sizeAdjustedBaseline * 0.6) + (bodySizeMl * 0.4)) / 100) * 100,
+    activityMl: activityWater,
+  };
+}
+
 function getNutritionPlan({ currentWeight, goalWeight, weeks, age, height, gender = 'male', activityLevel = 'moderate' }) {
   const cw = Number(currentWeight);
   const gw = Number(goalWeight);
   const durationWeeks = Math.max(1, Number(weeks) || 1);
+  const durationDays = durationWeeks * 7;
   const userAge = Number(age) || 28;
   const userHeight = Number(height) || (gender === 'female' ? 166 : 178);
-  const multiplier = ACTIVITY_MULTIPLIERS[activityLevel] || ACTIVITY_MULTIPLIERS.moderate;
+  const multiplier = getActivityMultiplier(activityLevel);
   const bmr = getMifflinBmr(cw, userHeight, userAge, gender);
+  const goalBmr = getMifflinBmr(gw, userHeight, userAge + (durationWeeks / 52), gender);
   const tdee = Math.round(bmr * multiplier);
-  const rawDailyAdjustment = Math.round(((cw - gw) * KCAL_PER_KG_BODY_MASS) / (durationWeeks * 7));
+  const goalMaintenance = Math.round(goalBmr * multiplier);
   const goalType = gw < cw ? 'cut' : gw > cw ? 'bulk' : 'maintain';
-  const maxDeficit = Math.round(Math.min(1000, Math.max(250, tdee * 0.25)));
-  const maxSurplus = Math.round(Math.min(500, Math.max(150, tdee * 0.15)));
-  const dailyAdjustment = goalType === 'cut'
-    ? clampNumber(rawDailyAdjustment, 0, maxDeficit)
+  const isTeen = userAge < 18;
+  const targetFloor = isTeen ? (gender === 'female' ? 1600 : 1800) : (gender === 'female' ? 1200 : 1500);
+  const targetCeiling = Math.max(targetFloor + 300, Math.round(tdee * 1.2));
+  const rawTarget = goalType === 'maintain'
+    ? tdee
+    : findCaloriesForGoal({
+        currentWeight: cw,
+        goalWeight: gw,
+        days: durationDays,
+        age: userAge,
+        height: userHeight,
+        gender,
+        activityLevel,
+        minCalories: targetFloor,
+        maxCalories: targetCeiling,
+      });
+  const safeLossKgPerWeek = isTeen ? Math.min(0.45, Math.max(0.15, cw * 0.005)) : Math.min(0.9, Math.max(0.25, cw * 0.01));
+  const safeGainKgPerWeek = isTeen ? Math.min(0.25, Math.max(0.1, cw * 0.0025)) : Math.min(0.5, Math.max(0.15, cw * 0.005));
+  const maxDeficit = Math.round(Math.min(isTeen ? tdee * 0.1 : tdee * 0.3, 1000, (safeLossKgPerWeek * KCAL_PER_KG_BODY_MASS) / 7));
+  const maxSurplus = Math.round(Math.min(isTeen ? tdee * 0.08 : tdee * 0.15, 500, (safeGainKgPerWeek * KCAL_PER_KG_BODY_MASS) / 7));
+  const target = goalType === 'cut'
+    ? Math.round(clampNumber(rawTarget, Math.max(targetFloor, tdee - maxDeficit), tdee))
     : goalType === 'bulk'
-      ? clampNumber(rawDailyAdjustment, -maxSurplus, 0)
-      : 0;
-  const targetFloor = gender === 'female' ? 1200 : 1500;
-  const targetCeiling = Math.max(targetFloor + 200, Math.round(tdee + maxSurplus));
-  const target = Math.round(clampNumber(tdee - dailyAdjustment, targetFloor, targetCeiling));
-  const proteinFactor = goalType === 'cut' ? 2.2 : goalType === 'bulk' ? 1.8 : 1.7;
-  const proteinG = Math.round(cw * proteinFactor);
-  const fatFloor = Math.round(cw * 0.6);
-  const fatTarget = Math.round(target * 0.25 / 9);
-  const fatG = Math.max(fatFloor, fatTarget);
+      ? Math.round(clampNumber(rawTarget, tdee, Math.min(targetCeiling, tdee + maxSurplus)))
+      : tdee;
+  const simulated = simulateWeightFromCalories({
+    startWeight: cw,
+    dailyCalories: target,
+    days: durationDays,
+    age: userAge,
+    height: userHeight,
+    gender,
+    activityLevel,
+  });
+  const recommendedWeeks = goalType === 'maintain' ? durationWeeks : estimateWeeksToGoalFromCalories({
+    currentWeight: cw,
+    goalWeight: gw,
+    dailyCalories: target,
+    age: userAge,
+    height: userHeight,
+    gender,
+    activityLevel,
+  });
+  const rawDailyAdjustment = Math.round(tdee - rawTarget);
+  const dailyAdjustment = Math.round(tdee - target);
+  const proteinFactor = goalType === 'cut' ? 2.0 : goalType === 'bulk' ? 1.8 : 1.6;
+  const proteinG = Math.round(Math.min(cw * proteinFactor, (target * 0.35) / 4));
+  const fatFloor = Math.round(Math.min(cw * 0.6, (target * 0.2) / 9));
+  const fatTarget = Math.round(target * 0.27 / 9);
+  const fatG = Math.round(clampNumber(fatTarget, fatFloor, (target * 0.35) / 9));
   const carbsG = Math.max(0, Math.round((target - proteinG * 4 - fatG * 9) / 4));
-  const baseTotalWater = gender === 'female' ? 2700 : 3700;
-  const referenceWeight = gender === 'female' ? 62 : 78;
-  const sizeAdjustment = (cw - referenceWeight) * 12;
-  const activityWater = { sedentary: 0, light: 200, moderate: 400, active: 700, veryactive: 1000 }[activityLevel] || 400;
-  const waterMl = Math.round(clampNumber((baseTotalWater * 0.8) + sizeAdjustment + activityWater, 1600, 5500) / 100) * 100;
-  const capped = Math.abs(rawDailyAdjustment - dailyAdjustment) > 25 || target !== Math.round(tdee - dailyAdjustment);
+  const hydration = getHydrationPlan({ weightKg: cw, gender, activityLevel });
+  const capped = Math.abs(rawTarget - target) > 25;
+  const desiredWeeklyChange = (gw - cw) / durationWeeks;
+  const projectedWeeklyChange = (simulated.finalWeight - cw) / durationWeeks;
 
   return {
     bmr: Math.round(bmr),
     tdee,
+    goalMaintenance,
+    averageTdee: Math.round(simulated.averageTdee),
     target,
     rawDailyAdjustment,
     dailyAdjustment,
     protein: proteinG,
     carbs: carbsG,
     fat: fatG,
-    waterMl,
+    waterMl: hydration.waterMl,
+    waterBaseMl: hydration.baseMl,
+    waterActivityMl: hydration.activityMl,
     goalType,
     capped,
+    isTeen,
+    desiredWeeklyChange,
+    projectedWeeklyChange,
+    predictedWeight: Number(simulated.finalWeight.toFixed(1)),
+    recommendedWeeks,
+    safeLossKgPerWeek,
+    safeGainKgPerWeek,
   };
 }
 
@@ -4412,21 +4545,42 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
     const goalWeight = Number(tdeeForm.goalWeight);
     const currentWeight = Number(tdeeForm.currentWeight);
     if (!dailyKcal || !goalWeight || !currentWeight) return;
+    const userAge = Number(tdeeForm.age || settings.age) || 28;
+    const userHeight = Number(tdeeForm.height || settings.height) || ((tdeeForm.gender || settings.gender) === 'female' ? 166 : 178);
+    const gender = tdeeForm.gender || settings.gender || 'male';
+    const activityLevel = tdeeForm.activityLevel || 'moderate';
     const plan = getNutritionPlan({
       currentWeight,
       goalWeight,
       weeks: Number(tdeeForm.weeks) || 12,
-      age: tdeeForm.age || settings.age,
-      height: tdeeForm.height || settings.height,
-      gender: tdeeForm.gender || settings.gender || 'male',
-      activityLevel: tdeeForm.activityLevel,
+      age: userAge,
+      height: userHeight,
+      gender,
+      activityLevel,
     });
-    const dailyDelta = dailyKcal - plan.tdee;
     const totalDeltaKg = goalWeight - currentWeight;
-    if (Math.abs(dailyDelta) < 10 || dailyDelta * totalDeltaKg <= 0) { setReverseCalResult({ error: 'noDiff' }); return; }
-    const days = Math.abs((totalDeltaKg * KCAL_PER_KG_BODY_MASS) / dailyDelta);
-    const weeks = Math.max(1, Math.round(days / 7));
-    setReverseCalResult({ weeks, tdee: plan.tdee, dailyDiff: dailyDelta, gaining: totalDeltaKg > 0 });
+    const firstWeek = simulateWeightFromCalories({
+      startWeight: currentWeight,
+      dailyCalories: dailyKcal,
+      days: 7,
+      age: userAge,
+      height: userHeight,
+      gender,
+      activityLevel,
+    });
+    const firstWeekDelta = firstWeek.finalWeight - currentWeight;
+    if (Math.abs(firstWeekDelta) < 0.02 || firstWeekDelta * totalDeltaKg <= 0) { setReverseCalResult({ error: 'noDiff' }); return; }
+    const weeks = estimateWeeksToGoalFromCalories({
+      currentWeight,
+      goalWeight,
+      dailyCalories: dailyKcal,
+      age: userAge,
+      height: userHeight,
+      gender,
+      activityLevel,
+    });
+    if (!weeks) { setReverseCalResult({ error: 'noDiff' }); return; }
+    setReverseCalResult({ weeks, tdee: plan.tdee, dailyDiff: dailyKcal - plan.tdee, gaining: totalDeltaKg > 0 });
   }
 
   function saveBodyWeight(event) {
@@ -5490,34 +5644,46 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
               {(() => {
                 const waterGoal = waterGoalMl;
                 const pct = Math.min(100, Math.round(waterToday / waterGoal * 100));
+                const ringPct = Math.min(100, Math.max(0, (waterToday / waterGoal) * 100));
+                const remainingMl = Math.max(0, waterGoal - waterToday);
                 return (
-                  <>
-                    <div style={{textAlign:'center', margin:'0.75rem 0 1rem'}}>
-                      <div style={{fontSize:'2.2rem', fontWeight:700, color:'#38bdf8', lineHeight:1}}>{(waterToday / 1000).toFixed(2).replace(/\.?0+$/, v => v === '' ? '' : v)} L</div>
-                      <div style={{fontSize:'0.78rem', opacity:0.55, marginTop:'0.2rem'}}>{copy.waterDrank}</div>
-                      <div style={{height:'8px', borderRadius:'4px', background:'rgba(148,163,184,0.15)', margin:'0.7rem 0 0.3rem', overflow:'hidden'}}>
-                        <div style={{height:'100%', borderRadius:'4px', background: pct >= 100 ? '#34d399' : '#38bdf8', width:`${pct}%`, transition:'width 0.3s'}} />
+                  <div className="hydration-card-body">
+                    <div className="hydration-hero">
+                      <div className="hydration-ring" style={{'--pct': `${ringPct}%`}}>
+                        <div>
+                          <strong>{formatLiters(waterToday)} L</strong>
+                          <span>{pct}%</span>
+                        </div>
                       </div>
-                      <div style={{fontSize:'0.75rem', opacity:0.45}}>{copy.waterGoalLabel}: {(waterGoal / 1000).toFixed(1)} L {pct >= 100 ? '✓' : `(${pct}%)`}</div>
+                      <div className="hydration-summary">
+                        <span>{copy.waterDrank}</span>
+                        <strong>{pct >= 100 ? (settings.language === 'sl' ? 'Cilj dosezen' : 'Goal reached') : `${Math.round(remainingMl)} ml ${settings.language === 'sl' ? 'preostalo' : 'left'}`}</strong>
+                        <p>{copy.waterGoalLabel}: {(waterGoal / 1000).toFixed(1)} L</p>
+                      </div>
                     </div>
-                    <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.45rem', marginBottom:'0.6rem'}}>
+                    <div className="hydration-mini-grid">
+                      <div><span>{settings.language === 'sl' ? 'Danes' : 'Today'}</span><strong>{formatLiters(waterToday)} L</strong></div>
+                      <div><span>{settings.language === 'sl' ? 'Cilj' : 'Goal'}</span><strong>{formatLiters(waterGoal, 1)} L</strong></div>
+                      <div><span>{settings.language === 'sl' ? 'Preostanek' : 'Remaining'}</span><strong>{formatLiters(remainingMl)} L</strong></div>
+                    </div>
+                    <div className="water-quick-grid">
                       {[250, 500, 750, 1000].map(ml => (
                         <button key={ml} className="action-btn-outline" type="button" onClick={() => addWater(ml)}>+{ml} ml</button>
                       ))}
                     </div>
-                    <div style={{display:'flex', gap:'0.4rem', marginBottom:'0.6rem'}}>
-                      <input type="number" className="full-width" style={{flex:1}} value={waterCustomMl} onChange={e => setWaterCustomMl(e.target.value)} placeholder="ml" min="50" step="50" />
-                      <button className="action-btn-outline" type="button" style={{flexShrink:0}} onClick={() => { const ml = Number(waterCustomMl); if (ml > 0) { addWater(ml); setWaterCustomMl(''); } }}>+</button>
+                    <div className="water-custom-row">
+                      <input type="number" className="full-width" value={waterCustomMl} onChange={e => setWaterCustomMl(e.target.value)} placeholder="ml" min="50" step="50" />
+                      <button className="action-btn-outline" type="button" onClick={() => { const ml = Number(waterCustomMl); if (ml > 0) { addWater(ml); setWaterCustomMl(''); } }}>+</button>
                     </div>
                     <button className="action-btn-outline danger-button full-width" type="button" onClick={resetWater}>{copy.waterReset}</button>
-                    {!tdeeResult && <p style={{fontSize:'0.72rem', opacity:0.45, marginTop:'0.6rem', textAlign:'center'}}>{settings.language === 'sl' ? 'Cilj nastavis v Settings ali ga posodobis s TDEE kalkulatorjem.' : 'Set this target in Settings or update it from the TDEE calculator.'}</p>}
-                  </>
+                    <p className="hydration-note">{tdeeResult ? (settings.language === 'sl' ? 'Cilj je posodobljen iz kalkulatorja kalorij.' : 'Goal updated from the calorie calculator.') : (settings.language === 'sl' ? 'Cilj nastavis v Settings ali ga posodobis s kalkulatorjem kalorij.' : 'Set this target in Settings or update it from the calorie calculator.')}</p>
+                  </div>
                 );
               })()}
             </section>
-            <section className="glass-panel action-panel fade-in-up">
-              <div className="panel-header"><h3>{copy.tdeeTitle}</h3></div>
-              <form className="premium-form" onSubmit={calculateTDEE}>
+            <section className="glass-panel action-panel fade-in-up calorie-calculator-panel">
+              <div className="panel-header"><h3>{copy.tdeeTitle}</h3><span className="calc-method-pill">{settings.language === 'sl' ? 'MSJ + dinamicni model' : 'MSJ + dynamic model'}</span></div>
+              <form className="premium-form calorie-calculator-form" onSubmit={calculateTDEE}>
                 <div className="input-group"><label>{copy.tdeeGender}</label><select className="premium-select" value={tdeeForm.gender} onChange={(e) => setTdeeForm((c) => ({ ...c, gender: e.target.value }))}><option value="male">{copy.tdeeMale}</option><option value="female">{copy.tdeeFemale}</option></select></div>
                 <div className="form-row triple">
                   <div className="input-group"><label>{copy.tdeeAge}</label><input type="number" min="10" max="100" value={tdeeForm.age} onChange={(e) => setTdeeForm((c) => ({ ...c, age: e.target.value }))} placeholder="25" /></div>
@@ -5530,26 +5696,47 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                 <button className="action-btn-primary full-width" type="submit">{copy.tdeeCalculate}</button>
               </form>
               {tdeeResult && (
-                <div style={{marginTop:'1rem'}}>
-                  <div className="stats-list">
-                    {tdeeResult.bmr && <div className="stats-row"><span>BMR</span><strong>{tdeeResult.bmr} kcal</strong></div>}
-                    <div className="stats-row"><span>{copy.tdeeTDEE}</span><strong>{tdeeResult.tdee} kcal</strong></div>
-                    <div className="stats-row"><span>{copy.tdeeAdjustment}</span><strong style={{color: tdeeResult.dailyAdjustment > 0 ? 'var(--error)' : 'var(--secondary-glow)'}}>{tdeeResult.dailyAdjustment > 0 ? '-' : '+'}{Math.abs(tdeeResult.dailyAdjustment)} kcal</strong></div>
-                    <div className="stats-row"><span>{copy.tdeeTarget}</span><strong style={{fontSize:'1.1rem'}}>{tdeeResult.target} kcal</strong></div>
-                    {tdeeResult.protein && <div className="stats-row"><span>{copy.macrosProtein}</span><strong style={{color:'#60a5fa'}}>{tdeeResult.protein} g</strong></div>}
-                    {tdeeResult.carbs && <div className="stats-row"><span>{copy.macrosCarbs}</span><strong style={{color:'#fb923c'}}>{tdeeResult.carbs} g</strong></div>}
-                    {tdeeResult.fat && <div className="stats-row"><span>{copy.macrosFat}</span><strong style={{color:'#34d399'}}>{tdeeResult.fat} g</strong></div>}
-                    {tdeeResult.waterMl && <div className="stats-row"><span>{copy.macrosWater}</span><strong style={{color:'#38bdf8'}}>{(tdeeResult.waterMl/1000).toFixed(1)} L</strong></div>}
+                <div className="calorie-result-card">
+                  <div className="calorie-target-hero">
+                    <span>{copy.tdeeTarget}</span>
+                    <strong>{tdeeResult.target.toLocaleString()} kcal</strong>
+                    <p>{settings.language === 'sl' ? 'Vzdrzevanje danes' : 'Current maintenance'}: {tdeeResult.tdee.toLocaleString()} kcal</p>
                   </div>
-                  {tdeeResult.capped && <p className="settings-copy" style={{marginTop:'0.75rem'}}>{settings.language === 'sl' ? 'Cilj je bil omejen na bolj varen dnevni razpon, ker je izbrana hitrost spremembe zelo agresivna.' : 'The target was capped to a safer daily range because the selected rate of change is very aggressive.'}</p>}
-                  <button className="action-btn-outline full-width" style={{marginTop:'0.75rem',color:'var(--secondary-glow)',borderColor:'var(--secondary-glow)'}} type="button" onClick={() => { setSettings(c => ({...c, calorieGoal: String(tdeeResult.target)})); alert(copy.goalSet); }}>
+                  <div className="calorie-metric-grid">
+                    <div><span>BMR</span><strong>{tdeeResult.bmr.toLocaleString()}</strong><small>kcal</small></div>
+                    <div><span>{copy.tdeeTDEE}</span><strong>{tdeeResult.tdee.toLocaleString()}</strong><small>kcal</small></div>
+                    <div><span>{settings.language === 'sl' ? 'Ciljno vzdrz.' : 'Goal maint.'}</span><strong>{tdeeResult.goalMaintenance.toLocaleString()}</strong><small>kcal</small></div>
+                    <div><span>{settings.language === 'sl' ? 'Sprememba' : 'Change'}</span><strong className={tdeeResult.dailyAdjustment > 0 ? 'negative' : tdeeResult.dailyAdjustment < 0 ? 'positive' : ''}>{tdeeResult.dailyAdjustment > 0 ? '-' : tdeeResult.dailyAdjustment < 0 ? '+' : ''}{Math.abs(tdeeResult.dailyAdjustment)}</strong><small>kcal/day</small></div>
+                    <div><span>{settings.language === 'sl' ? 'Tempo' : 'Pace'}</span><strong>{Math.abs(tdeeResult.projectedWeeklyChange).toFixed(2)}</strong><small>kg/week</small></div>
+                    <div><span>{settings.language === 'sl' ? 'Napoved' : 'Predicted'}</span><strong>{tdeeResult.predictedWeight.toFixed(1)}</strong><small>kg</small></div>
+                  </div>
+                  <div className="macro-result-grid">
+                    {[
+                      [copy.macrosProtein, tdeeResult.protein, '#60a5fa', tdeeResult.protein * 4],
+                      [copy.macrosCarbs, tdeeResult.carbs, '#fb923c', tdeeResult.carbs * 4],
+                      [copy.macrosFat, tdeeResult.fat, '#34d399', tdeeResult.fat * 9],
+                    ].map(([label, grams, color, kcal]) => (
+                      <div key={label} className="macro-result-item" style={{'--macro-color': color, '--macro-width': `${Math.min(100, Math.round((kcal / Math.max(1, tdeeResult.target)) * 100))}%`}}>
+                        <span>{label}</span>
+                        <strong>{grams} g</strong>
+                        <i />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="calorie-support-grid">
+                    <div><span>{copy.macrosWater}</span><strong>{(tdeeResult.waterMl/1000).toFixed(1)} L</strong></div>
+                    <div><span>{settings.language === 'sl' ? 'Realisticen cas' : 'Realistic time'}</span><strong>{tdeeResult.recommendedWeeks ? `${tdeeResult.recommendedWeeks} ${copy.reverseCalWeeks}` : '-'}</strong></div>
+                  </div>
+                  {tdeeResult.isTeen && <p className="settings-copy calorie-warning">{settings.language === 'sl' ? 'Ker je starost pod 18, je kalkulator omejil agresivne spremembe. Za hujsanje ali vecji surplus pri mladoletnih osebah naj cilj potrdi zdravnik ali dietetik.' : 'Because age is under 18, aggressive changes are capped. For weight loss or a large surplus in minors, confirm the target with a clinician or registered dietitian.'}</p>}
+                  {tdeeResult.capped && <p className="settings-copy calorie-warning">{settings.language === 'sl' ? 'Izbran rok je bil bolj agresiven od varnega razpona, zato je cilj omejen in napovedana teza lahko ne doseze cilja v tem roku.' : 'The selected timeframe was more aggressive than the safe range, so the target was capped and the predicted weight may not fully reach the goal by then.'}</p>}
+                  <button className="action-btn-outline full-width set-goal-btn" type="button" onClick={() => { setSettings(c => ({...c, calorieGoal: tdeeResult.target})); alert(copy.goalSet); }}>
                     {copy.setAsGoal}
                   </button>
                 </div>
               )}
               {/* Reverse calorie calculator */}
-              <div style={{marginTop:'1.5rem',paddingTop:'1.2rem',borderTop:'1px solid rgba(148,163,184,0.15)'}}>
-                <h4 style={{margin:'0 0 0.75rem',fontSize:'0.95rem'}}>{copy.reverseCalTitle}</h4>
+              <div className="reverse-calorie-card">
+                <h4>{copy.reverseCalTitle}</h4>
                 <form className="premium-form" onSubmit={calculateReverseCal}>
                   <div className="input-group">
                     <label>{copy.reverseCalDailyKcal}</label>
@@ -5558,9 +5745,10 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
                   <button className="action-btn-outline full-width" type="submit">{copy.reverseCalCalc}</button>
                 </form>
                 {reverseCalResult && !reverseCalResult.error && (
-                  <div style={{marginTop:'0.75rem',padding:'0.9rem',borderRadius:'10px',background:'rgba(99,102,241,0.1)'}}>
-                    <p style={{margin:'0 0 0.3rem',fontSize:'0.85rem',opacity:0.7}}>{copy.reverseCalResult}</p>
-                    <p style={{margin:0,fontSize:'1.1rem',fontWeight:700}}>{reverseCalResult.weeks} {copy.reverseCalWeeks} <span style={{fontSize:'0.85rem',fontWeight:400,opacity:0.7}}>({reverseCalResult.gaining ? copy.reverseCalGaining : copy.reverseCalLosing})</span></p>
+                  <div className="reverse-result">
+                    <p>{copy.reverseCalResult}</p>
+                    <strong>{reverseCalResult.weeks} {copy.reverseCalWeeks}</strong>
+                    <span>{reverseCalResult.gaining ? copy.reverseCalGaining : copy.reverseCalLosing} / {reverseCalResult.dailyDiff > 0 ? '+' : ''}{Math.round(reverseCalResult.dailyDiff)} kcal</span>
                   </div>
                 )}
                 {reverseCalResult?.error && <p className="settings-copy" style={{marginTop:'0.75rem'}}>{settings.language === 'sl' ? 'Ta vnos kalorij ne vodi proti izbranemu cilju. Za izgubo mora biti pod TDEE, za pridobivanje nad TDEE.' : 'That calorie intake does not move toward the selected goal. For loss it must be below TDEE; for gain it must be above TDEE.'}</p>}

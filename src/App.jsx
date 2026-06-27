@@ -1337,15 +1337,15 @@ function getLocalizedLabel(labels, language) {
 }
 
 const sections = {
-  Chest: ['Bench Press', 'Incline Bench Press', 'Decline Bench Press', 'Chest Fly', 'Push-Up'],
-  Legs: ['Squat', 'Leg Press', 'Romanian Deadlift', 'Walking Lunge', 'Leg Extension'],
-  Triceps: ['Triceps Pushdown', 'Overhead Triceps Extension', 'Close Grip Bench Press', 'Bench Dip', 'Skull Crusher'],
-  Biceps: ['Barbell Curl', 'Dumbbell Curl', 'Hammer Curl', 'Preacher Curl', 'Cable Curl'],
-  Forearms: ['Wrist Curl', 'Reverse Wrist Curl', 'Farmer Carry', 'Plate Pinch Hold', 'Reverse Curl'],
-  Shoulders: ['Overhead Press', 'Lateral Raise', 'Front Raise', 'Rear Delt Fly', 'Arnold Press'],
-  'Stamina/Cardio': ['Running', 'Cycling', 'Rowing', 'Jump Rope', 'Burpee'],
-  Back: ['Barbell Row', 'Lat Pulldown', 'Pull-Up', 'Seated Cable Row', 'Straight Arm Pulldown'],
-  Abs: ['Crunch', 'Leg Raise', 'Plank', 'Russian Twist', 'Cable Crunch'],
+  Chest: ['Bench Press', 'Incline Bench Press', 'Decline Bench Press', 'Chest Fly', 'Dumbbell Bench Press', 'Incline Dumbbell Press', 'Cable Fly', 'Pec Deck Fly', 'Machine Chest Press', 'Smith Machine Bench Press', 'Low Cable Fly', 'High Cable Fly', 'Weighted Chest Dip', 'Landmine Chest Press', 'Plate Squeeze Press'],
+  Legs: ['Squat', 'Leg Press', 'Romanian Deadlift', 'Walking Lunge', 'Leg Extension', 'Hack Squat', 'Front Squat', 'Goblet Squat', 'Hip Thrust', 'Lying Leg Curl', 'Seated Leg Curl', 'Standing Calf Raise', 'Seated Calf Raise', 'Smith Machine Squat', 'Cable Pull-Through'],
+  Triceps: ['Triceps Pushdown', 'Overhead Triceps Extension', 'Close Grip Bench Press', 'Skull Crusher', 'Rope Triceps Pushdown', 'Cable Overhead Triceps Extension', 'Dumbbell Kickback', 'Machine Triceps Dip', 'EZ-Bar French Press', 'Single-Arm Cable Pushdown', 'Cross-Body Cable Extension', 'Reverse Grip Triceps Pushdown', 'JM Press', 'Tate Press', 'Seated Dumbbell Triceps Extension'],
+  Biceps: ['Barbell Curl', 'Dumbbell Curl', 'Hammer Curl', 'Preacher Curl', 'Cable Curl', 'Incline Dumbbell Curl', 'Concentration Curl', 'EZ-Bar Curl', 'Spider Curl', 'Bayesian Cable Curl', 'Machine Preacher Curl', 'Rope Hammer Curl', 'Cable Reverse Curl', 'Zottman Curl', 'Drag Curl'],
+  Forearms: ['Wrist Curl', 'Reverse Wrist Curl', 'Farmer Carry', 'Plate Pinch Hold', 'Reverse Curl', 'Behind-the-Back Wrist Curl', 'Cable Wrist Curl', 'Dumbbell Wrist Rotation', 'Wrist Roller', 'Fat Grip Farmer Carry', 'Barbell Hold', 'Gripper Squeeze', 'Pronated Dumbbell Curl', 'Suitcase Carry', 'Cable Pronation Supination'],
+  Shoulders: ['Overhead Press', 'Lateral Raise', 'Front Raise', 'Rear Delt Fly', 'Arnold Press', 'Dumbbell Shoulder Press', 'Machine Shoulder Press', 'Cable Lateral Raise', 'Upright Row', 'Face Pull', 'Reverse Pec Deck', 'Landmine Press', 'Push Press', 'Cable Y Raise', 'Dumbbell Shrug'],
+  'Stamina/Cardio': ['Treadmill Run', 'Stationary Bike', 'Rowing Machine', 'Elliptical Trainer', 'Stair Climber', 'Assault Bike', 'SkiErg', 'Battle Ropes', 'Sled Push', 'Incline Treadmill Walk', 'Spin Bike Intervals', 'Treadmill Sprints', 'StepMill Intervals', 'Air Rower Intervals', 'Prowler Push'],
+  Back: ['Barbell Row', 'Lat Pulldown', 'Seated Cable Row', 'Straight Arm Pulldown', 'Deadlift', 'T-Bar Row', 'Chest-Supported Row', 'Single-Arm Dumbbell Row', 'Machine Row', 'Wide Grip Lat Pulldown', 'Close Grip Lat Pulldown', 'Cable Pullover', 'Rack Pull', 'Meadows Row', 'Assisted Pull-Up Machine'],
+  Abs: ['Crunch', 'Cable Crunch', 'Machine Crunch', 'Weighted Crunch', 'Decline Sit-Up', 'Hanging Knee Raise', 'Captain\'s Chair Knee Raise', 'Ab Wheel Rollout', 'Medicine Ball Russian Twist', 'Pallof Press', 'Cable Woodchop', 'Weighted Plank', 'Stability Ball Crunch', 'Decline Reverse Crunch', 'Landmine Rotation'],
 };
 
 const exerciseInfo = {
@@ -1818,6 +1818,215 @@ ADDITIONAL_CALISTHENICS_EXERCISES.forEach((exercise) => {
   if (!exerciseDifficulty[exercise.name]) exerciseDifficulty[exercise.name] = exercise.difficulty;
 });
 
+const GYM_EQUIPMENT_LABELS = {
+  barbell: { sl: 'Palica, rack in utezi', en: 'Barbell, rack, and plates' },
+  dumbbells: { sl: 'Rocke in klop', en: 'Dumbbells and bench' },
+  cable: { sl: 'Kabelski skripec', en: 'Cable station' },
+  machine: { sl: 'Naprava', en: 'Machine' },
+  smith: { sl: 'Smith naprava', en: 'Smith machine' },
+  bench: { sl: 'Klop in utezi', en: 'Bench and weights' },
+  landmine: { sl: 'Landmine nastavek in palica', en: 'Landmine attachment and barbell' },
+  dip: { sl: 'Dip postaja in pas ali plosca', en: 'Dip station and belt or plate' },
+  pullup: { sl: 'Drog za zgibe ali kapitanski stol', en: 'Pull-up bar or captain chair' },
+  plate: { sl: 'Utezna plosca', en: 'Weight plate' },
+  kettlebell: { sl: 'Rocna utez ali kettlebell', en: 'Dumbbell or kettlebell' },
+  cardio: { sl: 'Kardio naprava', en: 'Cardio machine' },
+  sled: { sl: 'Sani ali prowler', en: 'Sled or prowler' },
+  rope: { sl: 'Bojne vrvi', en: 'Battle ropes' },
+  wheel: { sl: 'Ab wheel in podloga', en: 'Ab wheel and mat' },
+  ab: { sl: 'Podloga ali naprava za jedro', en: 'Mat or core machine' },
+  roller: { sl: 'Wrist roller ali palica z vrvjo', en: 'Wrist roller or bar with rope' },
+  grip: { sl: 'Grip pripomocek ali debele rocice', en: 'Grip tool or thick handles' },
+};
+
+const GYM_SECTION_COPY = {
+  Chest: {
+    howTo: { sl: 'Nastavi klop ali napravo, spusti breme kontrolirano proti prsim in potisni skozi stabilen lok.', en: 'Set the bench or machine, lower the load toward the chest under control, and press through a stable path.' },
+    cues: { sl: 'Lopatice stisni, rebra zakleni in komolce vodi pod nadzorom.', en: 'Pin the shoulder blades, lock the ribs down, and keep the elbows controlled.' },
+  },
+  Back: {
+    howTo: { sl: 'Zacni z napetim trupom, povleci komolce nazaj ali navzdol in breme vrni brez zibanja.', en: 'Start with a braced torso, pull the elbows back or down, and return the load without rocking.' },
+    cues: { sl: 'Najprej premakni lopatice, ne vleci z vratom in ne izgubi ravnega hrbta.', en: 'Move the shoulder blades first, do not pull with the neck, and keep the back flat.' },
+  },
+  Legs: {
+    howTo: { sl: 'Nastavi stopala stabilno, spusti se skozi kolk in koleno ter odrini breme z enakomerno kontrolo.', en: 'Set the feet firmly, move through the hips and knees, and drive the load with steady control.' },
+    cues: { sl: 'Kolena naj sledijo prstom, pete ostanejo tezke, tempo naj ostane miren.', en: 'Track knees over toes, keep the heels heavy, and keep the tempo calm.' },
+  },
+  Triceps: {
+    howTo: { sl: 'Zakleni nadlahti, spusti ali potisni breme skozi komolce in zakljuci s popolnim iztegom.', en: 'Lock the upper arms, move the load through the elbows, and finish with a full extension.' },
+    cues: { sl: 'Komolci naj ne bezijo narazen, zapestja ostanejo ravna.', en: 'Do not let the elbows drift wide, and keep the wrists straight.' },
+  },
+  Biceps: {
+    howTo: { sl: 'Dvigni breme s pregibom komolcev, vrh stisni in spusti pocasi brez zamaha.', en: 'Curl the load through the elbows, squeeze the top, and lower slowly without swinging.' },
+    cues: { sl: 'Komolci ostanejo mirni, ramena naj ne prevzamejo giba.', en: 'Keep the elbows quiet and do not let the shoulders take over.' },
+  },
+  Forearms: {
+    howTo: { sl: 'Premik ali drzo izvedi iz zapestij in prijema, z majhnim obsegom in konstantno napetostjo.', en: 'Move or hold through the wrists and grip with a small range and constant tension.' },
+    cues: { sl: 'Ne hiti, stisk naj bo enakomeren in brez bolecine v zapestju.', en: 'Do not rush, keep the squeeze even, and avoid wrist pain.' },
+  },
+  Shoulders: {
+    howTo: { sl: 'Breme vodi iz ramen, dviguj po stabilni liniji in spusti pod kontrolo.', en: 'Move the load from the shoulders, lift through a stable line, and lower under control.' },
+    cues: { sl: 'Ne lomi ledvenega dela, vrat naj ostane sproscen, lopatice naj delajo naravno.', en: 'Do not overarch the low back, keep the neck relaxed, and let the shoulder blades move naturally.' },
+  },
+  Abs: {
+    howTo: { sl: 'Zakleni medenico in rebra, skrci trup ali se upiraj rotaciji s polno kontrolo.', en: 'Lock pelvis and ribs, curl the torso or resist rotation with full control.' },
+    cues: { sl: 'Gib naj pride iz jedra, ne iz vratu ali bokov.', en: 'Let the movement come from the core, not the neck or hips.' },
+  },
+  'Stamina/Cardio': {
+    howTo: { sl: 'Izberi interval ali enakomeren tempo in ohrani tehniko skozi celoten delovni blok.', en: 'Choose intervals or a steady pace and keep technique clean for the whole work block.' },
+    cues: { sl: 'Dihanje naj ostane ritmicno, intenzivnost stopnjuj postopno.', en: 'Keep breathing rhythmic and build intensity gradually.' },
+  },
+};
+
+const GYM_SECTION_DEFAULT_WEIGHTS = {
+  Chest: { Chest: 0.72, Triceps: 0.18, Shoulders: 0.1 },
+  Back: { Back: 0.72, Biceps: 0.18, Forearms: 0.1 },
+  Legs: { Legs: 0.9, Abs: 0.1 },
+  Triceps: { Triceps: 0.85, Chest: 0.1, Shoulders: 0.05 },
+  Biceps: { Biceps: 0.85, Forearms: 0.15 },
+  Forearms: { Forearms: 0.9, Biceps: 0.1 },
+  Shoulders: { Shoulders: 0.78, Triceps: 0.12, Abs: 0.1 },
+  Abs: { Abs: 0.9, Legs: 0.05, Shoulders: 0.05 },
+  'Stamina/Cardio': { 'Stamina/Cardio': 0.7, Legs: 0.2, Abs: 0.1 },
+};
+
+function makeAdditionalGymExercise([section, name, sl, difficulty = 'Intermediate', equipment = 'machine', weights]) {
+  const resolvedWeights = weights || GYM_SECTION_DEFAULT_WEIGHTS[section] || { [section]: 1 };
+  const copy = GYM_SECTION_COPY[section] || GYM_SECTION_COPY.Chest;
+  const primary = CAL_SECTION_LABELS[section] || { sl: section, en: section };
+  return {
+    section,
+    name,
+    weights: resolvedWeights,
+    info: {
+      sl,
+      en: name,
+      targets: {
+        sl: makeCalisthenicsTargets(resolvedWeights, 'sl'),
+        en: makeCalisthenicsTargets(resolvedWeights, 'en'),
+      },
+      primary,
+      howTo: {
+        sl: `${sl}: ${copy.howTo.sl}`,
+        en: `${name}: ${copy.howTo.en}`,
+      },
+      cues: copy.cues,
+    },
+    equipment: GYM_EQUIPMENT_LABELS[equipment] || GYM_EQUIPMENT_LABELS.machine,
+    difficulty: CAL_DIFFICULTY_LABELS[difficulty] || CAL_DIFFICULTY_LABELS.Intermediate,
+  };
+}
+
+const ADDITIONAL_GYM_EXERCISES = [
+  ['Chest', 'Dumbbell Bench Press', 'Potisk z rockami na ravni klopi', 'Intermediate', 'dumbbells'],
+  ['Chest', 'Incline Dumbbell Press', 'Potisk z rockami na nagnjeni klopi', 'Intermediate', 'dumbbells', { Chest: 0.65, Shoulders: 0.22, Triceps: 0.13 }],
+  ['Chest', 'Cable Fly', 'Metulj na kablih', 'Beginner', 'cable', { Chest: 1 }],
+  ['Chest', 'Pec Deck Fly', 'Pec deck metulj', 'Beginner', 'machine', { Chest: 1 }],
+  ['Chest', 'Machine Chest Press', 'Potisk za prsa na napravi', 'Beginner', 'machine'],
+  ['Chest', 'Smith Machine Bench Press', 'Smith potisk s prsi', 'Intermediate', 'smith'],
+  ['Chest', 'Low Cable Fly', 'Metulj na kablih od spodaj', 'Beginner', 'cable', { Chest: 0.9, Shoulders: 0.1 }],
+  ['Chest', 'High Cable Fly', 'Metulj na kablih od zgoraj', 'Beginner', 'cable', { Chest: 0.95, Shoulders: 0.05 }],
+  ['Chest', 'Weighted Chest Dip', 'Obtezeni dip za prsa', 'Advanced', 'dip', { Chest: 0.55, Triceps: 0.3, Shoulders: 0.15 }],
+  ['Chest', 'Landmine Chest Press', 'Landmine potisk za prsa', 'Intermediate', 'landmine', { Chest: 0.55, Shoulders: 0.3, Triceps: 0.15 }],
+  ['Chest', 'Plate Squeeze Press', 'Potisk s stiskom plosce', 'Beginner', 'plate', { Chest: 0.85, Triceps: 0.1, Shoulders: 0.05 }],
+  ['Legs', 'Hack Squat', 'Hack pocep', 'Intermediate', 'machine'],
+  ['Legs', 'Front Squat', 'Sprednji pocep', 'Advanced', 'barbell', { Legs: 0.86, Abs: 0.14 }],
+  ['Legs', 'Goblet Squat', 'Goblet pocep', 'Beginner', 'kettlebell'],
+  ['Legs', 'Hip Thrust', 'Potisk bokov', 'Intermediate', 'barbell', { Legs: 0.85, Abs: 0.15 }],
+  ['Legs', 'Lying Leg Curl', 'Lezeci upogib nog', 'Beginner', 'machine', { Legs: 1 }],
+  ['Legs', 'Seated Leg Curl', 'Sedeci upogib nog', 'Beginner', 'machine', { Legs: 1 }],
+  ['Legs', 'Standing Calf Raise', 'Stojeci dvig na prste', 'Beginner', 'machine', { Legs: 1 }],
+  ['Legs', 'Seated Calf Raise', 'Sedeci dvig na prste', 'Beginner', 'machine', { Legs: 1 }],
+  ['Legs', 'Smith Machine Squat', 'Smith pocep', 'Intermediate', 'smith'],
+  ['Legs', 'Cable Pull-Through', 'Cable pull-through', 'Beginner', 'cable', { Legs: 0.8, Back: 0.1, Abs: 0.1 }],
+  ['Triceps', 'Rope Triceps Pushdown', 'Potisk vrvi za triceps', 'Beginner', 'cable'],
+  ['Triceps', 'Cable Overhead Triceps Extension', 'Nadglavni cable izteg za triceps', 'Beginner', 'cable'],
+  ['Triceps', 'Dumbbell Kickback', 'Triceps kickback z rocko', 'Beginner', 'dumbbells'],
+  ['Triceps', 'Machine Triceps Dip', 'Dip za triceps na napravi', 'Beginner', 'machine'],
+  ['Triceps', 'EZ-Bar French Press', 'Francoski potisk z EZ palico', 'Intermediate', 'barbell'],
+  ['Triceps', 'Single-Arm Cable Pushdown', 'Enorocni cable pushdown', 'Beginner', 'cable'],
+  ['Triceps', 'Cross-Body Cable Extension', 'Cable izteg preko telesa', 'Beginner', 'cable'],
+  ['Triceps', 'Reverse Grip Triceps Pushdown', 'Triceps pushdown s podprijemom', 'Beginner', 'cable'],
+  ['Triceps', 'JM Press', 'JM press', 'Advanced', 'barbell', { Triceps: 0.7, Chest: 0.2, Shoulders: 0.1 }],
+  ['Triceps', 'Tate Press', 'Tate press', 'Intermediate', 'dumbbells'],
+  ['Triceps', 'Seated Dumbbell Triceps Extension', 'Sedeci triceps izteg z rocko', 'Beginner', 'dumbbells'],
+  ['Biceps', 'Incline Dumbbell Curl', 'Pregib z rockami na nagnjeni klopi', 'Intermediate', 'dumbbells'],
+  ['Biceps', 'Concentration Curl', 'Koncentracijski pregib', 'Beginner', 'dumbbells'],
+  ['Biceps', 'EZ-Bar Curl', 'Pregib z EZ palico', 'Beginner', 'barbell'],
+  ['Biceps', 'Spider Curl', 'Spider pregib', 'Intermediate', 'bench'],
+  ['Biceps', 'Bayesian Cable Curl', 'Bayesian cable pregib', 'Intermediate', 'cable'],
+  ['Biceps', 'Machine Preacher Curl', 'Scott pregib na napravi', 'Beginner', 'machine'],
+  ['Biceps', 'Rope Hammer Curl', 'Kladivni pregib z vrvjo', 'Beginner', 'cable', { Biceps: 0.65, Forearms: 0.35 }],
+  ['Biceps', 'Cable Reverse Curl', 'Obratni pregib na kablu', 'Beginner', 'cable', { Biceps: 0.45, Forearms: 0.55 }],
+  ['Biceps', 'Zottman Curl', 'Zottman pregib', 'Intermediate', 'dumbbells', { Biceps: 0.65, Forearms: 0.35 }],
+  ['Biceps', 'Drag Curl', 'Drag pregib', 'Intermediate', 'barbell'],
+  ['Forearms', 'Behind-the-Back Wrist Curl', 'Pregib zapestja za hrbtom', 'Beginner', 'barbell', { Forearms: 1 }],
+  ['Forearms', 'Cable Wrist Curl', 'Pregib zapestja na kablu', 'Beginner', 'cable', { Forearms: 1 }],
+  ['Forearms', 'Dumbbell Wrist Rotation', 'Rotacija zapestja z rocko', 'Beginner', 'dumbbells', { Forearms: 1 }],
+  ['Forearms', 'Wrist Roller', 'Wrist roller', 'Intermediate', 'roller', { Forearms: 1 }],
+  ['Forearms', 'Fat Grip Farmer Carry', 'Kmecka hoja z debelim prijemom', 'Intermediate', 'grip', { Forearms: 0.65, Back: 0.2, Abs: 0.15 }],
+  ['Forearms', 'Barbell Hold', 'Drza palice', 'Beginner', 'barbell', { Forearms: 0.85, Back: 0.1, Abs: 0.05 }],
+  ['Forearms', 'Gripper Squeeze', 'Stisk gripperja', 'Beginner', 'grip', { Forearms: 1 }],
+  ['Forearms', 'Pronated Dumbbell Curl', 'Proniran pregib z rockami', 'Beginner', 'dumbbells', { Forearms: 0.6, Biceps: 0.4 }],
+  ['Forearms', 'Suitcase Carry', 'Enorocna kmecka hoja', 'Beginner', 'dumbbells', { Forearms: 0.5, Abs: 0.3, Back: 0.2 }],
+  ['Forearms', 'Cable Pronation Supination', 'Pronacija in supinacija na kablu', 'Beginner', 'cable', { Forearms: 1 }],
+  ['Shoulders', 'Dumbbell Shoulder Press', 'Ramenski potisk z rockami', 'Intermediate', 'dumbbells'],
+  ['Shoulders', 'Machine Shoulder Press', 'Ramenski potisk na napravi', 'Beginner', 'machine'],
+  ['Shoulders', 'Cable Lateral Raise', 'Stranski dvig na kablu', 'Beginner', 'cable', { Shoulders: 1 }],
+  ['Shoulders', 'Upright Row', 'Veslanje stoje', 'Intermediate', 'barbell', { Shoulders: 0.7, Back: 0.2, Forearms: 0.1 }],
+  ['Shoulders', 'Face Pull', 'Face pull', 'Beginner', 'cable', { Shoulders: 0.65, Back: 0.3, Forearms: 0.05 }],
+  ['Shoulders', 'Reverse Pec Deck', 'Obratni pec deck', 'Beginner', 'machine', { Shoulders: 0.75, Back: 0.25 }],
+  ['Shoulders', 'Landmine Press', 'Landmine ramenski potisk', 'Intermediate', 'landmine'],
+  ['Shoulders', 'Push Press', 'Push press', 'Advanced', 'barbell', { Shoulders: 0.55, Triceps: 0.2, Legs: 0.15, Abs: 0.1 }],
+  ['Shoulders', 'Cable Y Raise', 'Y dvig na kablu', 'Beginner', 'cable', { Shoulders: 0.9, Back: 0.1 }],
+  ['Shoulders', 'Dumbbell Shrug', 'Skomig z rockami', 'Beginner', 'dumbbells', { Shoulders: 0.55, Back: 0.35, Forearms: 0.1 }],
+  ['Stamina/Cardio', 'Treadmill Run', 'Tek na tekalni stezi', 'Beginner', 'cardio'],
+  ['Stamina/Cardio', 'Stationary Bike', 'Sobno kolo', 'Beginner', 'cardio', { 'Stamina/Cardio': 0.65, Legs: 0.3, Abs: 0.05 }],
+  ['Stamina/Cardio', 'Rowing Machine', 'Veslaska naprava', 'Beginner', 'cardio', { 'Stamina/Cardio': 0.4, Back: 0.25, Legs: 0.25, Biceps: 0.1 }],
+  ['Stamina/Cardio', 'Elliptical Trainer', 'Elipticni trener', 'Beginner', 'cardio'],
+  ['Stamina/Cardio', 'Stair Climber', 'Stopnicni simulator', 'Beginner', 'cardio', { 'Stamina/Cardio': 0.55, Legs: 0.4, Abs: 0.05 }],
+  ['Stamina/Cardio', 'Assault Bike', 'Assault bike', 'Intermediate', 'cardio', { 'Stamina/Cardio': 0.5, Legs: 0.25, Shoulders: 0.15, Back: 0.1 }],
+  ['Stamina/Cardio', 'SkiErg', 'SkiErg', 'Intermediate', 'cardio', { 'Stamina/Cardio': 0.45, Back: 0.25, Abs: 0.15, Triceps: 0.15 }],
+  ['Stamina/Cardio', 'Battle Ropes', 'Bojne vrvi', 'Intermediate', 'rope', { 'Stamina/Cardio': 0.45, Shoulders: 0.25, Abs: 0.2, Forearms: 0.1 }],
+  ['Stamina/Cardio', 'Sled Push', 'Potisk sani', 'Intermediate', 'sled', { 'Stamina/Cardio': 0.45, Legs: 0.45, Abs: 0.1 }],
+  ['Stamina/Cardio', 'Incline Treadmill Walk', 'Hoja v klanec na tekalni stezi', 'Beginner', 'cardio', { 'Stamina/Cardio': 0.55, Legs: 0.4, Abs: 0.05 }],
+  ['Stamina/Cardio', 'Spin Bike Intervals', 'Intervali na spinning kolesu', 'Intermediate', 'cardio', { 'Stamina/Cardio': 0.65, Legs: 0.3, Abs: 0.05 }],
+  ['Stamina/Cardio', 'Treadmill Sprints', 'Sprinti na tekalni stezi', 'Advanced', 'cardio', { 'Stamina/Cardio': 0.65, Legs: 0.3, Abs: 0.05 }],
+  ['Stamina/Cardio', 'StepMill Intervals', 'Intervali na StepMill napravi', 'Intermediate', 'cardio', { 'Stamina/Cardio': 0.58, Legs: 0.37, Abs: 0.05 }],
+  ['Stamina/Cardio', 'Air Rower Intervals', 'Intervali na air rowerju', 'Intermediate', 'cardio', { 'Stamina/Cardio': 0.42, Back: 0.25, Legs: 0.23, Biceps: 0.1 }],
+  ['Stamina/Cardio', 'Prowler Push', 'Prowler potisk', 'Advanced', 'sled', { 'Stamina/Cardio': 0.45, Legs: 0.45, Abs: 0.1 }],
+  ['Back', 'Deadlift', 'Mrtvi dvig', 'Advanced', 'barbell', { Back: 0.45, Legs: 0.4, Abs: 0.15 }],
+  ['Back', 'T-Bar Row', 'T-bar veslanje', 'Intermediate', 'barbell'],
+  ['Back', 'Chest-Supported Row', 'Veslanje s podporo prsi', 'Beginner', 'bench'],
+  ['Back', 'Single-Arm Dumbbell Row', 'Enorocno veslanje z rocko', 'Beginner', 'dumbbells'],
+  ['Back', 'Machine Row', 'Veslanje na napravi', 'Beginner', 'machine'],
+  ['Back', 'Wide Grip Lat Pulldown', 'Siroki poteg na prsi', 'Beginner', 'machine'],
+  ['Back', 'Close Grip Lat Pulldown', 'Ozki poteg na prsi', 'Beginner', 'machine', { Back: 0.68, Biceps: 0.22, Forearms: 0.1 }],
+  ['Back', 'Cable Pullover', 'Cable pullover', 'Beginner', 'cable', { Back: 0.85, Abs: 0.15 }],
+  ['Back', 'Rack Pull', 'Rack pull', 'Advanced', 'barbell', { Back: 0.62, Legs: 0.25, Abs: 0.13 }],
+  ['Back', 'Meadows Row', 'Meadows veslanje', 'Intermediate', 'landmine'],
+  ['Back', 'Assisted Pull-Up Machine', 'Asistirani zgib na napravi', 'Beginner', 'machine'],
+  ['Abs', 'Machine Crunch', 'Trebusnjak na napravi', 'Beginner', 'machine', { Abs: 1 }],
+  ['Abs', 'Weighted Crunch', 'Obtezeni trebusnjak', 'Beginner', 'plate', { Abs: 1 }],
+  ['Abs', 'Decline Sit-Up', 'Trebusnjak na negativni klopi', 'Intermediate', 'bench', { Abs: 0.9, Legs: 0.1 }],
+  ['Abs', 'Hanging Knee Raise', 'Dvig kolen v visenju', 'Intermediate', 'pullup', { Abs: 0.82, Legs: 0.12, Forearms: 0.06 }],
+  ['Abs', "Captain's Chair Knee Raise", 'Dvig kolen na kapitanskem stolu', 'Beginner', 'machine', { Abs: 0.85, Legs: 0.1, Shoulders: 0.05 }],
+  ['Abs', 'Ab Wheel Rollout', 'Ab wheel rollout', 'Intermediate', 'wheel', { Abs: 0.75, Shoulders: 0.15, Back: 0.1 }],
+  ['Abs', 'Medicine Ball Russian Twist', 'Ruski zasuk z medicinko', 'Beginner', 'plate', { Abs: 1 }],
+  ['Abs', 'Pallof Press', 'Pallof press', 'Beginner', 'cable', { Abs: 0.85, Shoulders: 0.1, Chest: 0.05 }],
+  ['Abs', 'Cable Woodchop', 'Sekanje na kablu', 'Intermediate', 'cable', { Abs: 0.82, Shoulders: 0.1, Back: 0.08 }],
+  ['Abs', 'Weighted Plank', 'Obtezena deska', 'Intermediate', 'plate', { Abs: 0.82, Back: 0.1, Shoulders: 0.08 }],
+  ['Abs', 'Stability Ball Crunch', 'Trebusnjak na zogi', 'Beginner', 'ab', { Abs: 1 }],
+  ['Abs', 'Decline Reverse Crunch', 'Obratni trebusnjak na negativni klopi', 'Intermediate', 'bench', { Abs: 0.9, Legs: 0.1 }],
+  ['Abs', 'Landmine Rotation', 'Landmine rotacija', 'Intermediate', 'landmine', { Abs: 0.78, Shoulders: 0.12, Back: 0.1 }],
+].map(makeAdditionalGymExercise);
+
+ADDITIONAL_GYM_EXERCISES.forEach((exercise) => {
+  if (!exerciseInfo[exercise.name]) exerciseInfo[exercise.name] = exercise.info;
+  if (!exerciseEquipment[exercise.name]) exerciseEquipment[exercise.name] = exercise.equipment;
+  if (!exerciseDifficulty[exercise.name]) exerciseDifficulty[exercise.name] = exercise.difficulty;
+});
+
 
 const EXERCISE_MUSCLE_WEIGHTS = {
   'Bench Press': { Chest: 0.7, Triceps: 0.2, Shoulders: 0.1 },
@@ -1936,6 +2145,10 @@ const BODYWEIGHT_LOAD_FACTORS = {
 ADDITIONAL_CALISTHENICS_EXERCISES.forEach((exercise) => {
   EXERCISE_MUSCLE_WEIGHTS[exercise.name] = exercise.weights;
   BODYWEIGHT_LOAD_FACTORS[exercise.name] = exercise.loadFactor;
+});
+
+ADDITIONAL_GYM_EXERCISES.forEach((exercise) => {
+  EXERCISE_MUSCLE_WEIGHTS[exercise.name] = exercise.weights;
 });
 
 const normalizeWorkout = (w, i = 0) => {

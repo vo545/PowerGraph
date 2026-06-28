@@ -4013,6 +4013,17 @@ export default function App() {
     }
     const timer = window.setTimeout(() => {
       const target = document.querySelector(`[data-tour="${activeTutorialStep.target}"]`);
+      const isMobileTour = window.matchMedia('(max-width: 720px)').matches;
+      if (target && isMobileTour && mainContentRef.current) {
+        const scroller = mainContentRef.current;
+        const targetRect = target.getBoundingClientRect();
+        const scrollerRect = scroller.getBoundingClientRect();
+        const targetTop = scroller.scrollTop + targetRect.top - scrollerRect.top - 84;
+        scroller.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+        const pageTop = window.scrollY + targetRect.top - 84;
+        window.scrollTo({ top: Math.max(0, pageTop), behavior: 'smooth' });
+        return;
+      }
       target?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
     }, 120);
     return () => window.clearTimeout(timer);
@@ -6881,12 +6892,14 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
       {showTutorial && activeTutorialStep && (() => {
         const isLast = tutorialStep >= guidedTutorialSteps.length - 1;
         const progress = Math.round(((tutorialStep + 1) / guidedTutorialSteps.length) * 100);
+        const tutorialSectionLabel = nav.find(([id]) => id === activeTutorialStep.section)?.[1] || activeTutorialStep.section;
         return (
           <>
             <div className="tutorial-soft-scrim" aria-hidden="true" />
             <aside className="guided-tutorial-card glass-panel" role="dialog" aria-live="polite" aria-label={activeTutorialStep.title}>
               <div className="tutorial-card-top">
                 <span>{tutorialStep + 1} / {guidedTutorialSteps.length}</span>
+                <strong className="tutorial-section-pill">{tutorialSectionLabel}</strong>
                 <button className="context-help-btn" type="button" onClick={() => setShowTutorial(false)} aria-label={settings.language === 'sl' ? 'Zapri vodic' : 'Close guide'}>x</button>
               </div>
               <h2>{activeTutorialStep.title}</h2>

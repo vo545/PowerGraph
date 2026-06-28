@@ -2008,6 +2008,11 @@ p {
   pointer-events: none;
 }
 
+[data-tour] {
+  scroll-margin-top: 96px;
+  scroll-margin-bottom: 320px;
+}
+
 .context-help-btn {
   width: 24px;
   min-width: 24px;
@@ -2083,6 +2088,21 @@ p {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.tutorial-section-pill {
+  max-width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.11);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  color: var(--text-primary);
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .guided-tutorial-card h2 {
@@ -6358,43 +6378,79 @@ body {
   [data-tour-active='true'] {
     outline-width: 2px;
     outline-offset: 4px;
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.16), 0 0 24px rgba(var(--accent-rgb), 0.4);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.08), 0 0 24px rgba(var(--accent-rgb), 0.36);
+  }
+
+  .tutorial-soft-scrim {
+    background: linear-gradient(180deg, transparent 0 48%, rgba(0, 0, 0, 0.1) 100%);
+  }
+
+  [data-tour] {
+    scroll-margin-top: 92px;
+    scroll-margin-bottom: 310px;
   }
 
   .guided-tutorial-card {
     left: 10px;
     right: 10px;
-    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(74px + env(safe-area-inset-bottom, 0px));
     width: auto;
-    max-height: min(58vh, 520px);
+    max-height: min(34vh, 280px);
     overflow: auto;
-    padding: 16px;
-    border-radius: 16px;
+    padding: 10px 12px 11px;
+    gap: 7px;
+    border-radius: 15px;
+  }
+
+  .tutorial-card-top {
+    gap: 8px;
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+  }
+
+  .tutorial-section-pill {
+    max-width: 54%;
+    padding: 3px 7px;
+    font-size: 0.66rem;
   }
 
   .guided-tutorial-card h2 {
-    font-size: 1.18rem;
+    font-size: 0.98rem;
+    line-height: 1.16;
   }
 
-  .guided-tutorial-card p,
+  .guided-tutorial-card p {
+    font-size: 0.76rem;
+    line-height: 1.34;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
   .tutorial-bullet-list {
-    font-size: 0.88rem;
+    display: none;
+  }
+
+  .tutorial-progress-track {
+    height: 4px;
   }
 
   .tutorial-control-row {
-    grid-template-columns: 1fr;
-    gap: 8px;
+    grid-template-columns: 0.85fr 0.85fr 1fr;
+    gap: 6px;
   }
 
   .tutorial-control-row button {
     width: 100%;
-    min-height: 40px;
+    min-height: 31px;
+    padding: 6px 7px;
+    font-size: 0.72rem;
+    border-radius: 10px;
   }
 
   .tutorial-jump-row {
-    max-height: 38px;
-    overflow: auto;
-    padding-bottom: 2px;
+    display: none;
   }
 
   .context-help-btn {

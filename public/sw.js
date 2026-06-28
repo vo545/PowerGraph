@@ -10,8 +10,11 @@ self.addEventListener('install', (e) => {
     caches.open(CACHE)
       .then(c => c.addAll([APP_SCOPE, `${APP_SCOPE}index.html`]))
       .catch(() => {}) // ignore if offline at install time
-      .then(() => self.skipWaiting()) // activate immediately, don't wait for old tabs to close
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 // ── Activate: clean up old caches, claim clients, notify if this is an update ─

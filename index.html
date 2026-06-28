@@ -21,13 +21,33 @@
     <script type="module" src="/src/main.jsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('%BASE_URL%sw.js', { updateViaCache: 'none' });
-        // The SW posts SW_UPDATED when a new version activates.
-        // App.jsx listens and shows a toast before reloading.
+        function notifyUpdate(registration) {
+          window.__swRegistration = registration;
+          window.__swUpdated = true;
+          window.dispatchEvent(new CustomEvent('sw-updated'));
+        }
+
+        navigator.serviceWorker.register('%BASE_URL%sw.js', { updateViaCache: 'none' }).then((registration) => {
+          window.__swRegistration = registration;
+          if (registration.waiting && navigator.serviceWorker.controller) notifyUpdate(registration);
+          registration.addEventListener('updatefound', () => {
+            const worker = registration.installing;
+            if (!worker) return;
+            worker.addEventListener('statechange', () => {
+              if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                notifyUpdate(registration);
+              }
+            });
+          });
+        });
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (window.__powerGraphUpdating) window.location.reload();
+        });
+
         navigator.serviceWorker.addEventListener('message', (e) => {
           if (e.data?.type === 'SW_UPDATED') {
-            window.__swUpdated = true;
-            window.dispatchEvent(new CustomEvent('sw-updated'));
+            notifyUpdate(window.__swRegistration);
           }
         });
       }

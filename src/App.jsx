@@ -56,6 +56,8 @@ const SETTINGS_KEY_PREFIX = 'powergraph_settings_';
 const USERS_KEY = 'powergraph_users';
 const SESSION_KEY = 'powergraph_session';
 const ADMIN_EMAIL = 'vid.oreskovic@gmail.com';
+const DEMO_EMAIL = 'demo@powergraph.local';
+const DEMO_FLAG_KEY = 'powergraph_demo_loaded_at';
 const ADMIN_CONFIG_KEY = 'powergraph_admin_config';
 const ADMIN_AUDIT_KEY = 'powergraph_admin_audit';
 const LOGINS_KEY = 'powergraph_logins';
@@ -597,11 +599,11 @@ function loadBodyFatHistory(email) {
 
 const LANGUAGE_OPTIONS = [
   { id: 'en', label: 'English' },
-  { id: 'sl', label: 'Slovenscina' },
-  { id: 'es', label: 'Espanol' },
-  { id: 'pt', label: 'Portugues' },
-  { id: 'fr', label: 'Francais' },
-  { id: 'tr', label: 'Turkce' },
+  { id: 'sl', label: 'Slovenščina' },
+  { id: 'es', label: 'Español' },
+  { id: 'pt', label: 'Português' },
+  { id: 'fr', label: 'Français' },
+  { id: 'tr', label: 'Türkçe' },
   { id: 'ar', label: 'العربية' },
   { id: 'ja', label: '日本語' },
   { id: 'zh', label: '简体中文' },
@@ -617,7 +619,7 @@ const BACKGROUND_PRESETS = [
   { id: 'mono', color: '#cbd5e1', label: { en: 'Monochrome', sl: 'Monokrom', es: 'Monocromo', pt: 'Monocromatico', fr: 'Monochrome', tr: 'Monokrom', ar: 'Monochrome', ja: 'Mono', zh: 'Mono', ru: 'Mono' } },
 ];
 const SUPPORTED_BACKGROUNDS = BACKGROUND_PRESETS.map((item) => item.id);
-const defaultSettings = { units: 'kg', language: 'en', backgroundAccent: 'blue', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, waterGoalMl: 2500, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
+const defaultSettings = { units: 'kg', language: 'sl', backgroundAccent: 'blue', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, waterGoalMl: 2500, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
 const defaultAdminConfig = {
   appName: 'PowerGraph',
   announcementEnabled: false,
@@ -626,7 +628,7 @@ const defaultAdminConfig = {
   signupEnabled: true,
   feedbackEnabled: true,
   backupBannerEnabled: true,
-  defaultLanguage: 'en',
+  defaultLanguage: 'sl',
   defaultAccent: 'blue',
   defaultUnits: 'kg',
   defaultCalorieGoal: 2200,
@@ -1066,6 +1068,40 @@ const ui = {
     waterGoalLabel: 'Cilj',
     waterReset: 'Ponastavi',
     waterNoGoal: 'Izračunaj TDEE za priporočen cilj vode.',
+    landingTagline: 'Spremljaj treninge, kalorije, težo in napredek v eni močni nadzorni plošči.',
+    landingWorkoutCard: 'Sledi treningom',
+    landingCaloriesCard: 'Kalorije in makri',
+    landingProgressCard: 'Grafi napredka',
+    landingTodayPreview: 'Danes',
+    dashboardTodayCalories: 'Kalorije danes',
+    dashboardWeeklyVolume: 'Tedenski volumen',
+    dashboardBodyWeight: 'Telesna teža',
+    dashboardQuickActions: 'Hitre akcije',
+    dashboardEmptyTitle: 'Še brez podatkov',
+    dashboardEmptyBody: 'Začni z enim treningom, obrokom ali meritvijo. PowerGraph bo potem takoj napolnil grafe in napredek.',
+    addWeight: 'Dodaj težo',
+    addWaterShort: 'Dodaj vodo',
+    repeatLastWorkout: 'Ponovi zadnji trening',
+    repeatLastWorkoutConfirm: 'Naj zadnji trening kopiram v obrazec za danes? Pred shranjevanjem ga lahko urediš.',
+    noWorkoutToRepeat: 'Ni treninga za ponovitev.',
+    copyYesterdayMeals: 'Kopiraj včerajšnje obroke',
+    copyYesterdayConfirm: 'Kopiram včerajšnje obroke na današnji dan?',
+    copyYesterdayDuplicateConfirm: 'Danes že imaš obroke. Vseeno kopiram včerajšnje obroke?',
+    copiedYesterdayMeals: 'Včerajšnji obroki kopirani.',
+    noYesterdayMeals: 'Včeraj ni obrokov za kopiranje.',
+    deleteConfirmWorkout: 'Izbrišem ta trening?',
+    deleteConfirmMeal: 'Izbrišem ta obrok?',
+    deleteConfirmWeight: 'Izbrišem to meritev teže?',
+    deleteConfirmWater: 'Ponastavim današnji vnos vode?',
+    deleteConfirmEstimate: 'Izbrišem ta zapis?',
+    demoTry: 'Preizkusi demo s podatki',
+    demoLoaded: 'Demo podatki naloženi.',
+    demoClear: 'Počisti demo podatke',
+    demoClearConfirm: 'Počistim demo podatke?',
+    demoCleared: 'Demo podatki odstranjeni.',
+    dataPrivacy: 'Podatki in zasebnost',
+    dataPrivacyDesc: 'Podatki so shranjeni lokalno v tem brskalniku, razen če je omogočen backend sync. Export je tvoja varnostna kopija, import jo naloži nazaj.',
+    privacyPolicy: 'Politika zasebnosti',
   },
   en: {
     app: 'PowerGraph',
@@ -1494,6 +1530,40 @@ const ui = {
     waterGoalLabel: 'Goal',
     waterReset: 'Reset',
     waterNoGoal: 'Calculate TDEE to get a recommended water goal.',
+    landingTagline: 'Track workouts, calories, weight, and progress in one powerful dashboard.',
+    landingWorkoutCard: 'Track workouts',
+    landingCaloriesCard: 'Calories & macros',
+    landingProgressCard: 'Progress graphs',
+    landingTodayPreview: 'Today',
+    dashboardTodayCalories: 'Today calories',
+    dashboardWeeklyVolume: 'Weekly volume',
+    dashboardBodyWeight: 'Body weight',
+    dashboardQuickActions: 'Quick actions',
+    dashboardEmptyTitle: 'No data yet',
+    dashboardEmptyBody: 'Start with one workout, meal, or weight entry. PowerGraph will immediately fill your graphs and progress.',
+    addWeight: 'Add weight',
+    addWaterShort: 'Add water',
+    repeatLastWorkout: 'Repeat last workout',
+    repeatLastWorkoutConfirm: 'Copy the last workout into today’s form? You can edit it before saving.',
+    noWorkoutToRepeat: 'No workout to repeat yet.',
+    copyYesterdayMeals: 'Copy yesterday meals',
+    copyYesterdayConfirm: 'Copy yesterday’s meals to today?',
+    copyYesterdayDuplicateConfirm: 'You already have meals today. Copy yesterday’s meals anyway?',
+    copiedYesterdayMeals: 'Yesterday meals copied.',
+    noYesterdayMeals: 'No meals from yesterday to copy.',
+    deleteConfirmWorkout: 'Delete this workout?',
+    deleteConfirmMeal: 'Delete this meal?',
+    deleteConfirmWeight: 'Delete this weight entry?',
+    deleteConfirmWater: 'Reset today’s water intake?',
+    deleteConfirmEstimate: 'Delete this entry?',
+    demoTry: 'Try demo with sample data',
+    demoLoaded: 'Demo data loaded.',
+    demoClear: 'Clear demo data',
+    demoClearConfirm: 'Clear demo data?',
+    demoCleared: 'Demo data removed.',
+    dataPrivacy: 'Data & Privacy',
+    dataPrivacyDesc: 'Your data is saved locally in this browser unless backend sync is enabled. Export is your backup, import restores it.',
+    privacyPolicy: 'Privacy policy',
   },
 };
 
@@ -4049,6 +4119,17 @@ export default function App() {
   const todayWorkouts = useMemo(() => workouts.filter((workout) => workout.date === todayKey), [todayKey, workouts]);
   const todayCalories = useMemo(() => calorieEntries.filter((entry) => entry.date === todayKey), [calorieEntries, todayKey]);
   const todayTotals = useMemo(() => todayCalories.reduce((acc, entry) => ({ calories: acc.calories + Number(entry.calories || 0), protein: acc.protein + Number(entry.protein || 0), carbs: acc.carbs + Number(entry.carbs || 0), fat: acc.fat + Number(entry.fat || 0) }), { calories: 0, protein: 0, carbs: 0, fat: 0 }), [todayCalories]);
+  const latestBodyWeightEntry = useMemo(() => [...bodyWeightEntries].sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id)[0] || null, [bodyWeightEntries]);
+  const workoutStreak = useMemo(() => calculateStreak(workouts), [workouts]);
+  const weeklyVolumeKg = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setHours(0, 0, 0, 0);
+    cutoff.setDate(cutoff.getDate() - 6);
+    return workouts
+      .filter((workout) => new Date(workout.date) >= cutoff)
+      .reduce((total, workout) => total + getWorkoutVolumeKg(workout, dashboardBodyWeightKg, customExercises), 0);
+  }, [customExercises, dashboardBodyWeightKg, workouts]);
+  const hasProgressData = workouts.length || calorieEntries.length || bodyWeightEntries.length || waterToday > 0;
   const waterGoalMl = Math.max(1000, Number(tdeeResult?.waterMl || settings.waterGoalMl || defaultSettings.waterGoalMl));
   const dailyControl = useMemo(() => {
     const lastWorkoutDate = sortedWorkouts[0]?.date || '';
@@ -4596,7 +4677,11 @@ export default function App() {
     localStorage.removeItem(getBodyFatKey(currentUser));
     setToast(copy.cleared);
   }
-  function deleteWorkout(id) { setWorkouts((current) => current.filter((item) => item.id !== id)); if (editingWorkoutId === id) setEditingWorkoutId(null); }
+  function deleteWorkout(id) {
+    if (!window.confirm(copy.deleteConfirmWorkout)) return;
+    setWorkouts((current) => current.filter((item) => item.id !== id));
+    if (editingWorkoutId === id) setEditingWorkoutId(null);
+  }
   function saveComment(id) { setWorkouts(cur => cur.map(w => w.id === id ? { ...w, comment: commentText.trim() } : w)); setEditingCommentId(null); setCommentText(''); }
   function startEditComment(w) { setEditingCommentId(w.id); setCommentText(w.comment || ''); }
 
@@ -4607,14 +4692,23 @@ export default function App() {
     setInstallPrompt(null);
   }
 
+  function applyServiceWorkerUpdate() {
+    window.__powerGraphUpdating = true;
+    const waitingWorker = window.__swRegistration?.waiting;
+    if (waitingWorker) waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+    else window.location.reload();
+  }
+
 
   function addWater(ml) {
     const user = localStorage.getItem(SESSION_KEY) || '';
     const next = waterToday + ml;
     setWaterToday(next);
     saveWaterMl(user, next);
+    setToast(`+${ml} ml`);
   }
   function resetWater() {
+    if (!window.confirm(copy.deleteConfirmWater)) return;
     const user = localStorage.getItem(SESSION_KEY) || '';
     setWaterToday(0);
     saveWaterMl(user, 0);
@@ -4865,7 +4959,11 @@ export default function App() {
     setEditingWorkoutId(null);
   }
   function cancelWorkoutEdit() { setEditingWorkoutId(null); setFormData({ date: new Date().toISOString().slice(0, 10), exercise: 'Bench Press', weight: '', setDetails: ['12', '10', '8'] }); }
-  function deleteMeal(id) { setCalorieEntries((current) => current.filter((item) => item.id !== id)); if (editingMealId === id) setEditingMealId(null); }
+  function deleteMeal(id) {
+    if (!window.confirm(copy.deleteConfirmMeal)) return;
+    setCalorieEntries((current) => current.filter((item) => item.id !== id));
+    if (editingMealId === id) setEditingMealId(null);
+  }
   function startEditMeal(entry) { setEditingMealId(entry.id); setCalorieForm({ date: entry.date, mealType: entry.mealType, name: entry.name, calories: String(entry.calories), protein: String(entry.protein), carbs: String(entry.carbs), fat: String(entry.fat) }); setActiveSection('calories'); }
   function saveMealEdit() {
     if (!editingMealId || !calorieForm.name || !calorieForm.calories || !calorieForm.date) return;
@@ -4927,7 +5025,10 @@ Be concise. Use average homemade/generic values, not brand values.`;
     setCalError('noResult');
     setCalLoading(false);
   }
-  function deleteCalHistoryEntry(id) { setCalHistory(prev => prev.filter(e => e.id !== id)); }
+  function deleteCalHistoryEntry(id) {
+    if (!window.confirm(copy.deleteConfirmEstimate)) return;
+    setCalHistory(prev => prev.filter(e => e.id !== id));
+  }
 
   function handleCalImage(e) {
     const file = e.target.files?.[0];
@@ -5037,6 +5138,7 @@ Keep each value to 1-2 sentences. "sl" is Slovenian language.`;
   }
 
   function deleteCustomExercise(id) {
+    if (!window.confirm(copy.deleteConfirmEstimate)) return;
     const updated = customExercises.filter(e => e.id !== id);
     setCustomExercises(updated);
     localStorage.setItem(getCustomExKey(currentUser), JSON.stringify(updated));
@@ -5236,7 +5338,10 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
     setBodyWeightEntries((c) => [...c, entry].sort((a, b) => new Date(b.date) - new Date(a.date)));
     setBwForm((c) => ({ ...c, weight: '' }));
   }
-  function deleteBodyWeightEntry(id) { setBodyWeightEntries((c) => c.filter((e) => e.id !== id)); }
+  function deleteBodyWeightEntry(id) {
+    if (!window.confirm(copy.deleteConfirmWeight)) return;
+    setBodyWeightEntries((c) => c.filter((e) => e.id !== id));
+  }
   function calculateTDEE(event) {
     event.preventDefault();
     const cw = Number(tdeeForm.currentWeight);
@@ -5315,13 +5420,149 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
   }
 
   function repeatWorkout(w) {
-    setFormData(c => ({ ...c, exercise: w.exercise, weight: w.weight, setDetails: w.setDetails.map(String), setWeights: w.setWeights ? w.setWeights.map(String) : undefined }));
+    if (!w) { setToast(copy.noWorkoutToRepeat); return; }
+    if (!window.confirm(copy.repeatLastWorkoutConfirm)) return;
+    setEditingWorkoutId(null);
+    setFormData(c => ({ ...c, date: todayKey, exercise: w.exercise, weight: String(w.weight), setDetails: w.setDetails.map(String), setWeights: w.setWeights ? w.setWeights.map(String) : undefined }));
     setActiveSection('dashboard');
+    window.setTimeout(() => scrollToFeatureTarget('add-workout'), 120);
+  }
+
+  function repeatLastWorkout() {
+    repeatWorkout(sortedWorkouts[0]);
   }
 
   function reuseMeal(entry) {
     setCalorieForm({ date: new Date().toISOString().slice(0, 10), mealType: entry.mealType, name: entry.name, calories: String(entry.calories), protein: String(entry.protein || ''), carbs: String(entry.carbs || ''), fat: String(entry.fat || '') });
     setActiveSection('calories');
+  }
+
+  function copyYesterdayMeals() {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayKey = yesterday.toISOString().slice(0, 10);
+    const meals = calorieEntries.filter((entry) => entry.date === yesterdayKey);
+    if (!meals.length) { setToast(copy.noYesterdayMeals); return; }
+    const todayMealsCount = calorieEntries.filter((entry) => entry.date === todayKey).length;
+    if (todayMealsCount && !window.confirm(copy.copyYesterdayDuplicateConfirm)) return;
+    if (!todayMealsCount && !window.confirm(copy.copyYesterdayConfirm)) return;
+    const now = Date.now();
+    const copied = meals.map((entry, index) => ({
+      ...entry,
+      id: now + index,
+      date: todayKey,
+    }));
+    setCalorieEntries((current) => [...current, ...copied]);
+    setCalorieForm((current) => ({ ...current, date: todayKey }));
+    setActiveSection('calories');
+    window.setTimeout(() => scrollToFeatureTarget('add-meal'), 120);
+    setToast(copy.copiedYesterdayMeals);
+  }
+
+  function dateOffsetKey(offsetDays) {
+    const date = new Date();
+    date.setHours(12, 0, 0, 0);
+    date.setDate(date.getDate() + offsetDays);
+    return date.toISOString().slice(0, 10);
+  }
+
+  function buildDemoData() {
+    const workoutSeed = [
+      [-8, 'Bench Press', 72.5, [10, 8, 7]],
+      [-7, 'Lat Pulldown', 62.5, [12, 10, 10]],
+      [-5, 'Squat', 95, [8, 8, 6]],
+      [-4, 'Overhead Press', 42.5, [10, 8, 8]],
+      [-2, 'Seated Cable Row', 65, [12, 10, 9]],
+      [0, 'Incline Dumbbell Press', 30, [10, 9, 8]],
+    ];
+    const workoutsDemo = workoutSeed.map(([offset, exercise, weight, setDetails], index) => normalizeWorkout({
+      id: Date.now() - 5000 + index,
+      date: dateOffsetKey(offset),
+      exercise,
+      weight,
+      setDetails,
+    }));
+    const calorieEntriesDemo = [
+      { id: Date.now() - 4100, date: dateOffsetKey(0), mealType: 'breakfast', name: 'Greek yogurt, banana, oats', calories: 520, protein: 34, carbs: 72, fat: 10 },
+      { id: Date.now() - 4099, date: dateOffsetKey(0), mealType: 'lunch', name: 'Chicken rice bowl', calories: 760, protein: 52, carbs: 88, fat: 18 },
+      { id: Date.now() - 4098, date: dateOffsetKey(0), mealType: 'snack', name: 'Protein shake', calories: 210, protein: 32, carbs: 12, fat: 4 },
+      { id: Date.now() - 4097, date: dateOffsetKey(-1), mealType: 'breakfast', name: 'Eggs and toast', calories: 610, protein: 38, carbs: 48, fat: 26 },
+      { id: Date.now() - 4096, date: dateOffsetKey(-1), mealType: 'dinner', name: 'Salmon, potatoes, salad', calories: 820, protein: 48, carbs: 62, fat: 36 },
+    ];
+    const bodyWeightDemo = [-18, -12, -6, 0].map((offset, index) => ({
+      id: Date.now() - 3000 + index,
+      date: dateOffsetKey(offset),
+      weight: [82.4, 81.9, 81.3, 80.8][index],
+    }));
+    const calHistoryDemo = [
+      { id: Date.now() - 2000, name: 'Chicken rice bowl', grams: 420, kcalPer100: 181, total: 760, date: dateOffsetKey(0) },
+      { id: Date.now() - 1999, name: 'Greek yogurt bowl', grams: 360, kcalPer100: 144, total: 520, date: dateOffsetKey(-1) },
+    ];
+    const bodyFatDemo = [{
+      id: Date.now() - 1000,
+      date: dateOffsetKey(-1),
+      result: { bodyFatPercent: 15.8, confidence: 'moderate', category: 'Fitness', fatMassKg: 12.8, leanMassKg: 68 },
+      metrics: { gender: 'male', age: 22, height: 180, weight: 80.8, waist: 82, neck: 39, hip: 96 },
+      photoCount: 0,
+    }];
+    return {
+      settings: { ...defaultSettings, language: settings.language || 'sl', gender: 'male', age: '22', height: '180', calorieGoal: 2200, waterGoalMl: 3200, backgroundAccent: settings.backgroundAccent || 'blue' },
+      workoutsDemo,
+      calorieEntriesDemo,
+      bodyWeightDemo,
+      calHistoryDemo,
+      bodyFatDemo,
+      restDaysDemo: [dateOffsetKey(-3)],
+      cheatDaysDemo: [],
+      customExercisesDemo: [],
+      waterDemo: 1850,
+    };
+  }
+
+  function loadDemoData() {
+    if (currentUser && currentUser !== DEMO_EMAIL && !window.confirm(settings.language === 'sl' ? 'Preklopim na ločen demo profil? Tvoji podatki ostanejo shranjeni.' : 'Switch to a separate demo profile? Your real data stays saved.')) return;
+    const demo = buildDemoData();
+    const users = loadUsers();
+    if (!users.some((user) => user.email === DEMO_EMAIL)) {
+      localStorage.setItem(USERS_KEY, JSON.stringify([...users, { email: DEMO_EMAIL, passwordHash: 'demo-profile', createdAt: new Date().toISOString() }]));
+    }
+    localStorage.setItem(getWorkoutStorageKey(DEMO_EMAIL), JSON.stringify(demo.workoutsDemo));
+    localStorage.setItem(getCaloriesStorageKey(DEMO_EMAIL), JSON.stringify(demo.calorieEntriesDemo));
+    localStorage.setItem(getSettingsStorageKey(DEMO_EMAIL), JSON.stringify(demo.settings));
+    localStorage.setItem(getBodyWeightKey(DEMO_EMAIL), JSON.stringify(demo.bodyWeightDemo));
+    localStorage.setItem(getCalHistoryKey(DEMO_EMAIL), JSON.stringify(demo.calHistoryDemo));
+    localStorage.setItem(getBodyFatKey(DEMO_EMAIL), JSON.stringify(demo.bodyFatDemo));
+    localStorage.setItem(getRestKey(DEMO_EMAIL), JSON.stringify(demo.restDaysDemo));
+    localStorage.setItem(getCheatKey(DEMO_EMAIL), JSON.stringify(demo.cheatDaysDemo));
+    localStorage.setItem(getCustomExKey(DEMO_EMAIL), JSON.stringify(demo.customExercisesDemo));
+    localStorage.setItem(getWaterKey(DEMO_EMAIL), String(demo.waterDemo));
+    localStorage.setItem(DEMO_FLAG_KEY, new Date().toISOString());
+    setCurrentUser(DEMO_EMAIL);
+    setActiveSection('dashboard');
+    setShowTutorial(false);
+    window.setTimeout(() => {
+      mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 80);
+    setToast(copy.demoLoaded);
+  }
+
+  function clearDemoData() {
+    if (!window.confirm(copy.demoClearConfirm)) return;
+    removeUserLocalData(DEMO_EMAIL);
+    localStorage.removeItem(DEMO_FLAG_KEY);
+    localStorage.setItem(USERS_KEY, JSON.stringify(loadUsers().filter((user) => user.email !== DEMO_EMAIL)));
+    if (currentUser === DEMO_EMAIL) {
+      localStorage.removeItem(SESSION_KEY);
+      setCurrentUser('');
+      setWorkouts([]);
+      setCalorieEntries([]);
+      setBodyWeightEntries([]);
+      setBodyFatHistory([]);
+      setCalHistory([]);
+      setWaterToday(0);
+    }
+    setToast(copy.demoCleared);
   }
   function getIngredientMealLabel() {
     return ingredientMode === 'quick'
@@ -5373,6 +5614,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
     setToast(settings.language === 'sl' ? 'Meritve so nalozene.' : 'Measurements loaded.');
   }
   function deleteBodyFatEntry(id) {
+    if (!window.confirm(copy.deleteConfirmEstimate)) return;
     setBodyFatHistory((current) => current.filter((entry) => entry.id !== id));
   }
 
@@ -5456,6 +5698,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
     { id: 'log-workout', label: slUi ? 'Dodaj trening' : 'Log workout', description: slUi ? 'Skoci direktno na vnos treninga.' : 'Jump directly to workout logging.', icon: NAV_ICONS.dashboard, keywords: 'workout trening add log sets reps weight', quick: true, run: () => goToFeature('dashboard', 'add-workout') },
     { id: 'rest-timer', label: slUi ? 'Timer za pavzo' : 'Rest timer', description: slUi ? 'Odpri timer in kontrole za pocitek.' : 'Open timer and recovery controls.', icon: NAV_ICONS.dashboard, keywords: 'timer rest pause pocitek', quick: true, run: () => goToFeature('dashboard', 'timer-rest') },
     { id: 'add-meal', label: slUi ? 'Dodaj obrok' : 'Add meal', description: slUi ? 'Skoci na hiter vnos obroka.' : 'Jump to meal entry.', icon: NAV_ICONS.calories, keywords: 'meal food calories obrok kalorije', quick: true, run: () => goToFeature('calories', 'add-meal') },
+    { id: 'add-weight', label: copy.addWeight, description: slUi ? 'Skoci na meritev telesne teze.' : 'Jump to body-weight entry.', icon: NAV_ICONS.bodyweight, keywords: 'weight bodyweight teza measurement', quick: true, run: () => goToFeature('bodyweight', 'bodyweight-tracker') },
+    { id: 'quick-water-add', label: slUi ? '+250 ml vode' : '+250 ml water', description: slUi ? 'Takoj dodaj 250 ml k danasnjemu vnosu.' : 'Instantly add 250 ml to today.', icon: NAV_ICONS.bodyweight, keywords: 'water voda add hydration', quick: true, run: () => { addWater(250); setQuickActionsOpen(false); setCommandOpen(false); } },
     { id: 'water', label: slUi ? 'Voda' : 'Water', description: slUi ? 'Hiter vnos vode in pregled cilja.' : 'Quick water logging and goal check.', icon: NAV_ICONS.bodyweight, keywords: 'water voda hydration hidracija', quick: true, run: () => goToFeature('bodyweight', 'water-tracker') },
     { id: 'calorie-calculator', label: slUi ? 'Kalkulator kalorij' : 'Calorie calculator', description: slUi ? 'Izracunaj cilj kalorij, makrote in realen cas.' : 'Calculate target calories, macros, and realistic time.', icon: NAV_ICONS.bodyweight, keywords: 'tdee calorie calculator macros kalkulator', quick: true, run: () => goToFeature('bodyweight', 'calorie-calculator') },
     { id: 'ingredient', label: slUi ? 'Oceni hrano' : 'Estimate food', description: slUi ? 'AI/offline ocena kalorij iz opisa hrane.' : 'AI/offline calorie estimate from a food description.', icon: NAV_ICONS.ocenjevalec, keywords: 'ai food ingredient estimate kcal hrana', quick: true, run: () => goToFeature('ocenjevalec', 'ingredient-tracker') },
@@ -5467,7 +5711,10 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
   ];
   const commandSearch = commandQuery.trim().toLowerCase();
   const commandMatches = commandActions.filter((action) => !commandSearch || `${action.label} ${action.description} ${action.keywords}`.toLowerCase().includes(commandSearch)).slice(0, 12);
-  const quickActions = commandActions.filter((action) => action.quick).slice(0, 8);
+  const quickActions = [
+    ...commandActions.filter((action) => action.quick && !action.id.startsWith('nav-')),
+    ...commandActions.filter((action) => action.quick && action.id.startsWith('nav-')),
+  ].slice(0, 8);
   function runCommandAction(action) {
     if (!action) return;
     action.run();
@@ -5525,7 +5772,17 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             </div>
             <div className="auth-hero-copy">
               <h2>{copy.authTitle}</h2>
-              <p>{copy.authSubtitle}</p>
+              <p>{copy.landingTagline || copy.authSubtitle}</p>
+            </div>
+            <div className="auth-feature-grid" aria-label="PowerGraph features">
+              <article><strong>{copy.landingWorkoutCard}</strong><span>6x / week</span></article>
+              <article><strong>{copy.landingCaloriesCard}</strong><span>1850 / 2200 kcal</span></article>
+              <article><strong>{copy.landingProgressCard}</strong><span>Rank: Silver</span></article>
+            </div>
+            <div className="auth-preview-card">
+              <div><span>{copy.landingTodayPreview}</span><strong>1850 / 2200 kcal</strong></div>
+              <div><span>{copy.workouts}</span><strong>7 {settings.language === 'sl' ? 'ta teden' : 'this week'}</strong></div>
+              <div><span>{copy.rankTitle}</span><strong>Silver</strong></div>
             </div>
             <div className="auth-security-strip" aria-label="Security highlights">
               <span>{copy.authSecurityLocal}</span>
@@ -5608,6 +5865,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               <span>{authMode === 'signup' ? copy.authSwitchLogin : copy.authSwitchSignup}</span>
               <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAuthError(''); }}>{authMode === 'signup' ? copy.login : copy.signup}</button>
             </div>}
+            <button className="action-btn-outline full-width demo-login-btn" type="button" onClick={loadDemoData}>{copy.demoTry}</button>
             <p className="auth-local-note">{copy.authLocalOnly}</p>
           </section>
         </section>
@@ -5678,9 +5936,22 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
 
         {activeSection === 'dashboard' && <>
           <div className="dashboard-grid dashboard-home-grid">
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow"><Dumbbell size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.workouts}</p><h3 className="stat-value">{overall.workouts}</h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow"><ClipboardList size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.totalSets}</p><h3 className="stat-value">{overall.sets}</h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow"><Trophy size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.totalVolume}</p><h3 className="stat-value">{formatVolume(overall.volumeKg, settings.units)}</h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow"><Utensils size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.dashboardTodayCalories}</p><h3 className="stat-value">{Math.round(todayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow"><Flame size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.streak}</p><h3 className="stat-value">{workoutStreak}</h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow"><Scale size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.dashboardBodyWeight}</p><h3 className="stat-value">{latestBodyWeightEntry ? formatWeight(latestBodyWeightEntry.weight, settings.units) : '-'}</h3></div></article>
+            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon orange-glow"><Trophy size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.dashboardWeeklyVolume}</p><h3 className="stat-value">{formatVolume(weeklyVolumeKg, settings.units)}</h3></div></article>
+            <section className="glass-panel dashboard-quick-card fade-in-up">
+              <div className="panel-header"><h3>{copy.dashboardQuickActions}</h3></div>
+              <div className="dashboard-action-grid">
+                <button className="action-btn-primary" type="button" onClick={() => goToFeature('dashboard', 'add-workout')}>+ {copy.addWorkout}</button>
+                <button className="action-btn-outline" type="button" onClick={() => goToFeature('calories', 'add-meal')}>+ {copy.addMeal}</button>
+                <button className="action-btn-outline" type="button" onClick={() => goToFeature('bodyweight', 'bodyweight-tracker')}>+ {copy.addWeight}</button>
+                <button className="action-btn-outline" type="button" onClick={() => addWater(250)}>+250 ml</button>
+                <button className="action-btn-outline" type="button" onClick={repeatLastWorkout}>{copy.repeatLastWorkout}</button>
+                <button className="action-btn-outline" type="button" onClick={copyYesterdayMeals}>{copy.copyYesterdayMeals}</button>
+              </div>
+              {!hasProgressData && <div className="empty-state dashboard-empty-state"><h4>{copy.dashboardEmptyTitle}</h4><p>{copy.dashboardEmptyBody}</p><button className="action-btn-outline" type="button" onClick={loadDemoData}>{copy.demoTry}</button></div>}
+            </section>
             <section className="glass-panel daily-control-panel fade-in-up" {...tourAttrs('dashboard-overview')}>
               <div className="panel-header">
                 <h3>{settings.language === 'sl' ? 'Dnevni center' : 'Daily Control'}</h3>
@@ -6054,7 +6325,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             </section>
 
             <section className="glass-panel action-panel fade-in-up" {...tourAttrs('add-meal')}>
-              <div className="panel-header"><h3>{copy.addMeal}</h3>{helpButton('addMeal')}</div>
+              <div className="panel-header"><h3>{copy.addMeal}</h3><div className="settings-button-row panel-help-row">{helpButton('addMeal')}<button className="action-btn-outline" type="button" onClick={copyYesterdayMeals}>{copy.copyYesterdayMeals}</button></div></div>
               <form className="premium-form" onSubmit={editingMealId ? (e) => { e.preventDefault(); saveMealEdit(); } : saveMeal}>
                 <div className="input-group"><label htmlFor="meal-date">{copy.date}</label><input id="meal-date" type="date" value={calorieForm.date} onChange={(e) => setCalorieForm((c) => ({ ...c, date: e.target.value }))} /></div>
                 <div className="input-group"><label htmlFor="meal-type">{copy.mealType}</label><select id="meal-type" className="premium-select" value={calorieForm.mealType} onChange={(e) => setCalorieForm((c) => ({ ...c, mealType: e.target.value }))}><option value="breakfast">{copy.breakfast}</option><option value="lunch">{copy.lunch}</option><option value="dinner">{copy.dinner}</option><option value="snack">{copy.snack}</option></select></div>
@@ -6917,6 +7188,21 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
 
         {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => setSettings((c) => ({ ...c, language: e.target.value }))}>{LANGUAGE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></article><article className="settings-card settings-card-wide"><div className="settings-actions settings-actions-stacked"><div><span className="settings-title">{copy.backgroundAccent}</span><p className="settings-copy">{copy.backgroundAccentDesc}</p></div><div className="accent-picker" role="radiogroup" aria-label={copy.backgroundAccent}>{BACKGROUND_PRESETS.map((preset) => <button key={preset.id} className={`accent-choice ${settings.backgroundAccent === preset.id ? 'active' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, backgroundAccent: preset.id }))} aria-pressed={settings.backgroundAccent === preset.id}><span className="accent-swatch" style={{ background: preset.color }} />{getLocalizedLabel(preset.label, settings.language)}</button>)}</div></div></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.installApp}</span><p className="settings-copy">{copy.installAppDesc}</p></div><div>{isInStandaloneMode ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installDone}</span> : isIos ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installIos}</span> : <button className="action-btn-outline" type="button" onClick={triggerInstall} disabled={!installPrompt}>{copy.installBtn}</button>}</div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.showFeedbackBtn}</span><p className="settings-copy">{copy.showFeedbackBtnDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => setSettings(c => ({...c, showFeedbackBtn: !c.showFeedbackBtn}))}>{settings.showFeedbackBtn ? '✓ On' : 'Off'}</button></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.tutorialOpen}</span><p className="settings-copy">{copy.tutorialOpenDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => { setTutorialStep(0); setShowTutorial(true); }}>{copy.tutorialOpen}</button></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
         {activeSection === 'settings' && (
+          <section className="glass-panel settings-section fade-in-up data-privacy-panel">
+            <div className="panel-header"><h3>{copy.dataPrivacy}</h3>{helpButton('data')}</div>
+            <p className="settings-copy">{copy.dataPrivacyDesc}</p>
+            <div className="settings-button-row privacy-actions-row">
+              <button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button>
+              <button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button>
+              <button className="action-btn-outline" type="button" onClick={loadDemoData}>{copy.demoTry}</button>
+              {currentUser === DEMO_EMAIL && <button className="action-btn-outline danger-button" type="button" onClick={clearDemoData}>{copy.demoClear}</button>}
+              <a className="action-btn-outline privacy-link-btn" href={`${import.meta.env.BASE_URL}privacy.html`} target="_blank" rel="noreferrer">{copy.privacyPolicy}</a>
+              <button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button>
+            </div>
+          </section>
+        )}
+
+        {activeSection === 'settings' && (
           <section className="glass-panel settings-section fade-in-up" {...tourAttrs('personal-targets')}>
             <div className="panel-header"><h3>{settings.language === 'sl' ? 'Osebni cilji' : 'Personal targets'}</h3>{helpButton('personalTargets')}</div>
             <div className="settings-grid">
@@ -7032,7 +7318,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
         <div className="sw-update-banner">
           <span>{settings.language === 'sl' ? '🆕 Nova verzija je na voljo!' : '🆕 New version available!'}</span>
           <div className="sw-update-actions">
-            <button className="action-btn-primary" style={{padding:'0.35rem 1rem',fontSize:'0.85rem'}} type="button" onClick={() => window.location.reload()}>
+            <button className="action-btn-primary" style={{padding:'0.35rem 1rem',fontSize:'0.85rem'}} type="button" onClick={applyServiceWorkerUpdate}>
               {settings.language === 'sl' ? 'Osveži' : 'Reload'}
             </button>
             <button className="action-btn-outline" style={{padding:'0.35rem 0.6rem',fontSize:'0.85rem'}} type="button" onClick={() => setSwUpdatePending(false)}>✕</button>

@@ -1,9 +1,11 @@
-node_modules
-dist
+node_modules/
+dist/
 .vite
+.DS_Store
 
 # Local secrets and runtime data
 .env
+*.env
 .env.*
 !.env.example
 backend/.env

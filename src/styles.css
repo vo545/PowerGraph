@@ -423,6 +423,51 @@ p {
   font-weight: 900;
 }
 
+.auth-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.auth-feature-grid article,
+.auth-preview-card {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.34);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+}
+
+.auth-feature-grid strong,
+.auth-preview-card strong {
+  color: var(--text-primary);
+  display: block;
+  font-weight: 950;
+}
+
+.auth-feature-grid span,
+.auth-preview-card span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.auth-preview-card {
+  display: grid;
+  gap: 10px;
+  max-width: 440px;
+}
+
+.auth-preview-card div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.demo-login-btn {
+  margin-top: 4px;
+}
+
 .app-container {
   display: flex;
   min-height: 100vh;
@@ -629,6 +674,20 @@ p {
   gap: 24px;
 }
 
+.dashboard-home-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.dashboard-home-grid > .dashboard-quick-card,
+.dashboard-home-grid > .daily-control-panel {
+  grid-column: span 4;
+}
+
+.dashboard-home-grid > .chart-panel,
+.dashboard-home-grid > .action-panel {
+  grid-column: span 2;
+}
+
 .stat-card {
   padding: 22px 24px;
   display: flex;
@@ -646,6 +705,41 @@ p {
 .daily-control-panel {
   grid-column: span 3;
   padding: 24px;
+}
+
+.dashboard-quick-card {
+  grid-column: span 3;
+  padding: 20px;
+}
+
+.dashboard-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dashboard-action-grid button {
+  min-height: 44px;
+}
+
+.dashboard-empty-state {
+  margin-top: 12px;
+}
+
+.data-privacy-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.privacy-actions-row {
+  flex-wrap: wrap;
+}
+
+.privacy-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 
 .daily-control-grid {
@@ -685,12 +779,36 @@ p {
 }
 
 @media (max-width: 1100px) {
+  .dashboard-home-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-home-grid > .dashboard-quick-card,
+  .dashboard-home-grid > .daily-control-panel {
+    grid-column: span 2;
+  }
+
   .daily-control-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
+  .dashboard-home-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-home-grid > .dashboard-quick-card,
+  .dashboard-home-grid > .daily-control-panel,
+  .dashboard-home-grid > .chart-panel,
+  .dashboard-home-grid > .action-panel {
+    grid-column: span 1;
+  }
+
   .daily-control-panel {
     grid-column: span 1;
     padding: 18px;
@@ -4600,6 +4718,15 @@ textarea,
     font-size: 14px;
   }
 
+  .auth-feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-feature-grid article,
+  .auth-preview-card {
+    padding: 12px;
+  }
+
   .auth-input-wrap {
     grid-template-columns: 34px minmax(0, 1fr) auto;
   }
@@ -6094,12 +6221,31 @@ body {
   }
 
   .dashboard-home-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     align-items: stretch;
   }
 
+  .dashboard-home-grid > .stat-card {
+    order: 0;
+  }
+
+  .dashboard-home-grid > .dashboard-quick-card {
+    order: 1;
+    grid-column: 1 / -1 !important;
+  }
+
+  .dashboard-home-grid > .daily-control-panel {
+    order: 2;
+    grid-column: 1 / -1 !important;
+  }
+
+  .dashboard-home-grid > .chart-panel {
+    order: 3;
+    grid-column: 1 / -1 !important;
+  }
+
   .dashboard-home-grid > .action-panel {
-    order: -20;
+    order: 4;
     grid-column: 1 / -1 !important;
   }
 
@@ -6804,5 +6950,22 @@ body {
 
   .help-popover-card {
     padding: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-home-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .dashboard-home-grid > .stat-card {
+    grid-column: auto !important;
+  }
+
+  .dashboard-home-grid > .dashboard-quick-card,
+  .dashboard-home-grid > .daily-control-panel,
+  .dashboard-home-grid > .chart-panel,
+  .dashboard-home-grid > .action-panel {
+    grid-column: 1 / -1 !important;
   }
 }

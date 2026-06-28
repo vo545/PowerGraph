@@ -3687,6 +3687,7 @@ export default function App() {
   const bodyFatSideRef = useRef(null);
   const bodyFatBackRef = useRef(null);
   const mainContentRef = useRef(null);
+  const commandInputRef = useRef(null);
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) ?? 'dark');
   const [currentUser, setCurrentUser] = useState(() => localStorage.getItem(SESSION_KEY) || '');
   const aiEnabled = Boolean(API_URL && currentUser && getJwt(currentUser));
@@ -3764,6 +3765,9 @@ export default function App() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const [helpTopic, setHelpTopic] = useState(null);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState('');
+  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const [customExercises, setCustomExercises] = useState(() => loadCustomExercises(localStorage.getItem(SESSION_KEY) || ''));
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [addExForm, setAddExForm] = useState({ name: '', section: 'Back' });
@@ -5411,6 +5415,93 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
   };
   const NAV_SHORT = NAV_SHORT_LABELS[settings.language] || NAV_SHORT_LABELS.en;
   const nav = [['dashboard', copy.dashboard], ['exercises', copy.exercises], ['history', copy.history], ['bodyweight', copy.bodyweight], ['calories', copy.calories], ['ocenjevalec', copy.ocenjevalec], ['rankings', copy.rankings], ['advisor', copy.advisor], ['settings', copy.settings], ...(currentUser === ADMIN_EMAIL ? [['admin', copy.admin]] : [])];
+  function scrollToFeatureTarget(targetId) {
+    const target = document.querySelector(`[data-tour="${targetId}"]`);
+    if (!target) return;
+    const isMobile = window.matchMedia('(max-width: 720px)').matches;
+    if (isMobile) {
+      const targetRect = target.getBoundingClientRect();
+      if (mainContentRef.current) {
+        const scroller = mainContentRef.current;
+        const scrollerRect = scroller.getBoundingClientRect();
+        const targetTop = scroller.scrollTop + targetRect.top - scrollerRect.top - 84;
+        scroller.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+      }
+      const pageTop = window.scrollY + targetRect.top - 84;
+      window.scrollTo({ top: Math.max(0, pageTop), behavior: 'smooth' });
+      return;
+    }
+    target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+  }
+  function goToFeature(section, targetId = 'section-intro') {
+    setActiveSection(section);
+    setCommandOpen(false);
+    setQuickActionsOpen(false);
+    setCommandQuery('');
+    setHelpTopic(null);
+    window.setTimeout(() => scrollToFeatureTarget(targetId), 120);
+    window.setTimeout(() => scrollToFeatureTarget(targetId), 360);
+  }
+  const slUi = settings.language === 'sl';
+  const commandActions = [
+    ...nav.map(([id, label]) => ({
+      id: `nav-${id}`,
+      label,
+      description: sectionDescriptions[id] || '',
+      icon: NAV_ICONS[id],
+      keywords: `${id} ${label}`,
+      quick: ['dashboard', 'calories', 'bodyweight', 'rankings', 'settings'].includes(id),
+      run: () => goToFeature(id, 'section-intro'),
+    })),
+    { id: 'log-workout', label: slUi ? 'Dodaj trening' : 'Log workout', description: slUi ? 'Skoci direktno na vnos treninga.' : 'Jump directly to workout logging.', icon: NAV_ICONS.dashboard, keywords: 'workout trening add log sets reps weight', quick: true, run: () => goToFeature('dashboard', 'add-workout') },
+    { id: 'rest-timer', label: slUi ? 'Timer za pavzo' : 'Rest timer', description: slUi ? 'Odpri timer in kontrole za pocitek.' : 'Open timer and recovery controls.', icon: NAV_ICONS.dashboard, keywords: 'timer rest pause pocitek', quick: true, run: () => goToFeature('dashboard', 'timer-rest') },
+    { id: 'add-meal', label: slUi ? 'Dodaj obrok' : 'Add meal', description: slUi ? 'Skoci na hiter vnos obroka.' : 'Jump to meal entry.', icon: NAV_ICONS.calories, keywords: 'meal food calories obrok kalorije', quick: true, run: () => goToFeature('calories', 'add-meal') },
+    { id: 'water', label: slUi ? 'Voda' : 'Water', description: slUi ? 'Hiter vnos vode in pregled cilja.' : 'Quick water logging and goal check.', icon: NAV_ICONS.bodyweight, keywords: 'water voda hydration hidracija', quick: true, run: () => goToFeature('bodyweight', 'water-tracker') },
+    { id: 'calorie-calculator', label: slUi ? 'Kalkulator kalorij' : 'Calorie calculator', description: slUi ? 'Izracunaj cilj kalorij, makrote in realen cas.' : 'Calculate target calories, macros, and realistic time.', icon: NAV_ICONS.bodyweight, keywords: 'tdee calorie calculator macros kalkulator', quick: true, run: () => goToFeature('bodyweight', 'calorie-calculator') },
+    { id: 'ingredient', label: slUi ? 'Oceni hrano' : 'Estimate food', description: slUi ? 'AI/offline ocena kalorij iz opisa hrane.' : 'AI/offline calorie estimate from a food description.', icon: NAV_ICONS.ocenjevalec, keywords: 'ai food ingredient estimate kcal hrana', quick: true, run: () => goToFeature('ocenjevalec', 'ingredient-tracker') },
+    { id: 'body-fat', label: slUi ? 'Body fat ocena' : 'Body fat estimate', description: slUi ? 'Odpri meritve in foto oceno telesne mascobe.' : 'Open measurements and photo-based body-fat estimate.', icon: NAV_ICONS.ocenjevalec, keywords: 'body fat estimate mascoba photo', quick: false, run: () => goToFeature('ocenjevalec', 'body-fat-estimator') },
+    { id: 'muscle-ranks', label: slUi ? 'Misicni rangi' : 'Muscle ranks', description: slUi ? 'Skoci na interaktivni ranking misic.' : 'Jump to interactive muscle ranking.', icon: NAV_ICONS.rankings, keywords: 'rank ranking muscle misice', quick: true, run: () => goToFeature('rankings', 'muscle-rankings') },
+    { id: 'advisor-open', label: slUi ? 'Kaj trenirati danes' : 'What to train today', description: slUi ? 'Odpri advisor predlog za trening.' : 'Open the workout advisor suggestion.', icon: NAV_ICONS.advisor, keywords: 'advisor suggestion workout today nasvet', quick: true, run: () => goToFeature('advisor', 'advisor-panel') },
+    { id: 'tutorial-open', label: copy.tutorialOpen, description: slUi ? 'Zazeni celoten vodeni tutorial.' : 'Start the full guided tutorial.', icon: '?', keywords: 'tutorial guide help pomoc vodič vodic', quick: false, run: () => { setCommandOpen(false); setQuickActionsOpen(false); setCommandQuery(''); setTutorialStep(0); setShowTutorial(true); } },
+    { id: 'export-data', label: copy.export, description: slUi ? 'Prenesi varnostno kopijo podatkov.' : 'Download a backup of your data.', icon: 'JSON', keywords: 'export backup json data podatki', quick: false, run: () => { setCommandOpen(false); setQuickActionsOpen(false); setCommandQuery(''); exportData(); } },
+  ];
+  const commandSearch = commandQuery.trim().toLowerCase();
+  const commandMatches = commandActions.filter((action) => !commandSearch || `${action.label} ${action.description} ${action.keywords}`.toLowerCase().includes(commandSearch)).slice(0, 12);
+  const quickActions = commandActions.filter((action) => action.quick).slice(0, 8);
+  function runCommandAction(action) {
+    if (!action) return;
+    action.run();
+  }
+  useEffect(() => {
+    if (!currentUser) return undefined;
+    const onKeyDown = (event) => {
+      const tag = event.target?.tagName?.toLowerCase();
+      const isTyping = ['input', 'textarea', 'select'].includes(tag) || event.target?.isContentEditable;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setCommandOpen(true);
+        setQuickActionsOpen(false);
+        return;
+      }
+      if (event.key === '/' && !isTyping && !commandOpen) {
+        event.preventDefault();
+        setCommandOpen(true);
+        setQuickActionsOpen(false);
+        return;
+      }
+      if (event.key === 'Escape') {
+        setCommandOpen(false);
+        setQuickActionsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [commandOpen, currentUser]);
+  useEffect(() => {
+    if (!commandOpen) return undefined;
+    const id = window.setTimeout(() => commandInputRef.current?.focus(), 40);
+    return () => window.clearTimeout(id);
+  }, [commandOpen]);
   const passwordStrength = getPasswordScore(authForm.password, authForm.email);
   const strengthLabels = [copy.authStrengthWeak, copy.authStrengthWeak, copy.authStrengthOk, copy.authStrengthGood, copy.authStrengthStrong];
   const passwordRules = [
@@ -5565,6 +5656,10 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               </button>
             )}
             {syncing && <span className="sync-indicator" title={settings.language === 'sl' ? 'Sinhroniziram...' : 'Syncing...'}>↻</span>}
+            <button className="quick-open-btn" type="button" onClick={() => { setCommandOpen(true); setQuickActionsOpen(false); }} title={slUi ? 'Hitri meni (Ctrl+K)' : 'Quick menu (Ctrl+K)'} aria-label={slUi ? 'Odpri hitri meni' : 'Open quick menu'}>
+              <span>Quick</span>
+              <kbd>Ctrl K</kbd>
+            </button>
             <button className="context-help-btn topbar-help-btn" type="button" onClick={() => setHelpTopic('tutorial')} title={copy.tutorialOpen} aria-label={copy.tutorialOpen}>?</button>
             <span className="user-chip">{getUserBadge(currentUser)}</span>
             <button className="theme-toggle" type="button" onClick={() => setTheme((c) => (c === 'dark' ? 'light' : 'dark'))}>{theme === 'dark' ? 'L' : 'D'}</button>
@@ -6841,6 +6936,72 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           </section>
         )}
       </main>
+
+      {currentUser && (
+        <div className={`quick-actions-widget${quickActionsOpen ? ' open' : ''}`}>
+          {quickActionsOpen && (
+            <div className="quick-actions-menu glass-panel">
+              <div className="quick-actions-head">
+                <strong>{slUi ? 'Hitre akcije' : 'Quick actions'}</strong>
+                <button className="context-help-btn" type="button" onClick={() => setQuickActionsOpen(false)} aria-label={slUi ? 'Zapri' : 'Close'}>x</button>
+              </div>
+              <div className="quick-actions-grid">
+                {quickActions.map((action) => (
+                  <button key={action.id} type="button" className="quick-action-mini" onClick={() => runCommandAction(action)}>
+                    <span>{action.icon}</span>
+                    <strong>{action.label}</strong>
+                  </button>
+                ))}
+              </div>
+              <button className="action-btn-outline full-width" type="button" onClick={() => { setCommandOpen(true); setQuickActionsOpen(false); }}>
+                {slUi ? 'Odpri iskanje' : 'Open search'}
+              </button>
+            </div>
+          )}
+          <button className="quick-actions-fab" type="button" onClick={() => setQuickActionsOpen((open) => !open)} aria-expanded={quickActionsOpen} aria-label={slUi ? 'Hitre akcije' : 'Quick actions'}>
+            <span>Quick</span>
+          </button>
+        </div>
+      )}
+
+      {commandOpen && (
+        <div className="command-overlay" onClick={() => setCommandOpen(false)}>
+          <section className="command-panel glass-panel" role="dialog" aria-label={slUi ? 'Hitri meni' : 'Quick menu'} onClick={(event) => event.stopPropagation()}>
+            <div className="command-head">
+              <div>
+                <p className="exercise-category">{slUi ? 'Hitri meni' : 'Quick menu'}</p>
+                <h3>{slUi ? 'Kam zelis?' : 'Where to?'}</h3>
+              </div>
+              <button className="context-help-btn" type="button" onClick={() => setCommandOpen(false)} aria-label={slUi ? 'Zapri' : 'Close'}>x</button>
+            </div>
+            <div className="command-input-wrap">
+              <Search size={17} strokeWidth={2.3} />
+              <input ref={commandInputRef} value={commandQuery} onChange={(event) => setCommandQuery(event.target.value)} placeholder={slUi ? 'Isci funkcijo, vnos, kalkulator...' : 'Search feature, log, calculator...'} />
+              <kbd>Esc</kbd>
+            </div>
+            <div className="command-results">
+              {commandMatches.length ? commandMatches.map((action) => (
+                <button key={action.id} className="command-item" type="button" onClick={() => runCommandAction(action)}>
+                  <span className="command-icon">{action.icon}</span>
+                  <span className="command-copy">
+                    <strong>{action.label}</strong>
+                    <small>{action.description}</small>
+                  </span>
+                </button>
+              )) : (
+                <div className="command-empty">
+                  <strong>{slUi ? 'Ni rezultatov' : 'No results'}</strong>
+                  <p>{slUi ? 'Poskusi drug izraz ali odpri enega izmed glavnih zavihkov.' : 'Try another word or open one of the main tabs.'}</p>
+                </div>
+              )}
+            </div>
+            <div className="command-foot">
+              <span>{slUi ? 'Tipka' : 'Shortcut'} <kbd>Ctrl</kbd> + <kbd>K</kbd></span>
+              <span>{slUi ? 'Tudi' : 'Also'} <kbd>/</kbd></span>
+            </div>
+          </section>
+        </div>
+      )}
 
       {currentUser && settings.showFeedbackBtn !== false && adminConfig.feedbackEnabled && (
         <div className="feedback-widget">

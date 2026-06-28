@@ -2009,32 +2009,42 @@ p {
 }
 
 .context-help-btn {
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-  border: 1px solid rgba(var(--accent-rgb), 0.35);
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  border: 1px solid rgba(var(--accent-rgb), 0.18);
   border-radius: 50%;
-  background: rgba(var(--accent-rgb), 0.12);
-  color: var(--text-primary);
+  background: rgba(var(--accent-rgb), 0.045);
+  color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-weight: 900;
-  font-size: 0.95rem;
+  font-size: 0.72rem;
   line-height: 1;
   cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  opacity: 0.46;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease, opacity 0.18s ease;
   flex: 0 0 auto;
 }
 
-.context-help-btn:hover {
+.context-help-btn:hover,
+.context-help-btn:focus-visible {
   transform: translateY(-1px);
-  border-color: rgba(var(--accent-rgb), 0.78);
-  background: rgba(var(--accent-rgb), 0.2);
+  opacity: 1;
+  color: var(--text-primary);
+  border-color: rgba(var(--accent-rgb), 0.52);
+  background: rgba(var(--accent-rgb), 0.12);
 }
 
 .topbar-help-btn {
-  box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.18);
+  opacity: 0.38;
+  box-shadow: none;
+}
+
+.topbar-help-btn:hover,
+.topbar-help-btn:focus-visible {
+  opacity: 0.9;
 }
 
 .panel-help-row {
@@ -3679,16 +3689,23 @@ textarea,
   position: sticky;
   top: 0;
   z-index: 25;
-  margin: 0 -2px 4px;
-  padding: 16px 2px 14px;
-  background: linear-gradient(180deg, rgba(7, 9, 11, 0.98), rgba(7, 9, 11, 0.86));
+  margin: 0 -18px 8px;
+  padding: 18px 20px 16px;
+  border-radius: 0 0 18px 18px;
+  background:
+    linear-gradient(180deg, rgba(6, 8, 11, 0.98), rgba(9, 13, 18, 0.9)),
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.055), transparent 42%);
   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 [data-theme='light'] .topbar {
-  background: linear-gradient(180deg, rgba(245, 247, 248, 0.98), rgba(245, 247, 248, 0.86));
+  background:
+    linear-gradient(180deg, rgba(245, 247, 248, 0.98), rgba(245, 247, 248, 0.9)),
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.055), transparent 42%);
+  box-shadow: 0 14px 34px rgba(148, 163, 184, 0.16);
 }
 
 .greeting h2 {
@@ -4956,17 +4973,22 @@ body {
     top: 0;
     z-index: 40;
     min-width: 0;
-    margin: -10px -8px 0;
-    padding: 10px 8px 8px;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-    border-radius: 0 0 16px 16px;
-    background: linear-gradient(180deg, rgba(7, 9, 11, 0.94), rgba(7, 9, 11, 0.74));
+    margin: -10px -12px 0;
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.13);
+    border-radius: 0 0 18px 18px;
+    background:
+      linear-gradient(180deg, rgba(5, 7, 10, 0.98), rgba(8, 11, 15, 0.86)),
+      linear-gradient(90deg, rgba(var(--accent-rgb), 0.06), transparent 46%);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
   }
 
   [data-theme='light'] .topbar {
-    background: linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(248, 250, 252, 0.78));
+    background:
+      linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(248, 250, 252, 0.84)),
+      linear-gradient(90deg, rgba(var(--accent-rgb), 0.06), transparent 46%);
   }
 
   .greeting {
@@ -4991,7 +5013,7 @@ body {
 
   .topbar-actions {
     flex: 0 0 auto;
-    gap: 6px;
+    gap: 7px;
     margin-left: auto;
     flex-wrap: nowrap;
   }
@@ -5740,9 +5762,9 @@ body {
 
   .topbar {
     min-height: 58px;
-    margin: -8px -6px 0;
-    padding: 9px 8px 7px;
-    border-radius: 0 0 18px 18px;
+    margin: -8px -10px 0;
+    padding: 11px 12px 9px;
+    border-radius: 0 0 20px 20px;
   }
 
   .greeting h2 {
@@ -6376,9 +6398,10 @@ body {
   }
 
   .context-help-btn {
-    width: 32px;
-    min-width: 32px;
-    height: 32px;
+    width: 22px;
+    min-width: 22px;
+    height: 22px;
+    font-size: 0.68rem;
   }
 
   .settings-guide-grid {

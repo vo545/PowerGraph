@@ -4799,17 +4799,18 @@ export default function App() {
 
 
   function addWater(ml) {
-    const user = localStorage.getItem(SESSION_KEY) || '';
-    const next = waterToday + ml;
-    setWaterToday(next);
-    saveWaterMl(user, next);
+    if (!currentUser) return;
+    setWaterToday((current) => {
+      const next = current + ml;
+      saveWaterMl(currentUser, next);
+      return next;
+    });
     setToast(`+${ml} ml`);
   }
   function resetWater() {
     if (!window.confirm(copy.deleteConfirmWater)) return;
-    const user = localStorage.getItem(SESSION_KEY) || '';
     setWaterToday(0);
-    saveWaterMl(user, 0);
+    saveWaterMl(currentUser, 0);
   }
 
   function banUser(email) {
@@ -5558,6 +5559,56 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
     setToast(copy.copiedYesterdayMeals);
   }
 
+  function copyYesterdayMealType(mealType) {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayKey = yesterday.toISOString().slice(0, 10);
+    const typeLabels = { breakfast: copy.breakfast, snack: copy.snack, lunch: copy.lunch, dinner: copy.dinner };
+    const meals = calorieEntries.filter((entry) => entry.date === yesterdayKey && entry.mealType === mealType);
+    const label = typeLabels[mealType] || mealType;
+    setQuickActionsOpen(false);
+    setCommandOpen(false);
+    if (!meals.length) {
+      setToast(settings.language === 'sl' ? `Včeraj ni vnosa za: ${label}.` : `No yesterday ${label.toLowerCase()} found.`);
+      return;
+    }
+    const now = Date.now();
+    const copied = meals.map((entry, index) => ({
+      ...entry,
+      id: now + index,
+      date: todayKey,
+    }));
+    setCalorieEntries((current) => [...current, ...copied]);
+    setCalorieForm((current) => ({ ...current, date: todayKey, mealType }));
+    setToast(settings.language === 'sl' ? `${label} dodan za danes.` : `${label} added for today.`);
+  }
+
+  function markTodayRestDay() {
+    setQuickActionsOpen(false);
+    setCommandOpen(false);
+    if (restDays.includes(todayKey)) {
+      setToast(copy.restDayDone);
+      return;
+    }
+    const updated = [...restDays, todayKey];
+    setRestDays(updated);
+    localStorage.setItem(getRestKey(currentUser), JSON.stringify(updated));
+    setToast(copy.restDayDone);
+  }
+
+  function markTodayCheatDay() {
+    setQuickActionsOpen(false);
+    setCommandOpen(false);
+    if (cheatDays.includes(todayKey)) {
+      setToast(copy.cheatDayDone);
+      return;
+    }
+    const updated = [...cheatDays, todayKey];
+    setCheatDays(updated);
+    localStorage.setItem(getCheatKey(currentUser), JSON.stringify(updated));
+    setToast(copy.cheatDayDone);
+  }
+
   function getIngredientMealLabel() {
     return ingredientMode === 'quick'
       ? (ingredientQuery.trim() || 'Estimated food')
@@ -5705,10 +5756,21 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
   ];
   const commandSearch = commandQuery.trim().toLowerCase();
   const commandMatches = commandActions.filter((action) => !commandSearch || `${action.label} ${action.description} ${action.keywords}`.toLowerCase().includes(commandSearch)).slice(0, 12);
+  const mealActionTypes = ['breakfast', 'snack', 'lunch', 'dinner'];
+  const mealActionLabels = { breakfast: copy.breakfast, snack: copy.snack, lunch: copy.lunch, dinner: copy.dinner };
   const quickActions = [
-    ...commandActions.filter((action) => action.quick && !action.id.startsWith('nav-')),
-    ...commandActions.filter((action) => action.quick && action.id.startsWith('nav-')),
-  ].slice(0, 8);
+    ...mealActionTypes.map((type) => ({
+      id: `copy-yesterday-${type}`,
+      label: slUi ? `Dodaj včerajšnji ${mealActionLabels[type].toLowerCase()}` : `Add yesterday ${mealActionLabels[type].toLowerCase()}`,
+      description: slUi ? `Kopira včerajšnji ${mealActionLabels[type].toLowerCase()} na danes.` : `Copies yesterday ${mealActionLabels[type].toLowerCase()} to today.`,
+      icon: NAV_ICONS.calories,
+      run: () => copyYesterdayMealType(type),
+    })),
+    { id: 'action-water-250', label: slUi ? '+250 ml vode' : '+250 ml water', description: slUi ? 'Takoj dodaj 250 ml vode.' : 'Instantly add 250 ml water.', icon: NAV_ICONS.bodyweight, run: () => { addWater(250); setQuickActionsOpen(false); setCommandOpen(false); } },
+    { id: 'action-rest-day', label: restDays.includes(todayKey) ? copy.restDayDone : copy.restDay, description: slUi ? 'Označi danes kot dan za počitek.' : 'Mark today as a rest day.', icon: NAV_ICONS.dashboard, run: markTodayRestDay },
+    { id: 'action-cheat-day', label: cheatDays.includes(todayKey) ? copy.cheatDayDone : copy.cheatDay, description: slUi ? 'Označi danes kot cheat day.' : 'Mark today as a cheat day.', icon: NAV_ICONS.calories, run: markTodayCheatDay },
+    { id: 'action-repeat-workout', label: copy.repeatLastWorkout, description: slUi ? 'Pripravi zadnji trening za ponoven vnos danes.' : 'Prepare your last workout to log again today.', icon: NAV_ICONS.dashboard, run: repeatLastWorkout },
+  ];
   function runCommandAction(action) {
     if (!action) return;
     action.run();
@@ -5910,9 +5972,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               </button>
             )}
             {syncing && <span className="sync-indicator" title={settings.language === 'sl' ? 'Sinhroniziram...' : 'Syncing...'}>↻</span>}
-            <button className="quick-open-btn" type="button" onClick={() => { setCommandOpen(true); setQuickActionsOpen(false); }} title={slUi ? 'Akcije (Ctrl+K)' : 'Actions (Ctrl+K)'} aria-label={slUi ? 'Odpri akcije' : 'Open actions'}>
+            <button className="quick-open-btn" type="button" onClick={() => { setQuickActionsOpen((open) => !open); setCommandOpen(false); }} title={slUi ? 'Akcije' : 'Actions'} aria-label={slUi ? 'Odpri akcije' : 'Open actions'} aria-expanded={quickActionsOpen}>
               <span>{slUi ? 'Akcije' : 'Actions'}</span>
-              <kbd>Ctrl K</kbd>
             </button>
             <button className="context-help-btn topbar-help-btn" type="button" onClick={() => setHelpTopic('tutorial')} title={copy.tutorialOpen} aria-label={copy.tutorialOpen}>?</button>
             <span className="user-chip">{getUserBadge(currentUser)}</span>
@@ -7260,10 +7321,10 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
 
       {commandOpen && (
         <div className="command-overlay" onClick={() => setCommandOpen(false)}>
-          <section className="command-panel glass-panel" role="dialog" aria-label={slUi ? 'Akcije' : 'Actions'} onClick={(event) => event.stopPropagation()}>
+          <section className="command-panel glass-panel" role="dialog" aria-label={slUi ? 'Iskanje' : 'Search'} onClick={(event) => event.stopPropagation()}>
             <div className="command-head">
               <div>
-                <p className="exercise-category">{slUi ? 'Akcije' : 'Actions'}</p>
+                <p className="exercise-category">{slUi ? 'Iskanje' : 'Search'}</p>
                 <h3>{slUi ? 'Kam zelis?' : 'Where to?'}</h3>
               </div>
               <button className="context-help-btn" type="button" onClick={() => setCommandOpen(false)} aria-label={slUi ? 'Zapri' : 'Close'}>x</button>

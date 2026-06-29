@@ -52,6 +52,8 @@ const REST_KEY_PREFIX = 'powergraph_rest_';
 const CHEAT_KEY_PREFIX = 'powergraph_cheat_';
 const WATER_KEY_PREFIX = 'powergraph_water_';
 const THEME_KEY = 'powergraph_theme';
+const LAST_SECTION_KEY_PREFIX = 'powergraph_last_section_';
+const DRAFT_KEY_PREFIX = 'powergraph_draft_';
 const SETTINGS_KEY_PREFIX = 'powergraph_settings_';
 const USERS_KEY = 'powergraph_users';
 const SESSION_KEY = 'powergraph_session';
@@ -63,6 +65,52 @@ const AUTH_THROTTLE_KEY_PREFIX = 'powergraph_auth_throttle_';
 const AUTH_MAX_ATTEMPTS = 5;
 const AUTH_LOCK_MS = 15 * 60 * 1000;
 const PBKDF2_ITERATIONS = 210000;
+const APP_SECTION_IDS = ['dashboard', 'exercises', 'history', 'bodyweight', 'calories', 'ocenjevalec', 'rankings', 'advisor', 'settings', 'admin'];
+
+function todayKey() { return new Date().toISOString().slice(0, 10); }
+function getInitialTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'dark' || saved === 'light') return saved;
+    return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  } catch {
+    return 'dark';
+  }
+}
+function getLastSectionKey(email) { return `${LAST_SECTION_KEY_PREFIX}${email}`; }
+function getDraftKey(email, name) { return `${DRAFT_KEY_PREFIX}${email}_${name}`; }
+function getInitialSection(email) {
+  if (!email) return 'dashboard';
+  try {
+    const saved = localStorage.getItem(getLastSectionKey(email));
+    if (!APP_SECTION_IDS.includes(saved)) return 'dashboard';
+    return saved === 'admin' && email !== ADMIN_EMAIL ? 'dashboard' : saved;
+  } catch {
+    return 'dashboard';
+  }
+}
+function saveDraft(email, name, value) {
+  if (!email) return;
+  try { localStorage.setItem(getDraftKey(email, name), JSON.stringify(value)); } catch {}
+}
+function loadDraft(email, name, fallback) {
+  if (!email) return fallback;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(getDraftKey(email, name)) || 'null');
+    return parsed && typeof parsed === 'object' ? { ...fallback, ...parsed } : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function clearUserDrafts(email) {
+  if (!email) return;
+  ['workoutForm', 'mealForm', 'bodyWeightForm', 'tdeeForm', 'ingredientForm'].forEach((name) => {
+    try { localStorage.removeItem(getDraftKey(email, name)); } catch {}
+  });
+}
+function getDefaultWorkoutForm() { return { date: todayKey(), exercise: 'Bench Press', weight: '', setDetails: ['12', '10', '8'], setWeights: ['', '', ''] }; }
+function getDefaultMealForm() { return { date: todayKey(), mealType: 'breakfast', name: '', calories: '', protein: '', carbs: '', fat: '' }; }
+function getDefaultBodyWeightForm() { return { date: todayKey(), weight: '' }; }
 
 const BAR_OPTS = {
   responsive: true,
@@ -3732,6 +3780,7 @@ function AnatomyRankModel({ selected, onSelect, gender = 'male', language = 'en'
 }
 
 export default function App() {
+  const initialSessionEmail = localStorage.getItem(SESSION_KEY) || '';
   const fileInputRef = useRef(null);
   const calImageRef = useRef(null);
   const previousCountRef = useRef(0);
@@ -3746,13 +3795,13 @@ export default function App() {
   const bodyFatBackRef = useRef(null);
   const mainContentRef = useRef(null);
   const commandInputRef = useRef(null);
-  const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) ?? 'dark');
-  const [currentUser, setCurrentUser] = useState(() => localStorage.getItem(SESSION_KEY) || '');
+  const [theme, setTheme] = useState(getInitialTheme);
+  const [currentUser, setCurrentUser] = useState(() => initialSessionEmail);
   const aiEnabled = Boolean(API_URL && currentUser && getJwt(currentUser));
-  const [workouts, setWorkouts] = useState(() => loadWorkouts(localStorage.getItem(SESSION_KEY) || ''));
-  const [calorieEntries, setCalorieEntries] = useState(() => loadCalories(localStorage.getItem(SESSION_KEY) || ''));
-  const [settings, setSettings] = useState(() => loadSettings(localStorage.getItem(SESSION_KEY) || ''));
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const [workouts, setWorkouts] = useState(() => loadWorkouts(initialSessionEmail));
+  const [calorieEntries, setCalorieEntries] = useState(() => loadCalories(initialSessionEmail));
+  const [settings, setSettings] = useState(() => loadSettings(initialSessionEmail));
+  const [activeSection, setActiveSection] = useState(() => getInitialSection(initialSessionEmail));
   const [selectedExercise, setSelectedExercise] = useState('Bench Press');
   const [toast, setToast] = useState('');
   const [swUpdatePending, setSwUpdatePending] = useState(false);
@@ -3766,8 +3815,8 @@ export default function App() {
   const [showAuthPassword, setShowAuthPassword] = useState(false);
   const [showAuthConfirm, setShowAuthConfirm] = useState(false);
   const [authTouched, setAuthTouched] = useState({ email: false, password: false, confirmPassword: false });
-  const [formData, setFormData] = useState({ date: new Date().toISOString().slice(0, 10), exercise: 'Bench Press', weight: '', setDetails: ['12', '10', '8'], setWeights: ['', '', ''] });
-  const [calorieForm, setCalorieForm] = useState({ date: new Date().toISOString().slice(0, 10), mealType: 'breakfast', name: '', calories: '', protein: '', carbs: '', fat: '' });
+  const [formData, setFormData] = useState(() => loadDraft(initialSessionEmail, 'workoutForm', getDefaultWorkoutForm()));
+  const [calorieForm, setCalorieForm] = useState(() => loadDraft(initialSessionEmail, 'mealForm', getDefaultMealForm()));
   const [calQuery, setCalQuery] = useState('');
   const [calGrams, setCalGrams] = useState('');
   const [calResult, setCalResult] = useState(null);
@@ -3777,10 +3826,10 @@ export default function App() {
   const [calImageLoading, setCalImageLoading] = useState(false);
   const [calPhotoResult, setCalPhotoResult] = useState(null);
   const [calPhotoError, setCalPhotoError] = useState('');
-  const [calHistory, setCalHistory] = useState(() => loadCalHistory(localStorage.getItem(SESSION_KEY) || ''));
-  const [bodyWeightEntries, setBodyWeightEntries] = useState(() => loadBodyWeight(localStorage.getItem(SESSION_KEY) || ''));
-  const [bwForm, setBwForm] = useState({ date: new Date().toISOString().slice(0, 10), weight: '' });
-  const [tdeeForm, setTdeeForm] = useState({ currentWeight: '', goalWeight: '', weeks: '12', activityLevel: 'moderate', gender: settings.gender || 'male', age: settings.age || '', height: settings.height || '' });
+  const [calHistory, setCalHistory] = useState(() => loadCalHistory(initialSessionEmail));
+  const [bodyWeightEntries, setBodyWeightEntries] = useState(() => loadBodyWeight(initialSessionEmail));
+  const [bwForm, setBwForm] = useState(() => loadDraft(initialSessionEmail, 'bodyWeightForm', getDefaultBodyWeightForm()));
+  const [tdeeForm, setTdeeForm] = useState(() => loadDraft(initialSessionEmail, 'tdeeForm', { currentWeight: '', goalWeight: '', weeks: '12', activityLevel: 'moderate', gender: settings.gender || 'male', age: settings.age || '', height: settings.height || '' }));
   const [tdeeResult, setTdeeResult] = useState(null);
   const [timerSeconds, setTimerSeconds] = useState(90);
   const [timerActive, setTimerActive] = useState(false);
@@ -3792,7 +3841,7 @@ export default function App() {
   const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
   const [adminLogs, setAdminLogs] = useState(null);
   const [adminPresence, setAdminPresence] = useState([]);
-  const [adminBonus, setAdminBonus] = useState(() => loadAdminBonus(localStorage.getItem(SESSION_KEY) || ''));
+  const [adminBonus, setAdminBonus] = useState(() => loadAdminBonus(initialSessionEmail));
   const [adminConfig, setAdminConfig] = useState(() => loadAdminConfig());
   const [adminConfigDraft, setAdminConfigDraft] = useState(() => loadAdminConfig());
   const [adminAudit, setAdminAudit] = useState(() => loadAdminAudit());
@@ -3801,8 +3850,8 @@ export default function App() {
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [commentText, setCommentText] = useState('');
   const [historySearch, setHistorySearch] = useState('');
-  const [restDays, setRestDays] = useState(() => loadRestDays(localStorage.getItem(SESSION_KEY) || ''));
-  const [cheatDays, setCheatDays] = useState(() => loadCheatDays(localStorage.getItem(SESSION_KEY) || ''));
+  const [restDays, setRestDays] = useState(() => loadRestDays(initialSessionEmail));
+  const [cheatDays, setCheatDays] = useState(() => loadCheatDays(initialSessionEmail));
   const [exerciseSearch, setExerciseSearch] = useState('');
   const [formExSearch, setFormExSearch] = useState('');
   const [chartSection, setChartSection] = useState(null);
@@ -3812,7 +3861,7 @@ export default function App() {
   const [advisorMode, setAdvisorMode] = useState('gym');
   const [advisorSplitId, setAdvisorSplitId] = useState('auto');
   const [customSplitSections, setCustomSplitSections] = useState([]);
-  const [waterToday, setWaterToday] = useState(() => loadWaterMl(localStorage.getItem(SESSION_KEY) || ''));
+  const [waterToday, setWaterToday] = useState(() => loadWaterMl(initialSessionEmail));
   const [waterCustomMl, setWaterCustomMl] = useState('');
   const [bannedUsers, setBannedUsers] = useState(() => loadBanned());
   const [modUsers, setModUsers] = useState(() => loadMods());
@@ -3826,26 +3875,28 @@ export default function App() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
-  const [customExercises, setCustomExercises] = useState(() => loadCustomExercises(localStorage.getItem(SESSION_KEY) || ''));
+  const [customExercises, setCustomExercises] = useState(() => loadCustomExercises(initialSessionEmail));
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [addExForm, setAddExForm] = useState({ name: '', section: 'Back' });
   const [addExLoading, setAddExLoading] = useState(false);
   const [addExError, setAddExError] = useState('');
   const [selectedRankMuscle, setSelectedRankMuscle] = useState('Chest');
-  const [ingredientMode, setIngredientMode] = useState('quick');
-  const [ingredientQuery, setIngredientQuery] = useState('');
-  const [ingredientItems, setIngredientItems] = useState([{ name: '', grams: '100' }]);
+  const initialIngredientDraft = loadDraft(initialSessionEmail, 'ingredientForm', { mode: 'quick', query: '', items: [{ name: '', grams: '100' }] });
+  const [ingredientMode, setIngredientMode] = useState(() => initialIngredientDraft.mode === 'precise' ? 'precise' : 'quick');
+  const [ingredientQuery, setIngredientQuery] = useState(() => typeof initialIngredientDraft.query === 'string' ? initialIngredientDraft.query : '');
+  const [ingredientItems, setIngredientItems] = useState(() => Array.isArray(initialIngredientDraft.items) && initialIngredientDraft.items.length ? initialIngredientDraft.items : [{ name: '', grams: '100' }]);
   const [ingredientResults, setIngredientResults] = useState(null);
   const [ingredientLoading, setIngredientLoading] = useState(false);
   const [ingredientError, setIngredientError] = useState('');
   const [bodyFatImages, setBodyFatImages] = useState({ front: null, side: null, back: null });
   const [bodyFatMetrics, setBodyFatMetrics] = useState({ gender: settings.gender || 'male', age: settings.age || '', height: settings.height || '', weight: '', waist: '', neck: '', hip: '' });
   const [bodyFatResult, setBodyFatResult] = useState(null);
-  const [bodyFatHistory, setBodyFatHistory] = useState(() => loadBodyFatHistory(localStorage.getItem(SESSION_KEY) || ''));
+  const [bodyFatHistory, setBodyFatHistory] = useState(() => loadBodyFatHistory(initialSessionEmail));
   const [bodyFatLoading, setBodyFatLoading] = useState(false);
   const [bodyFatError, setBodyFatError] = useState('');
   const [reverseCalDailyKcal, setReverseCalDailyKcal] = useState('');
   const [reverseCalResult, setReverseCalResult] = useState(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   const copy = getCopy(settings.language);
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -4303,9 +4354,12 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     localStorage.setItem(SESSION_KEY, currentUser);
+    const nextSettings = loadSettings(currentUser);
+    const nextWorkoutDraft = loadDraft(currentUser, 'workoutForm', getDefaultWorkoutForm());
+    const nextIngredientDraft = loadDraft(currentUser, 'ingredientForm', { mode: 'quick', query: '', items: [{ name: '', grams: '100' }] });
     setWorkouts(loadWorkouts(currentUser));
     setCalorieEntries(loadCalories(currentUser));
-    setSettings(loadSettings(currentUser));
+    setSettings(nextSettings);
     setCalHistory(loadCalHistory(currentUser));
     setBodyFatHistory(loadBodyFatHistory(currentUser));
     setBodyWeightEntries(loadBodyWeight(currentUser));
@@ -4313,8 +4367,16 @@ export default function App() {
     setCheatDays(loadCheatDays(currentUser));
     setAdminBonus(loadAdminBonus(currentUser));
     setCustomExercises(loadCustomExercises(currentUser));
-    setSelectedExercise('Bench Press');
-    setActiveSection('dashboard');
+    setWaterToday(loadWaterMl(currentUser));
+    setFormData(nextWorkoutDraft);
+    setCalorieForm(loadDraft(currentUser, 'mealForm', getDefaultMealForm()));
+    setBwForm(loadDraft(currentUser, 'bodyWeightForm', getDefaultBodyWeightForm()));
+    setTdeeForm(loadDraft(currentUser, 'tdeeForm', { currentWeight: '', goalWeight: '', weeks: '12', activityLevel: 'moderate', gender: nextSettings.gender || 'male', age: nextSettings.age || '', height: nextSettings.height || '' }));
+    setIngredientMode(nextIngredientDraft.mode === 'precise' ? 'precise' : 'quick');
+    setIngredientQuery(typeof nextIngredientDraft.query === 'string' ? nextIngredientDraft.query : '');
+    setIngredientItems(Array.isArray(nextIngredientDraft.items) && nextIngredientDraft.items.length ? nextIngredientDraft.items : [{ name: '', grams: '100' }]);
+    setSelectedExercise(nextWorkoutDraft.exercise || 'Bench Press');
+    setActiveSection(getInitialSection(currentUser));
     // Monthly recap check
     const now = new Date();
     const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -4335,6 +4397,31 @@ export default function App() {
       localStorage.setItem(getRecapKey(currentUser), currentMonthKey);
     }
   }, [currentUser]);
+  useEffect(() => {
+    if (!currentUser) return;
+    if (activeSection === 'admin' && currentUser !== ADMIN_EMAIL) return;
+    try { localStorage.setItem(getLastSectionKey(currentUser), activeSection); } catch {}
+  }, [activeSection, currentUser]);
+  useEffect(() => {
+    if (!currentUser || editingWorkoutId) return;
+    saveDraft(currentUser, 'workoutForm', formData);
+  }, [currentUser, editingWorkoutId, formData]);
+  useEffect(() => {
+    if (!currentUser || editingMealId) return;
+    saveDraft(currentUser, 'mealForm', calorieForm);
+  }, [calorieForm, currentUser, editingMealId]);
+  useEffect(() => {
+    if (!currentUser) return;
+    saveDraft(currentUser, 'bodyWeightForm', bwForm);
+  }, [bwForm, currentUser]);
+  useEffect(() => {
+    if (!currentUser) return;
+    saveDraft(currentUser, 'tdeeForm', tdeeForm);
+  }, [currentUser, tdeeForm]);
+  useEffect(() => {
+    if (!currentUser) return;
+    saveDraft(currentUser, 'ingredientForm', { mode: ingredientMode, query: ingredientQuery, items: ingredientItems });
+  }, [currentUser, ingredientItems, ingredientMode, ingredientQuery]);
   useEffect(() => {
     if (!currentUser) return;
     localStorage.setItem(getWorkoutStorageKey(currentUser), JSON.stringify(workouts));
@@ -4421,6 +4508,24 @@ export default function App() {
     mainContentRef.current?.scrollTo({ top: 0, behavior: 'auto' });
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, [activeSection]);
+  useEffect(() => {
+    if (!currentUser) {
+      setShowScrollTop(false);
+      return undefined;
+    }
+    const scroller = mainContentRef.current;
+    const updateScrollTopVisibility = () => {
+      const y = Math.max(window.scrollY || 0, scroller?.scrollTop || 0);
+      setShowScrollTop(y > 520);
+    };
+    updateScrollTopVisibility();
+    window.addEventListener('scroll', updateScrollTopVisibility, { passive: true });
+    scroller?.addEventListener('scroll', updateScrollTopVisibility, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', updateScrollTopVisibility);
+      scroller?.removeEventListener('scroll', updateScrollTopVisibility);
+    };
+  }, [currentUser, activeSection]);
   useEffect(() => { if (!toast) return undefined; const id = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(id); }, [toast]);
   useEffect(() => {
     if (activeSection !== 'admin' || currentUser !== ADMIN_EMAIL) return;
@@ -4659,6 +4764,13 @@ export default function App() {
     setRestDays([]);
     setCheatDays([]);
     setCustomExercises([]);
+    clearUserDrafts(currentUser);
+    setFormData(getDefaultWorkoutForm());
+    setCalorieForm(getDefaultMealForm());
+    setBwForm(getDefaultBodyWeightForm());
+    setIngredientMode('quick');
+    setIngredientQuery('');
+    setIngredientItems([{ name: '', grams: '100' }]);
     localStorage.removeItem(getRestKey(currentUser));
     localStorage.removeItem(getCheatKey(currentUser));
     localStorage.removeItem(getCustomExKey(currentUser));
@@ -4946,7 +5058,7 @@ export default function App() {
     setWorkouts((current) => current.map((item) => (item.id === editingWorkoutId ? { ...item, date: formData.date, exercise: formData.exercise, weight: maxWeight, setDetails: cleanSets, ...(isWD ? { setWeights: cleanWeights } : {}) } : item)));
     setEditingWorkoutId(null);
   }
-  function cancelWorkoutEdit() { setEditingWorkoutId(null); setFormData({ date: new Date().toISOString().slice(0, 10), exercise: 'Bench Press', weight: '', setDetails: ['12', '10', '8'] }); }
+  function cancelWorkoutEdit() { setEditingWorkoutId(null); setFormData(getDefaultWorkoutForm()); }
   function deleteMeal(id) {
     if (!window.confirm(copy.deleteConfirmMeal)) return;
     setCalorieEntries((current) => current.filter((item) => item.id !== id));
@@ -4959,7 +5071,7 @@ export default function App() {
     setEditingMealId(null);
     setCalorieForm({ date: new Date().toISOString().slice(0, 10), mealType: 'breakfast', name: '', calories: '', protein: '', carbs: '', fat: '' });
   }
-  function cancelMealEdit() { setEditingMealId(null); setCalorieForm({ date: new Date().toISOString().slice(0, 10), mealType: 'breakfast', name: '', calories: '', protein: '', carbs: '', fat: '' }); }
+  function cancelMealEdit() { setEditingMealId(null); setCalorieForm(getDefaultMealForm()); }
 
   async function searchCalories(e) {
     e.preventDefault();
@@ -5325,6 +5437,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
     const entry = { id: Date.now(), date: bwForm.date, weight: Number(bwForm.weight) };
     setBodyWeightEntries((c) => [...c, entry].sort((a, b) => new Date(b.date) - new Date(a.date)));
     setBwForm((c) => ({ ...c, weight: '' }));
+    setToast(copy.saved);
   }
   function deleteBodyWeightEntry(id) {
     if (!window.confirm(copy.deleteConfirmWeight)) return;
@@ -5622,6 +5735,9 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
       if (event.key === 'Escape') {
         setCommandOpen(false);
         setQuickActionsOpen(false);
+        setHelpTopic(null);
+        setFeedbackOpen(false);
+        setShowTutorial(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -7113,7 +7229,23 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
       </main>
 
       {currentUser && (
-        <div className={`quick-actions-widget${quickActionsOpen ? ' open' : ''}`}>
+        <>
+          {showScrollTop && (
+          <button
+            className="scroll-top-fab"
+            type="button"
+            onClick={() => {
+              mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            aria-label={slUi ? 'Nazaj na vrh' : 'Back to top'}
+            title={slUi ? 'Nazaj na vrh' : 'Back to top'}
+          >
+            ↑
+          </button>
+          )}
+
+          <div className={`quick-actions-widget${quickActionsOpen ? ' open' : ''}`}>
           {quickActionsOpen && (
             <div className="quick-actions-menu glass-panel">
               <div className="quick-actions-head">
@@ -7136,7 +7268,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           <button className="quick-actions-fab" type="button" onClick={() => setQuickActionsOpen((open) => !open)} aria-expanded={quickActionsOpen} aria-label={slUi ? 'Hitre akcije' : 'Quick actions'}>
             <span>Quick</span>
           </button>
-        </div>
+          </div>
+        </>
       )}
 
       {commandOpen && (
@@ -7151,7 +7284,18 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             </div>
             <div className="command-input-wrap">
               <Search size={17} strokeWidth={2.3} />
-              <input ref={commandInputRef} value={commandQuery} onChange={(event) => setCommandQuery(event.target.value)} placeholder={slUi ? 'Isci funkcijo, vnos, kalkulator...' : 'Search feature, log, calculator...'} />
+              <input
+                ref={commandInputRef}
+                value={commandQuery}
+                onChange={(event) => setCommandQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && commandMatches[0]) {
+                    event.preventDefault();
+                    runCommandAction(commandMatches[0]);
+                  }
+                }}
+                placeholder={slUi ? 'Isci funkcijo, vnos, kalkulator...' : 'Search feature, log, calculator...'}
+              />
               <kbd>Esc</kbd>
             </div>
             <div className="command-results">

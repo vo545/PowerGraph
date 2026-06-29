@@ -1122,7 +1122,6 @@ const ui = {
     dashboardTodayCalories: 'Kalorije danes',
     dashboardWeeklyVolume: 'Tedenski volumen',
     dashboardBodyWeight: 'Telesna teža',
-    dashboardQuickActions: 'Hitre akcije',
     dashboardEmptyTitle: 'Še brez podatkov',
     dashboardEmptyBody: 'Začni z enim treningom, obrokom ali meritvijo. PowerGraph bo potem takoj napolnil grafe in napredek.',
     addWeight: 'Dodaj težo',
@@ -1579,7 +1578,6 @@ const ui = {
     dashboardTodayCalories: 'Today calories',
     dashboardWeeklyVolume: 'Weekly volume',
     dashboardBodyWeight: 'Body weight',
-    dashboardQuickActions: 'Quick actions',
     dashboardEmptyTitle: 'No data yet',
     dashboardEmptyBody: 'Start with one workout, meal, or weight entry. PowerGraph will immediately fill your graphs and progress.',
     addWeight: 'Add weight',
@@ -5912,8 +5910,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               </button>
             )}
             {syncing && <span className="sync-indicator" title={settings.language === 'sl' ? 'Sinhroniziram...' : 'Syncing...'}>↻</span>}
-            <button className="quick-open-btn" type="button" onClick={() => { setCommandOpen(true); setQuickActionsOpen(false); }} title={slUi ? 'Hitri meni (Ctrl+K)' : 'Quick menu (Ctrl+K)'} aria-label={slUi ? 'Odpri hitri meni' : 'Open quick menu'}>
-              <span>Quick</span>
+            <button className="quick-open-btn" type="button" onClick={() => { setCommandOpen(true); setQuickActionsOpen(false); }} title={slUi ? 'Hitre akcije (Ctrl+K)' : 'Quick actions (Ctrl+K)'} aria-label={slUi ? 'Odpri hitre akcije' : 'Open quick actions'}>
+              <span>{slUi ? 'Hitre akcije' : 'Quick actions'}</span>
               <kbd>Ctrl K</kbd>
             </button>
             <button className="context-help-btn topbar-help-btn" type="button" onClick={() => setHelpTopic('tutorial')} title={copy.tutorialOpen} aria-label={copy.tutorialOpen}>?</button>
@@ -5947,18 +5945,6 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow"><Flame size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.streak}</p><h3 className="stat-value">{workoutStreak}</h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow"><Scale size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.dashboardBodyWeight}</p><h3 className="stat-value">{latestBodyWeightEntry ? formatWeight(latestBodyWeightEntry.weight, settings.units) : '-'}</h3></div></article>
             <article className="glass-panel stat-card fade-in-up"><div className="stat-icon orange-glow"><Trophy size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.dashboardWeeklyVolume}</p><h3 className="stat-value">{formatVolume(weeklyVolumeKg, settings.units)}</h3></div></article>
-            <section className="glass-panel dashboard-quick-card fade-in-up">
-              <div className="panel-header"><h3>{copy.dashboardQuickActions}</h3></div>
-              <div className="dashboard-action-grid">
-                <button className="action-btn-primary" type="button" onClick={() => goToFeature('dashboard', 'add-workout')}>+ {copy.addWorkout}</button>
-                <button className="action-btn-outline" type="button" onClick={() => goToFeature('calories', 'add-meal')}>+ {copy.addMeal}</button>
-                <button className="action-btn-outline" type="button" onClick={() => goToFeature('bodyweight', 'bodyweight-tracker')}>+ {copy.addWeight}</button>
-                <button className="action-btn-outline" type="button" onClick={() => addWater(250)}>+250 ml</button>
-                <button className="action-btn-outline" type="button" onClick={repeatLastWorkout}>{copy.repeatLastWorkout}</button>
-                <button className="action-btn-outline" type="button" onClick={copyYesterdayMeals}>{copy.copyYesterdayMeals}</button>
-              </div>
-              {!hasProgressData && <div className="empty-state dashboard-empty-state"><h4>{copy.dashboardEmptyTitle}</h4><p>{copy.dashboardEmptyBody}</p></div>}
-            </section>
             <section className="glass-panel daily-control-panel fade-in-up" {...tourAttrs('dashboard-overview')}>
               <div className="panel-header">
                 <h3>{settings.language === 'sl' ? 'Dnevni center' : 'Daily Control'}</h3>
@@ -7266,7 +7252,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             </div>
           )}
           <button className="quick-actions-fab" type="button" onClick={() => setQuickActionsOpen((open) => !open)} aria-expanded={quickActionsOpen} aria-label={slUi ? 'Hitre akcije' : 'Quick actions'}>
-            <span>Quick</span>
+            <span>{slUi ? 'Hitre akcije' : 'Quick actions'}</span>
           </button>
           </div>
         </>

@@ -56,8 +56,6 @@ const SETTINGS_KEY_PREFIX = 'powergraph_settings_';
 const USERS_KEY = 'powergraph_users';
 const SESSION_KEY = 'powergraph_session';
 const ADMIN_EMAIL = 'vid.oreskovic@gmail.com';
-const DEMO_EMAIL = 'demo@powergraph.local';
-const DEMO_FLAG_KEY = 'powergraph_demo_loaded_at';
 const ADMIN_CONFIG_KEY = 'powergraph_admin_config';
 const ADMIN_AUDIT_KEY = 'powergraph_admin_audit';
 const LOGINS_KEY = 'powergraph_logins';
@@ -619,7 +617,7 @@ const BACKGROUND_PRESETS = [
   { id: 'mono', color: '#cbd5e1', label: { en: 'Monochrome', sl: 'Monokrom', es: 'Monocromo', pt: 'Monocromatico', fr: 'Monochrome', tr: 'Monokrom', ar: 'Monochrome', ja: 'Mono', zh: 'Mono', ru: 'Mono' } },
 ];
 const SUPPORTED_BACKGROUNDS = BACKGROUND_PRESETS.map((item) => item.id);
-const defaultSettings = { units: 'kg', language: 'sl', backgroundAccent: 'blue', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, waterGoalMl: 2500, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
+const defaultSettings = { units: 'kg', language: 'en', backgroundAccent: 'blue', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, waterGoalMl: 2500, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
 const defaultAdminConfig = {
   appName: 'PowerGraph',
   announcementEnabled: false,
@@ -628,7 +626,7 @@ const defaultAdminConfig = {
   signupEnabled: true,
   feedbackEnabled: true,
   backupBannerEnabled: true,
-  defaultLanguage: 'sl',
+  defaultLanguage: 'en',
   defaultAccent: 'blue',
   defaultUnits: 'kg',
   defaultCalorieGoal: 2200,
@@ -1094,11 +1092,6 @@ const ui = {
     deleteConfirmWeight: 'Izbrišem to meritev teže?',
     deleteConfirmWater: 'Ponastavim današnji vnos vode?',
     deleteConfirmEstimate: 'Izbrišem ta zapis?',
-    demoTry: 'Preizkusi demo s podatki',
-    demoLoaded: 'Demo podatki naloženi.',
-    demoClear: 'Počisti demo podatke',
-    demoClearConfirm: 'Počistim demo podatke?',
-    demoCleared: 'Demo podatki odstranjeni.',
     dataPrivacy: 'Podatki in zasebnost',
     dataPrivacyDesc: 'Podatki so shranjeni lokalno v tem brskalniku, razen če je omogočen backend sync. Export je tvoja varnostna kopija, import jo naloži nazaj.',
     privacyPolicy: 'Politika zasebnosti',
@@ -1556,11 +1549,6 @@ const ui = {
     deleteConfirmWeight: 'Delete this weight entry?',
     deleteConfirmWater: 'Reset today’s water intake?',
     deleteConfirmEstimate: 'Delete this entry?',
-    demoTry: 'Try demo with sample data',
-    demoLoaded: 'Demo data loaded.',
-    demoClear: 'Clear demo data',
-    demoClearConfirm: 'Clear demo data?',
-    demoCleared: 'Demo data removed.',
     dataPrivacy: 'Data & Privacy',
     dataPrivacyDesc: 'Your data is saved locally in this browser unless backend sync is enabled. Export is your backup, import restores it.',
     privacyPolicy: 'Privacy policy',
@@ -5459,111 +5447,6 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
     setToast(copy.copiedYesterdayMeals);
   }
 
-  function dateOffsetKey(offsetDays) {
-    const date = new Date();
-    date.setHours(12, 0, 0, 0);
-    date.setDate(date.getDate() + offsetDays);
-    return date.toISOString().slice(0, 10);
-  }
-
-  function buildDemoData() {
-    const workoutSeed = [
-      [-8, 'Bench Press', 72.5, [10, 8, 7]],
-      [-7, 'Lat Pulldown', 62.5, [12, 10, 10]],
-      [-5, 'Squat', 95, [8, 8, 6]],
-      [-4, 'Overhead Press', 42.5, [10, 8, 8]],
-      [-2, 'Seated Cable Row', 65, [12, 10, 9]],
-      [0, 'Incline Dumbbell Press', 30, [10, 9, 8]],
-    ];
-    const workoutsDemo = workoutSeed.map(([offset, exercise, weight, setDetails], index) => normalizeWorkout({
-      id: Date.now() - 5000 + index,
-      date: dateOffsetKey(offset),
-      exercise,
-      weight,
-      setDetails,
-    }));
-    const calorieEntriesDemo = [
-      { id: Date.now() - 4100, date: dateOffsetKey(0), mealType: 'breakfast', name: 'Greek yogurt, banana, oats', calories: 520, protein: 34, carbs: 72, fat: 10 },
-      { id: Date.now() - 4099, date: dateOffsetKey(0), mealType: 'lunch', name: 'Chicken rice bowl', calories: 760, protein: 52, carbs: 88, fat: 18 },
-      { id: Date.now() - 4098, date: dateOffsetKey(0), mealType: 'snack', name: 'Protein shake', calories: 210, protein: 32, carbs: 12, fat: 4 },
-      { id: Date.now() - 4097, date: dateOffsetKey(-1), mealType: 'breakfast', name: 'Eggs and toast', calories: 610, protein: 38, carbs: 48, fat: 26 },
-      { id: Date.now() - 4096, date: dateOffsetKey(-1), mealType: 'dinner', name: 'Salmon, potatoes, salad', calories: 820, protein: 48, carbs: 62, fat: 36 },
-    ];
-    const bodyWeightDemo = [-18, -12, -6, 0].map((offset, index) => ({
-      id: Date.now() - 3000 + index,
-      date: dateOffsetKey(offset),
-      weight: [82.4, 81.9, 81.3, 80.8][index],
-    }));
-    const calHistoryDemo = [
-      { id: Date.now() - 2000, name: 'Chicken rice bowl', grams: 420, kcalPer100: 181, total: 760, date: dateOffsetKey(0) },
-      { id: Date.now() - 1999, name: 'Greek yogurt bowl', grams: 360, kcalPer100: 144, total: 520, date: dateOffsetKey(-1) },
-    ];
-    const bodyFatDemo = [{
-      id: Date.now() - 1000,
-      date: dateOffsetKey(-1),
-      result: { bodyFatPercent: 15.8, confidence: 'moderate', category: 'Fitness', fatMassKg: 12.8, leanMassKg: 68 },
-      metrics: { gender: 'male', age: 22, height: 180, weight: 80.8, waist: 82, neck: 39, hip: 96 },
-      photoCount: 0,
-    }];
-    return {
-      settings: { ...defaultSettings, language: settings.language || 'sl', gender: 'male', age: '22', height: '180', calorieGoal: 2200, waterGoalMl: 3200, backgroundAccent: settings.backgroundAccent || 'blue' },
-      workoutsDemo,
-      calorieEntriesDemo,
-      bodyWeightDemo,
-      calHistoryDemo,
-      bodyFatDemo,
-      restDaysDemo: [dateOffsetKey(-3)],
-      cheatDaysDemo: [],
-      customExercisesDemo: [],
-      waterDemo: 1850,
-    };
-  }
-
-  function loadDemoData() {
-    if (currentUser && currentUser !== DEMO_EMAIL && !window.confirm(settings.language === 'sl' ? 'Preklopim na ločen demo profil? Tvoji podatki ostanejo shranjeni.' : 'Switch to a separate demo profile? Your real data stays saved.')) return;
-    const demo = buildDemoData();
-    const users = loadUsers();
-    if (!users.some((user) => user.email === DEMO_EMAIL)) {
-      localStorage.setItem(USERS_KEY, JSON.stringify([...users, { email: DEMO_EMAIL, passwordHash: 'demo-profile', createdAt: new Date().toISOString() }]));
-    }
-    localStorage.setItem(getWorkoutStorageKey(DEMO_EMAIL), JSON.stringify(demo.workoutsDemo));
-    localStorage.setItem(getCaloriesStorageKey(DEMO_EMAIL), JSON.stringify(demo.calorieEntriesDemo));
-    localStorage.setItem(getSettingsStorageKey(DEMO_EMAIL), JSON.stringify(demo.settings));
-    localStorage.setItem(getBodyWeightKey(DEMO_EMAIL), JSON.stringify(demo.bodyWeightDemo));
-    localStorage.setItem(getCalHistoryKey(DEMO_EMAIL), JSON.stringify(demo.calHistoryDemo));
-    localStorage.setItem(getBodyFatKey(DEMO_EMAIL), JSON.stringify(demo.bodyFatDemo));
-    localStorage.setItem(getRestKey(DEMO_EMAIL), JSON.stringify(demo.restDaysDemo));
-    localStorage.setItem(getCheatKey(DEMO_EMAIL), JSON.stringify(demo.cheatDaysDemo));
-    localStorage.setItem(getCustomExKey(DEMO_EMAIL), JSON.stringify(demo.customExercisesDemo));
-    localStorage.setItem(getWaterKey(DEMO_EMAIL), String(demo.waterDemo));
-    localStorage.setItem(DEMO_FLAG_KEY, new Date().toISOString());
-    setCurrentUser(DEMO_EMAIL);
-    setActiveSection('dashboard');
-    setShowTutorial(false);
-    window.setTimeout(() => {
-      mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 80);
-    setToast(copy.demoLoaded);
-  }
-
-  function clearDemoData() {
-    if (!window.confirm(copy.demoClearConfirm)) return;
-    removeUserLocalData(DEMO_EMAIL);
-    localStorage.removeItem(DEMO_FLAG_KEY);
-    localStorage.setItem(USERS_KEY, JSON.stringify(loadUsers().filter((user) => user.email !== DEMO_EMAIL)));
-    if (currentUser === DEMO_EMAIL) {
-      localStorage.removeItem(SESSION_KEY);
-      setCurrentUser('');
-      setWorkouts([]);
-      setCalorieEntries([]);
-      setBodyWeightEntries([]);
-      setBodyFatHistory([]);
-      setCalHistory([]);
-      setWaterToday(0);
-    }
-    setToast(copy.demoCleared);
-  }
   function getIngredientMealLabel() {
     return ingredientMode === 'quick'
       ? (ingredientQuery.trim() || 'Estimated food')
@@ -5865,7 +5748,6 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               <span>{authMode === 'signup' ? copy.authSwitchLogin : copy.authSwitchSignup}</span>
               <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAuthError(''); }}>{authMode === 'signup' ? copy.login : copy.signup}</button>
             </div>}
-            <button className="action-btn-outline full-width demo-login-btn" type="button" onClick={loadDemoData}>{copy.demoTry}</button>
             <p className="auth-local-note">{copy.authLocalOnly}</p>
           </section>
         </section>
@@ -5920,7 +5802,16 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             </button>
             <button className="context-help-btn topbar-help-btn" type="button" onClick={() => setHelpTopic('tutorial')} title={copy.tutorialOpen} aria-label={copy.tutorialOpen}>?</button>
             <span className="user-chip">{getUserBadge(currentUser)}</span>
-            <button className="theme-toggle" type="button" onClick={() => setTheme((c) => (c === 'dark' ? 'light' : 'dark'))}>{theme === 'dark' ? 'L' : 'D'}</button>
+            <button
+              className="theme-toggle"
+              type="button"
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              data-mode={theme}
+              onClick={() => setTheme((c) => (c === 'dark' ? 'light' : 'dark'))}
+            >
+              <span aria-hidden="true">{theme === 'dark' ? 'LT' : 'DK'}</span>
+            </button>
             <button className="action-btn-outline" type="button" onClick={logout}>{copy.logout}</button>
           </div>
         </header>
@@ -5950,7 +5841,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                 <button className="action-btn-outline" type="button" onClick={repeatLastWorkout}>{copy.repeatLastWorkout}</button>
                 <button className="action-btn-outline" type="button" onClick={copyYesterdayMeals}>{copy.copyYesterdayMeals}</button>
               </div>
-              {!hasProgressData && <div className="empty-state dashboard-empty-state"><h4>{copy.dashboardEmptyTitle}</h4><p>{copy.dashboardEmptyBody}</p><button className="action-btn-outline" type="button" onClick={loadDemoData}>{copy.demoTry}</button></div>}
+              {!hasProgressData && <div className="empty-state dashboard-empty-state"><h4>{copy.dashboardEmptyTitle}</h4><p>{copy.dashboardEmptyBody}</p></div>}
             </section>
             <section className="glass-panel daily-control-panel fade-in-up" {...tourAttrs('dashboard-overview')}>
               <div className="panel-header">
@@ -7194,8 +7085,6 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             <div className="settings-button-row privacy-actions-row">
               <button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button>
               <button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button>
-              <button className="action-btn-outline" type="button" onClick={loadDemoData}>{copy.demoTry}</button>
-              {currentUser === DEMO_EMAIL && <button className="action-btn-outline danger-button" type="button" onClick={clearDemoData}>{copy.demoClear}</button>}
               <a className="action-btn-outline privacy-link-btn" href={`${import.meta.env.BASE_URL}privacy.html`} target="_blank" rel="noreferrer">{copy.privacyPolicy}</a>
               <button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button>
             </div>

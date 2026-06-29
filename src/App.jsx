@@ -7292,30 +7292,27 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           </button>
           )}
 
-          <div className={`quick-actions-widget${quickActionsOpen ? ' open' : ''}`}>
           {quickActionsOpen && (
-            <div className="quick-actions-menu glass-panel">
-              <div className="quick-actions-head">
-                <strong>{slUi ? 'Akcije' : 'Actions'}</strong>
-                <button className="context-help-btn" type="button" onClick={() => setQuickActionsOpen(false)} aria-label={slUi ? 'Zapri' : 'Close'}>x</button>
+            <div className="quick-actions-widget open">
+              <div className="quick-actions-menu glass-panel">
+                <div className="quick-actions-head">
+                  <strong>{slUi ? 'Akcije' : 'Actions'}</strong>
+                  <button className="context-help-btn" type="button" onClick={() => setQuickActionsOpen(false)} aria-label={slUi ? 'Zapri' : 'Close'}>x</button>
+                </div>
+                <div className="quick-actions-grid">
+                  {quickActions.map((action) => (
+                    <button key={action.id} type="button" className="quick-action-mini" onClick={() => runCommandAction(action)}>
+                      <span>{action.icon}</span>
+                      <strong>{action.label}</strong>
+                    </button>
+                  ))}
+                </div>
+                <button className="action-btn-outline full-width" type="button" onClick={() => { setCommandOpen(true); setQuickActionsOpen(false); }}>
+                  {slUi ? 'Odpri iskanje' : 'Open search'}
+                </button>
               </div>
-              <div className="quick-actions-grid">
-                {quickActions.map((action) => (
-                  <button key={action.id} type="button" className="quick-action-mini" onClick={() => runCommandAction(action)}>
-                    <span>{action.icon}</span>
-                    <strong>{action.label}</strong>
-                  </button>
-                ))}
-              </div>
-              <button className="action-btn-outline full-width" type="button" onClick={() => { setCommandOpen(true); setQuickActionsOpen(false); }}>
-                {slUi ? 'Odpri iskanje' : 'Open search'}
-              </button>
             </div>
           )}
-          <button className="quick-actions-fab" type="button" onClick={() => setQuickActionsOpen((open) => !open)} aria-expanded={quickActionsOpen} aria-label={slUi ? 'Akcije' : 'Actions'}>
-            <span>{slUi ? 'Akcije' : 'Actions'}</span>
-          </button>
-          </div>
         </>
       )}
 

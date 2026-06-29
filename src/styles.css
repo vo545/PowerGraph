@@ -1707,20 +1707,6 @@ p {
   justify-items: start;
 }
 
-.quick-actions-fab {
-  min-width: 74px;
-  height: 42px;
-  padding: 0 14px;
-  border: 1px solid rgba(var(--accent-rgb), 0.28);
-  border-radius: 999px;
-  background: rgba(5, 7, 10, 0.82);
-  color: var(--text-primary);
-  font-weight: 950;
-  cursor: pointer;
-  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.32);
-  backdrop-filter: blur(14px);
-}
-
 .quick-actions-menu {
   width: min(420px, calc(100vw - 28px));
   padding: 14px;
@@ -6825,7 +6811,11 @@ body {
 
 @media (max-width: 720px) {
   .quick-open-btn {
-    display: none;
+    display: inline-flex;
+    min-width: 74px;
+    height: 38px;
+    padding: 0 10px;
+    font-size: 0.78rem;
   }
 
   .quick-actions-widget {
@@ -6843,14 +6833,6 @@ body {
     height: 38px;
     font-size: 0.96rem;
     opacity: 0.78;
-  }
-
-  .quick-actions-fab {
-    min-width: 64px;
-    height: 36px;
-    padding: 0 11px;
-    font-size: 0.78rem;
-    opacity: 0.9;
   }
 
   .quick-actions-menu {

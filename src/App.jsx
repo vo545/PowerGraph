@@ -5910,8 +5910,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               </button>
             )}
             {syncing && <span className="sync-indicator" title={settings.language === 'sl' ? 'Sinhroniziram...' : 'Syncing...'}>↻</span>}
-            <button className="quick-open-btn" type="button" onClick={() => { setCommandOpen(true); setQuickActionsOpen(false); }} title={slUi ? 'Hitre akcije (Ctrl+K)' : 'Quick actions (Ctrl+K)'} aria-label={slUi ? 'Odpri hitre akcije' : 'Open quick actions'}>
-              <span>{slUi ? 'Hitre akcije' : 'Quick actions'}</span>
+            <button className="quick-open-btn" type="button" onClick={() => { setCommandOpen(true); setQuickActionsOpen(false); }} title={slUi ? 'Akcije (Ctrl+K)' : 'Actions (Ctrl+K)'} aria-label={slUi ? 'Odpri akcije' : 'Open actions'}>
+              <span>{slUi ? 'Akcije' : 'Actions'}</span>
               <kbd>Ctrl K</kbd>
             </button>
             <button className="context-help-btn topbar-help-btn" type="button" onClick={() => setHelpTopic('tutorial')} title={copy.tutorialOpen} aria-label={copy.tutorialOpen}>?</button>
@@ -7235,7 +7235,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           {quickActionsOpen && (
             <div className="quick-actions-menu glass-panel">
               <div className="quick-actions-head">
-                <strong>{slUi ? 'Hitre akcije' : 'Quick actions'}</strong>
+                <strong>{slUi ? 'Akcije' : 'Actions'}</strong>
                 <button className="context-help-btn" type="button" onClick={() => setQuickActionsOpen(false)} aria-label={slUi ? 'Zapri' : 'Close'}>x</button>
               </div>
               <div className="quick-actions-grid">
@@ -7251,8 +7251,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               </button>
             </div>
           )}
-          <button className="quick-actions-fab" type="button" onClick={() => setQuickActionsOpen((open) => !open)} aria-expanded={quickActionsOpen} aria-label={slUi ? 'Hitre akcije' : 'Quick actions'}>
-            <span>{slUi ? 'Hitre akcije' : 'Quick actions'}</span>
+          <button className="quick-actions-fab" type="button" onClick={() => setQuickActionsOpen((open) => !open)} aria-expanded={quickActionsOpen} aria-label={slUi ? 'Akcije' : 'Actions'}>
+            <span>{slUi ? 'Akcije' : 'Actions'}</span>
           </button>
           </div>
         </>
@@ -7260,10 +7260,10 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
 
       {commandOpen && (
         <div className="command-overlay" onClick={() => setCommandOpen(false)}>
-          <section className="command-panel glass-panel" role="dialog" aria-label={slUi ? 'Hitri meni' : 'Quick menu'} onClick={(event) => event.stopPropagation()}>
+          <section className="command-panel glass-panel" role="dialog" aria-label={slUi ? 'Akcije' : 'Actions'} onClick={(event) => event.stopPropagation()}>
             <div className="command-head">
               <div>
-                <p className="exercise-category">{slUi ? 'Hitri meni' : 'Quick menu'}</p>
+                <p className="exercise-category">{slUi ? 'Akcije' : 'Actions'}</p>
                 <h3>{slUi ? 'Kam zelis?' : 'Where to?'}</h3>
               </div>
               <button className="context-help-btn" type="button" onClick={() => setCommandOpen(false)} aria-label={slUi ? 'Zapri' : 'Close'}>x</button>

@@ -511,12 +511,26 @@ function buildNutritionResult(items, source = 'local') {
     fiber: acc.fiber + Number(item.fiber || 0),
     sugar: acc.sugar + Number(item.sugar || 0),
   }), { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 });
+  const confidence = items.every((item) => item.confidence === 'high')
+    ? 'high'
+    : (items.some((item) => item.confidence === 'low') ? 'low' : 'moderate');
   return {
     source,
-    confidence: items.every((item) => item.confidence !== 'low') ? 'moderate' : 'low',
+    confidence,
     total: Object.fromEntries(Object.entries(total).map(([key, value]) => [key, key === 'kcal' ? Math.round(value) : Number(value.toFixed(1))])),
     items: items.map((item) => ({ ...item, kcal: Math.round(item.kcal) })),
   };
+}
+
+function parseAiJson(text) {
+  if (typeof text !== 'string' || !text.trim()) return null;
+  const cleaned = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+  try { return JSON.parse(cleaned); } catch {}
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+  try { return JSON.parse(cleaned.slice(start, end + 1)); } catch {}
+  return null;
 }
 
 function analyzeIngredientsLocally({ mode, query, preciseItems }) {
@@ -531,19 +545,37 @@ function analyzeIngredientsLocally({ mode, query, preciseItems }) {
 }
 
 function sanitizeIngredientResult(parsed, source = 'ai') {
-  if (!parsed?.total || !Array.isArray(parsed.items)) return null;
+  if (!parsed || !Array.isArray(parsed.items)) return null;
   const items = parsed.items.map((item) => ({
     name: String(item.name || 'Food').slice(0, 80),
     grams: Math.max(0, Math.round(Number(item.grams) || 0)),
-    kcal: Math.max(0, Math.round(Number(item.kcal) || 0)),
+    kcalPer100: Math.max(0, Math.round(Number(item.kcalPer100 || item.kcal_per_100 || item.caloriesPer100g) || 0)),
+    kcal: Math.max(0, Math.round(Number(item.kcal) || (Number(item.kcalPer100 || item.kcal_per_100 || item.caloriesPer100g) * Number(item.grams || 0) / 100) || 0)),
     protein: Number((Number(item.protein) || 0).toFixed(1)),
     carbs: Number((Number(item.carbs) || 0).toFixed(1)),
     fat: Number((Number(item.fat) || 0).toFixed(1)),
     fiber: Number((Number(item.fiber) || 0).toFixed(1)),
     sugar: Number((Number(item.sugar) || 0).toFixed(1)),
-    confidence: item.confidence || 'moderate',
+    quantity: item.quantity ? String(item.quantity).slice(0, 40) : '',
+    unit: item.unit ? String(item.unit).slice(0, 24) : '',
+    assumption: item.assumption ? String(item.assumption).slice(0, 180) : '',
+    confidence: ['low', 'moderate', 'high'].includes(item.confidence) ? item.confidence : 'moderate',
   })).filter((item) => item.name && (item.kcal || item.grams));
-  return items.length ? buildNutritionResult(items, source) : null;
+  if (!items.length) return null;
+  const built = buildNutritionResult(items, source);
+  let calorieRange = null;
+  if (parsed.calorieRange && typeof parsed.calorieRange === 'object') {
+    const low = Math.max(0, Math.round(Number(parsed.calorieRange.low) || 0));
+    const high = Math.max(0, Math.round(Number(parsed.calorieRange.high) || 0));
+    if (low || high) calorieRange = { low: low || high, high: Math.max(low, high) };
+  }
+  return {
+    ...built,
+    mealName: parsed.mealName ? String(parsed.mealName).slice(0, 90) : '',
+    assumptions: Array.isArray(parsed.assumptions) ? parsed.assumptions.map((item) => String(item).slice(0, 180)).slice(0, 5) : [],
+    warnings: Array.isArray(parsed.warnings) ? parsed.warnings.map((item) => String(item).slice(0, 180)).slice(0, 5) : [],
+    calorieRange,
+  };
 }
 
 function getBodyFatCategory(percent, gender = 'male') {
@@ -888,12 +920,20 @@ const ui = {
     calEstHistoryEmpty: 'Še ni iskanj. Poišči prvo jed zgoraj.',
     calEstSaved: 'Shranjeno v knjižnico.',
     calEstAiResponse: 'Ocena AI',
-    calPhotoTitle: 'Oceni s sliko 📷',
-    calPhotoDesc: 'Slikaj jed – AI oceni kalorije za celoten obrok na sliki.',
+    calPhotoTitle: 'Analiza hrane s sliko',
+    calPhotoDesc: 'Slikaj hrano. AI najprej prepozna jedi, oceni grame, kalorije in makrote, potem pa lahko vse popraviš pred shranjevanjem.',
     calPhotoBtn: 'Dodaj sliko / Fotografiraj',
     calPhotoChange: 'Zamenjaj sliko',
-    calPhotoAnalyze: 'Oceni kalorije',
+    calPhotoAnalyze: 'Analiziraj sliko',
     calPhotoNoKey: 'AI backend ni nastavljen ali nisi povezan z njim.',
+    foodPhotoReviewTitle: 'Preglej in popravi AI oceno',
+    foodPhotoReviewDesc: 'To je ocena iz slike, ne tehtanje. Popravi ime, grame ali kcal za vsak item, nato shrani v obroke.',
+    foodCorrectionLabel: 'Popravek za AI',
+    foodCorrectionPlaceholder: 'npr. To nista 2 hlebca kruha, ampak 2 jajci. Kruha ni na sliki.',
+    foodCorrectionApply: 'Ponovno analiziraj s popravkom',
+    foodItemAdd: 'Dodaj item',
+    foodItemRemove: 'Odstrani',
+    foodEstimateReady: 'Ocena pripravljena. Preglej jo pred shranjevanjem.',
     prTitle: 'Osebni rekordi',
     prBadge: 'PR',
     prNoData: 'Še ni PR-jev. Dodaj trening!',
@@ -1351,12 +1391,20 @@ const ui = {
     calEstHistoryEmpty: 'No searches yet. Look up your first food above.',
     calEstSaved: 'Saved to library.',
     calEstAiResponse: 'AI estimate',
-    calPhotoTitle: 'Estimate from photo 📷',
-    calPhotoDesc: 'Take a photo – AI estimates the calories for the entire portion shown.',
+    calPhotoTitle: 'Analyze food photo',
+    calPhotoDesc: 'Take a food photo. AI identifies foods, estimates grams, calories, and macros, then you can correct everything before saving.',
     calPhotoBtn: 'Add photo / Take photo',
     calPhotoChange: 'Change photo',
-    calPhotoAnalyze: 'Estimate calories',
+    calPhotoAnalyze: 'Analyze photo',
     calPhotoNoKey: 'AI backend is not configured or connected.',
+    foodPhotoReviewTitle: 'Review and correct the AI estimate',
+    foodPhotoReviewDesc: 'This is a visual estimate, not a scale measurement. Correct the name, grams, or kcal for each item before saving.',
+    foodCorrectionLabel: 'Correction for AI',
+    foodCorrectionPlaceholder: 'e.g. Those are not 2 bread rolls, they are 2 eggs. There is no bread in the photo.',
+    foodCorrectionApply: 'Re-analyze with correction',
+    foodItemAdd: 'Add item',
+    foodItemRemove: 'Remove',
+    foodEstimateReady: 'Estimate ready. Review it before saving.',
     prTitle: 'Personal Records',
     prBadge: 'PR',
     prNoData: 'No PRs yet. Add a workout!',
@@ -3430,8 +3478,8 @@ function downloadFile(name, content, type) {
   URL.revokeObjectURL(url);
 }
 
-async function callGemini(email, parts) {
-  const data = await apiCall(email, '/api/gemini', 'POST', { parts });
+async function callGemini(email, parts, options = {}) {
+  const data = await apiCall(email, '/api/gemini', 'POST', { parts, ...options });
   return typeof data?.text === 'string' ? data.text : null;
 }
 
@@ -3864,6 +3912,7 @@ export default function App() {
   const [calImageLoading, setCalImageLoading] = useState(false);
   const [calPhotoResult, setCalPhotoResult] = useState(null);
   const [calPhotoError, setCalPhotoError] = useState('');
+  const [foodCorrectionText, setFoodCorrectionText] = useState('');
   const [calHistory, setCalHistory] = useState(() => loadCalHistory(initialSessionEmail));
   const [bodyWeightEntries, setBodyWeightEntries] = useState(() => loadBodyWeight(initialSessionEmail));
   const [bwForm, setBwForm] = useState(() => loadDraft(initialSessionEmail, 'bodyWeightForm', getDefaultBodyWeightForm()));
@@ -5300,6 +5349,7 @@ Be concise. Use average homemade/generic values, not brand values.`;
       setCalImage({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg', preview: dataUrl });
       setCalPhotoResult(null);
       setCalPhotoError('');
+      setFoodCorrectionText('');
     };
     img.onerror = () => { URL.revokeObjectURL(url); setCalPhotoError('error'); };
     img.src = url;
@@ -5311,31 +5361,41 @@ Be concise. Use average homemade/generic values, not brand values.`;
     setCalImageLoading(true);
     setCalPhotoError('');
     setCalPhotoResult(null);
+    setIngredientError('');
     try {
-      const prompt = `You are a nutritionist. Analyze this food photo carefully.
-Identify the food and estimate the total calories for the entire portion shown.
-Briefly describe what you see (1 sentence).
-Then on a new line write exactly: FOOD_NAME: <name of the main food or meal>
-Then on a new line write exactly: KCAL_PER_100G: <average kcal per 100g>
-Then on a new line write exactly: TOTAL_KCAL: <estimated total kcal for the portion shown>
-Be concise. Use average homemade/generic values, not brand values.`;
+      const prompt = `You are PowerGraph Food Vision, a careful nutrition estimator.
+Analyze this food photo and return ONLY valid JSON. Do not use markdown.
+
+Goal:
+- Identify every visible edible component separately.
+- Estimate realistic grams for the visible portion in the image, using plate/bowl/utensil context when available.
+- Estimate kcal, protein, carbs, fat, fiber, and sugar per item from the estimated grams.
+- Include kcalPer100 for every item when possible.
+- Use generic USDA-style averages, not branded values.
+- Do not invent hidden oils, sauces, or ingredients unless visually likely; list them as assumptions when used.
+- Use a realistic low-high calorieRange when portion size is uncertain.
+- Be conservative when uncertain and explain uncertainty in assumptions/warnings.
+- If the image is ambiguous, still provide the best estimate but mark confidence low.
+- Make total equal the sum of item estimates.
+
+JSON schema:
+{"mealName":"short meal name","assumptions":["short assumption"],"warnings":["short warning if needed"],"calorieRange":{"low":0,"high":0},"total":{"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0},"items":[{"name":"food item","quantity":"visible quantity like 2 eggs or 1 bowl","unit":"pieces|g|ml|serving","grams":0,"kcalPer100":0,"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"confidence":"low|moderate|high","assumption":"why this portion estimate was chosen"}]}`;
       const text = await callGemini(currentUser, [
         { inlineData: { mimeType: calImage.mimeType, data: calImage.base64 } },
         { text: prompt },
-      ]);
+      ], { generationConfig: { responseMimeType: 'application/json', temperature: 0.05, maxOutputTokens: 1800 } });
       if (text) {
-        const foodMatch = text.match(/FOOD_NAME:\s*(.+)/i);
-        const per100Match = text.match(/KCAL_PER_100G:\s*(\d+)/i);
-        const totalMatch = text.match(/TOTAL_KCAL:\s*(\d+)/i);
-        if (per100Match && totalMatch) {
-          const foodName = foodMatch ? foodMatch[1].trim() : 'Food';
-          const kcalPer100 = Number(per100Match[1]);
-          const total = Number(totalMatch[1]);
-          const aiText = text.replace(/FOOD_NAME:\s*.+/i, '').replace(/KCAL_PER_100G:\s*\d+/i, '').replace(/TOTAL_KCAL:\s*\d+/i, '').trim();
-          const estimatedGrams = kcalPer100 > 0 ? Math.round(total / kcalPer100 * 100) : 100;
-          setCalPhotoResult({ name: foodName, kcalPer100, total, aiText });
-          setCalHistory(prev => [{ id: Date.now(), name: foodName, grams: estimatedGrams, kcalPer100, total, date: new Date().toISOString().slice(0, 10) }, ...prev]);
-          setToast(copy.calEstSaved);
+        const parsed = parseAiJson(text);
+        if (parsed) {
+          const result = sanitizeIngredientResult(parsed, 'photo-ai');
+          if (result) {
+            setCalPhotoResult(result);
+            setIngredientResults(result);
+            setFoodCorrectionText('');
+            setToast(copy.foodEstimateReady);
+          } else {
+            setCalPhotoError('error');
+          }
         } else {
           setCalPhotoError('error');
         }
@@ -5344,6 +5404,44 @@ Be concise. Use average homemade/generic values, not brand values.`;
       }
     } catch { setCalPhotoError('error'); }
     finally { setCalImageLoading(false); }
+  }
+
+  async function reanalyzeFoodPhotoWithCorrection() {
+    if (!ingredientResults?.items?.length || !foodCorrectionText.trim()) return;
+    if (!aiEnabled) { setCalPhotoError('noKey'); return; }
+    setCalImageLoading(true);
+    setCalPhotoError('');
+    try {
+      const currentEstimate = JSON.stringify({
+        mealName: ingredientResults.mealName,
+        assumptions: ingredientResults.assumptions || [],
+        items: ingredientResults.items,
+      });
+      const prompt = `You are PowerGraph Food Vision. The previous food-photo estimate may be wrong.
+User correction: "${foodCorrectionText.trim()}"
+Current estimate JSON: ${currentEstimate}
+
+Use the correction as truth. If a food identity changed, recalculate grams, kcal, and macros from generic USDA-style averages. Return ONLY valid JSON with the same schema:
+If the user corrects only one item, keep the other visible items unless the correction says to remove them. Recalculate total from the final item list.
+{"mealName":"short meal name","assumptions":["short assumption"],"warnings":["short warning if needed"],"calorieRange":{"low":0,"high":0},"total":{"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0},"items":[{"name":"food item","quantity":"visible or corrected quantity","unit":"pieces|g|ml|serving","grams":0,"kcalPer100":0,"kcal":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"sugar":0,"confidence":"low|moderate|high","assumption":"why this estimate was chosen"}]}`;
+      const parts = [
+        ...(calImage ? [{ inlineData: { mimeType: calImage.mimeType, data: calImage.base64 } }] : []),
+        { text: prompt },
+      ];
+      const text = await callGemini(currentUser, parts, { generationConfig: { responseMimeType: 'application/json', temperature: 0.03, maxOutputTokens: 1800 } });
+      const parsed = parseAiJson(text);
+      if (!parsed) { setCalPhotoError('error'); return; }
+      const result = sanitizeIngredientResult(parsed, calImage ? 'photo-ai-corrected' : 'ai-corrected');
+      if (!result) { setCalPhotoError('error'); return; }
+      setCalPhotoResult(result);
+      setIngredientResults(result);
+      setFoodCorrectionText('');
+      setToast(copy.foodEstimateReady);
+    } catch {
+      setCalPhotoError('error');
+    } finally {
+      setCalImageLoading(false);
+    }
   }
 
   async function handleAddCustomExercise() {
@@ -5423,17 +5521,15 @@ Return JSON only, no markdown:
       }
       let result = null;
       if (aiEnabled) {
-        const text = await callGemini(currentUser, [{ text: prompt }]);
-        const m = text?.match(/\{[\s\S]*\}/);
-        if (m) {
-          result = sanitizeIngredientResult(JSON.parse(m[0]), 'ai');
-        }
+        const text = await callGemini(currentUser, [{ text: prompt }], { generationConfig: { responseMimeType: 'application/json', temperature: 0.05, maxOutputTokens: 1600 } });
+        const parsed = parseAiJson(text);
+        if (parsed) result = sanitizeIngredientResult(parsed, 'ai');
       }
       if (!result) result = localFallback;
       if (!result) { setIngredientError('error'); return; }
       setIngredientResults(result);
       const totalKcal = Math.round(result.total.kcal);
-      const label = getIngredientMealLabel();
+      const label = getIngredientMealLabel(result);
       const totalGrams = result.items.reduce((sum, item) => sum + Number(item.grams || 0), 0);
       setCalHistory(prev => [{ id: Date.now(), name: label, grams: totalGrams, kcalPer100: totalGrams ? Math.round(totalKcal / totalGrams * 100) : 0, total: totalKcal, protein: Number(result.total.protein) || 0, carbs: Number(result.total.carbs) || 0, fat: Number(result.total.fat) || 0, date: new Date().toISOString().slice(0, 10) }, ...prev]);
       setToast(copy.calEstSaved);
@@ -5441,7 +5537,7 @@ Return JSON only, no markdown:
       if (localFallback) {
         setIngredientResults(localFallback);
         const totalKcal = Math.round(localFallback.total.kcal);
-        const label = getIngredientMealLabel();
+        const label = getIngredientMealLabel(localFallback);
         const totalGrams = localFallback.items.reduce((sum, item) => sum + Number(item.grams || 0), 0);
         setCalHistory(prev => [{ id: Date.now(), name: label, grams: totalGrams, kcalPer100: totalGrams ? Math.round(totalKcal / totalGrams * 100) : 0, total: totalKcal, protein: Number(localFallback.total.protein) || 0, carbs: Number(localFallback.total.carbs) || 0, fat: Number(localFallback.total.fat) || 0, date: new Date().toISOString().slice(0, 10) }, ...prev]);
         setToast(copy.calEstSaved);
@@ -5763,10 +5859,80 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
     setToast(copy.cheatDayDone);
   }
 
-  function getIngredientMealLabel() {
+  function getIngredientMealLabel(result = ingredientResults) {
+    if (result?.mealName) return result.mealName;
+    if (result?.source?.startsWith('photo') && result.items?.length) {
+      return result.items.map((item) => item.name).filter(Boolean).slice(0, 3).join(', ') || 'Photo food estimate';
+    }
     return ingredientMode === 'quick'
       ? (ingredientQuery.trim() || 'Estimated food')
       : ingredientItems.filter((item) => item.name.trim()).map((item) => item.name.trim()).join(', ') || 'Estimated food';
+  }
+  function rebuildIngredientResult(items, current = ingredientResults) {
+    const cleaned = items.map((item) => ({
+      ...item,
+      name: String(item.name || 'Food').slice(0, 80),
+      grams: Math.max(0, Math.round(Number(item.grams) || 0)),
+      kcalPer100: Math.max(0, Math.round(Number(item.kcalPer100) || 0)),
+      kcal: Math.max(0, Math.round(Number(item.kcal) || 0)),
+      protein: Number((Number(item.protein) || 0).toFixed(1)),
+      carbs: Number((Number(item.carbs) || 0).toFixed(1)),
+      fat: Number((Number(item.fat) || 0).toFixed(1)),
+      fiber: Number((Number(item.fiber) || 0).toFixed(1)),
+      sugar: Number((Number(item.sugar) || 0).toFixed(1)),
+      confidence: ['low', 'moderate', 'high'].includes(item.confidence) ? item.confidence : 'moderate',
+    })).filter((item) => item.name && (item.kcal || item.grams));
+    if (!cleaned.length) return null;
+    const next = buildNutritionResult(cleaned, current?.source || 'manual');
+    return {
+      ...next,
+      mealName: current?.mealName || '',
+      assumptions: current?.assumptions || [],
+      warnings: current?.warnings || [],
+      calorieRange: current?.calorieRange || null,
+      reviewed: true,
+    };
+  }
+  function updateIngredientReviewItem(index, field, value) {
+    setIngredientResults((current) => {
+      if (!current?.items?.length) return current;
+      const items = current.items.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        const next = { ...item, [field]: value };
+        if (field === 'grams') {
+          const oldGrams = Number(item.grams) || 0;
+          const newGrams = Number(value) || 0;
+          if (oldGrams > 0 && newGrams > 0) {
+            const ratio = newGrams / oldGrams;
+            ['kcal', 'protein', 'carbs', 'fat', 'fiber', 'sugar'].forEach((key) => {
+              next[key] = key === 'kcal'
+                ? Math.round((Number(item[key]) || 0) * ratio)
+                : Number(((Number(item[key]) || 0) * ratio).toFixed(1));
+            });
+          } else if (Number(item.kcalPer100) > 0 && newGrams > 0) {
+            next.kcal = Math.round((Number(item.kcalPer100) * newGrams) / 100);
+          }
+        }
+        if (field === 'kcal' && Number(item.grams) > 0) {
+          next.kcalPer100 = Math.round((Number(value) || 0) / Number(item.grams) * 100);
+        }
+        return next;
+      });
+      return rebuildIngredientResult(items, current) || current;
+    });
+  }
+  function removeIngredientReviewItem(index) {
+    setIngredientResults((current) => {
+      if (!current?.items?.length || current.items.length <= 1) return current;
+      return rebuildIngredientResult(current.items.filter((_, itemIndex) => itemIndex !== index), current) || current;
+    });
+  }
+  function addIngredientReviewItem() {
+    setIngredientResults((current) => {
+      const base = current || { source: 'manual', items: [], assumptions: [], warnings: [] };
+      const nextItem = { name: 'Food item', grams: 100, kcalPer100: 100, kcal: 100, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, confidence: 'low', assumption: 'Added manually' };
+      return rebuildIngredientResult([...(base.items || []), nextItem], base) || base;
+    });
   }
   function addIngredientResultToMeals(result = ingredientResults) {
     if (!result?.total) return;
@@ -5774,13 +5940,26 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
       id: Date.now(),
       date: calorieForm.date || new Date().toISOString().slice(0, 10),
       mealType: calorieForm.mealType || 'snack',
-      name: getIngredientMealLabel(),
+      name: getIngredientMealLabel(result),
       calories: Math.round(Number(result.total.kcal) || 0),
       protein: Number(result.total.protein) || 0,
       carbs: Number(result.total.carbs) || 0,
       fat: Number(result.total.fat) || 0,
     };
     setCalorieEntries((current) => [...current, entry]);
+    const totalGrams = result.items?.reduce((sum, item) => sum + Number(item.grams || 0), 0) || 0;
+    setCalHistory(prev => [{
+      id: Date.now() + 1,
+      name: entry.name,
+      grams: totalGrams,
+      kcalPer100: totalGrams ? Math.round(entry.calories / totalGrams * 100) : 0,
+      total: entry.calories,
+      protein: entry.protein,
+      carbs: entry.carbs,
+      fat: entry.fat,
+      date: entry.date,
+      source: result.source,
+    }, ...prev]);
     setToast(settings.language === 'sl' ? 'Ocena dodana v obroke.' : 'Estimate added to meals.');
   }
   function editIngredientResultAsMeal(result = ingredientResults) {
@@ -5788,7 +5967,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
     setCalorieForm((current) => ({
       ...current,
       mealType: current.mealType || 'snack',
-      name: getIngredientMealLabel(),
+      name: getIngredientMealLabel(result),
       calories: String(Math.round(Number(result.total.kcal) || 0)),
       protein: String(Number(result.total.protein) || ''),
       carbs: String(Number(result.total.carbs) || ''),
@@ -6622,17 +6801,59 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                 {ingredientLoading ? copy.ingredientAnalyzing : (aiEnabled ? copy.ingredientAnalyze : (settings.language === 'sl' ? 'Izracunaj hrano' : 'Analyze food'))}
               </button>
             </form>
+            <div className="food-photo-analyzer">
+              <div className="food-photo-head">
+                <div>
+                  <h4>{copy.calPhotoTitle}</h4>
+                  <p className="settings-copy">{copy.calPhotoDesc}</p>
+                </div>
+                <span className="calc-method-pill">{aiEnabled ? 'AI vision' : 'Backend needed'}</span>
+              </div>
+              <input ref={calImageRef} type="file" accept="image/*" capture="environment" className="hidden-input" onChange={handleCalImage} />
+              {calImage ? (
+                <div className="food-photo-preview">
+                  <img src={calImage.preview} alt={settings.language === 'sl' ? 'Slika hrane' : 'Food preview'} />
+                  <div className="food-photo-actions">
+                    <button className="action-btn-primary" type="button" disabled={calImageLoading} onClick={analyzeImageCalories}>
+                      {calImageLoading ? copy.ingredientAnalyzing : copy.calPhotoAnalyze}
+                    </button>
+                    <button className="action-btn-outline" type="button" onClick={() => calImageRef.current?.click()}>{copy.calPhotoChange}</button>
+                    <button className="action-btn-outline danger-button" type="button" onClick={() => { setCalImage(null); setCalPhotoResult(null); setCalPhotoError(''); }}>
+                      {copy.bodyFatRemove}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button className="food-photo-drop" type="button" onClick={() => calImageRef.current?.click()}>
+                  <span>+</span>
+                  <strong>{copy.calPhotoBtn}</strong>
+                </button>
+              )}
+            </div>
             {ingredientError === 'noKey' && <p className="auth-error">{copy.ingredientNoKey}</p>}
             {ingredientError === 'error' && <p className="auth-error">{copy.ingredientError}</p>}
+            {calPhotoError === 'noKey' && <p className="auth-error">{copy.calPhotoNoKey}</p>}
+            {calPhotoError === 'error' && <p className="auth-error">{copy.calEstError}</p>}
             {ingredientResults && (
               <div style={{marginTop:'1.5rem'}}>
                 {/* Total summary */}
                 <div style={{padding:'1rem',borderRadius:'12px',background:'linear-gradient(135deg,rgba(99,102,241,0.18),rgba(139,92,246,0.12))',marginBottom:'1rem'}}>
-                  <h3 style={{margin:'0 0 0.6rem',fontSize:'1rem'}}>{copy.ingredientTotal}</h3>
+                  <h3 style={{margin:'0 0 0.6rem',fontSize:'1rem'}}>{ingredientResults.source?.startsWith('photo') ? copy.foodPhotoReviewTitle : copy.ingredientTotal}</h3>
+                  {ingredientResults.source?.startsWith('photo') && <p className="settings-copy" style={{margin:'0 0 0.75rem',fontSize:'0.82rem'}}>{copy.foodPhotoReviewDesc}</p>}
                   <p className="settings-copy" style={{margin:'0 0 0.75rem',fontSize:'0.78rem'}}>
-                    {ingredientResults.source === 'ai' ? (settings.language === 'sl' ? 'Vir: AI + validacija makrov' : 'Source: AI + macro validation') : (settings.language === 'sl' ? 'Vir: offline parser in lokalna baza hrane' : 'Source: offline parser and local food database')}
+                    {ingredientResults.source?.startsWith('photo')
+                      ? (settings.language === 'sl' ? 'Vir: AI vision + tvoj pregled' : 'Source: AI vision + your review')
+                      : (ingredientResults.source?.includes('ai')
+                        ? (settings.language === 'sl' ? 'Vir: AI + tvoj pregled makrov' : 'Source: AI + your macro review')
+                        : (settings.language === 'sl' ? 'Vir: offline parser in lokalna baza hrane' : 'Source: offline parser and local food database'))}
                     {ingredientResults.unmatched?.length ? ` - ${settings.language === 'sl' ? 'Ni prepoznano' : 'Not recognized'}: ${ingredientResults.unmatched.join(', ')}` : ''}
                   </p>
+                  {(ingredientResults.calorieRange?.low || ingredientResults.calorieRange?.high) ? <p className="settings-copy nutrition-note">{settings.language === 'sl' ? 'Realen razpon' : 'Realistic range'}: {ingredientResults.calorieRange.low}-{ingredientResults.calorieRange.high} kcal</p> : null}
+                  {[...(ingredientResults.assumptions || []), ...(ingredientResults.warnings || [])].length ? (
+                    <div className="nutrition-note-list">
+                      {[...(ingredientResults.assumptions || []), ...(ingredientResults.warnings || [])].slice(0, 6).map((note, index) => <span key={`${note}-${index}`}>{note}</span>)}
+                    </div>
+                  ) : null}
                   <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))',gap:'0.5rem'}}>
                     {[['kcal','🔥','#f59e0b'],['protein','💪','#60a5fa'],['carbs','🌾','#fb923c'],['fat','🫙','#34d399'],['fiber','🌿','#86efac'],['sugar','🍬','#f472b6']].map(([key,icon,color]) => (
                       <div key={key} style={{textAlign:'center',padding:'0.4rem',borderRadius:'8px',background:'rgba(148,163,184,0.08)'}}>
@@ -6649,22 +6870,47 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                     <button className="action-btn-outline" type="button" onClick={() => editIngredientResultAsMeal()}>
                       {settings.language === 'sl' ? 'Uredi pred shranjevanjem' : 'Edit before saving'}
                     </button>
+                    <button className="action-btn-outline" type="button" onClick={addIngredientReviewItem}>
+                      + {copy.foodItemAdd}
+                    </button>
+                  </div>
+                  <div className="food-correction-box">
+                    <label className="settings-label" htmlFor="food-correction">{copy.foodCorrectionLabel}</label>
+                    <textarea id="food-correction" rows={2} value={foodCorrectionText} onChange={(event) => setFoodCorrectionText(event.target.value)} placeholder={copy.foodCorrectionPlaceholder} />
+                    <button className="action-btn-outline" type="button" disabled={!foodCorrectionText.trim() || calImageLoading} onClick={reanalyzeFoodPhotoWithCorrection}>
+                      {calImageLoading ? copy.ingredientAnalyzing : copy.foodCorrectionApply}
+                    </button>
                   </div>
                 </div>
-                {/* Per-ingredient breakdown */}
-                {ingredientResults.items?.map((item, i) => (
-                  <div key={i} style={{padding:'0.75rem 1rem',borderRadius:'10px',background:'rgba(148,163,184,0.05)',marginBottom:'0.5rem',borderLeft:`3px solid var(--primary-glow)`}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.35rem'}}>
-                      <strong style={{fontSize:'0.9rem'}}>{item.name}</strong>
-                      <span style={{fontSize:'0.8rem',opacity:0.6}}>{item.grams}g</span>
-                    </div>
-                    <div style={{display:'flex',flexWrap:'wrap',gap:'0.4rem'}}>
-                      {[['kcal','#f59e0b'],['protein','#60a5fa'],['carbs','#fb923c'],['fat','#34d399'],['fiber','#86efac'],['sugar','#f472b6']].map(([key,color]) => (
-                        item[key] !== undefined && <span key={key} style={{fontSize:'0.75rem',padding:'0.15rem 0.45rem',borderRadius:'999px',background:'rgba(148,163,184,0.1)',color}}>{key}: {item[key]}{key==='kcal'?'':' g'}</span>
-                      ))}
-                    </div>
+                <div className="nutrition-review-table">
+                  <div className="nutrition-review-row nutrition-review-header">
+                    <span>{settings.language === 'sl' ? 'Hrana' : 'Food'}</span>
+                    <span>g</span>
+                    <span>kcal</span>
+                    <span>P</span>
+                    <span>C</span>
+                    <span>F</span>
+                    <span>{settings.language === 'sl' ? 'Zaup.' : 'Conf.'}</span>
+                    <span />
                   </div>
-                ))}
+                  {ingredientResults.items?.map((item, i) => (
+                    <div className="nutrition-review-row" key={`${item.name}-${i}`}>
+                      <input aria-label={settings.language === 'sl' ? 'Ime hrane' : 'Food name'} value={item.name} onChange={(event) => updateIngredientReviewItem(i, 'name', event.target.value)} />
+                      <input aria-label="grams" type="number" min="0" inputMode="decimal" value={item.grams} onChange={(event) => updateIngredientReviewItem(i, 'grams', event.target.value)} />
+                      <input aria-label="kcal" type="number" min="0" inputMode="decimal" value={item.kcal} onChange={(event) => updateIngredientReviewItem(i, 'kcal', event.target.value)} />
+                      <input aria-label="protein" type="number" min="0" inputMode="decimal" value={item.protein} onChange={(event) => updateIngredientReviewItem(i, 'protein', event.target.value)} />
+                      <input aria-label="carbs" type="number" min="0" inputMode="decimal" value={item.carbs} onChange={(event) => updateIngredientReviewItem(i, 'carbs', event.target.value)} />
+                      <input aria-label="fat" type="number" min="0" inputMode="decimal" value={item.fat} onChange={(event) => updateIngredientReviewItem(i, 'fat', event.target.value)} />
+                      <select aria-label={settings.language === 'sl' ? 'Zanesljivost' : 'Confidence'} value={item.confidence || 'moderate'} onChange={(event) => updateIngredientReviewItem(i, 'confidence', event.target.value)}>
+                        <option value="low">low</option>
+                        <option value="moderate">moderate</option>
+                        <option value="high">high</option>
+                      </select>
+                      <button className="action-btn-outline danger-button" type="button" onClick={() => removeIngredientReviewItem(i)} aria-label={copy.foodItemRemove}>x</button>
+                      {item.assumption ? <small>{item.assumption}</small> : null}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </section>

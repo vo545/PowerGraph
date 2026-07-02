@@ -19,6 +19,7 @@ if (!process.env.JWT_SECRET) {
 }
 const JWT_SECRET = process.env.JWT_SECRET;
 const GEMINI_KEY = process.env.GEMINI_KEY || '';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
 // ── Baza podatkov ──────────────────────────────────────────────────────────
 const db = new DatabaseSync(process.env.DB_PATH || 'powergraph.db');
@@ -195,6 +196,20 @@ function normalizeGeminiParts(body) {
     }
   }
   return parts.length ? parts : null;
+}
+
+function normalizeGenerationConfig(body) {
+  const raw = body?.generationConfig;
+  if (!raw || typeof raw !== 'object') return null;
+  const config = {};
+  const temperature = Number(raw.temperature);
+  const maxOutputTokens = Number(raw.maxOutputTokens);
+  if (Number.isFinite(temperature)) config.temperature = Math.min(1, Math.max(0, temperature));
+  if (Number.isFinite(maxOutputTokens)) config.maxOutputTokens = Math.min(4096, Math.max(64, Math.round(maxOutputTokens)));
+  if (raw.responseMimeType === 'application/json' || raw.responseMimeType === 'text/plain') {
+    config.responseMimeType = raw.responseMimeType;
+  }
+  return Object.keys(config).length ? config : null;
 }
 
 // ── Prijava / Registracija ─────────────────────────────────────────────────
@@ -375,14 +390,18 @@ app.post('/api/gemini', requireAuth, async (req, res) => {
   if (!GEMINI_KEY) return res.status(503).json({ error: 'Gemini not configured' });
   const parts = normalizeGeminiParts(req.body);
   if (!parts) return res.status(400).json({ error: 'Invalid Gemini payload' });
+  const generationConfig = normalizeGenerationConfig(req.body);
 
   try {
     const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${GEMINI_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts }] }),
+        body: JSON.stringify({
+          contents: [{ parts }],
+          ...(generationConfig ? { generationConfig } : {}),
+        }),
       }
     );
     const data = await r.json();

@@ -1,8 +1,8 @@
 # PowerGraph
 
-PowerGraph je lokalno-prva fitness aplikacija za belezenje treningov, kalorij, telesne teze, pocitka, cheat dni, ranga in osnovnih AI ocen. Frontend deluje kot React/Vite PWA in podatke privzeto hrani v brskalniku. Backend je opcijski in sluzi za prijavo, SQLite backup/sync, admin pregled ter varen Gemini proxy.
+PowerGraph is a local-first fitness PWA for workouts, calories, body weight, hydration, rest days, cheat days, rankings, and AI-assisted estimates. The React/Vite frontend stores data in the browser by default. The optional backend supports login, SQLite backup/sync, admin review, and a safe Gemini proxy.
 
-## Hiter zagon
+## Quick Start
 
 Frontend:
 
@@ -20,17 +20,17 @@ copy .env.example .env
 npm run dev
 ```
 
-Za povezavo frontenda z backendom nastavi `VITE_API_URL`, na primer:
+To connect the frontend to the backend, set `VITE_API_URL`, for example:
 
 ```bash
 VITE_API_URL=http://localhost:3001
 ```
 
-## Pomembno
+## Important
 
-- Ne nastavljaj API kljucev v `VITE_*` spremenljivke, ker so vidne v brskalniku.
-- `GEMINI_KEY`, `JWT_SECRET`, `ADMIN_EMAIL`, `DB_PATH` in `CORS_ORIGIN` sodijo v `backend/.env`.
-- Backup JSON v nastavitvah ostaja priporocen tudi pri uporabi backend synca.
+- Do not put API keys in `VITE_*` variables because they are visible in the browser.
+- `GEMINI_KEY`, `JWT_SECRET`, `ADMIN_EMAIL`, `DB_PATH`, and `CORS_ORIGIN` belong in `backend/.env`.
+- JSON backup from Settings is still recommended even when backend sync is enabled.
 
 ## Build
 
@@ -38,4 +38,4 @@ VITE_API_URL=http://localhost:3001
 npm run build
 ```
 
-Build ustvari PWA v `dist/` z verzioniranim service workerjem.
+The build creates the PWA in `dist/` with a versioned service worker.

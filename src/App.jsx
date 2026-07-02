@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarElement, CategoryScale, Chart as ChartJS, Filler, LinearScale, LineElement, PointElement, Tooltip } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
 import { ClipboardList, Dumbbell, Flame, Home, Lightbulb, Scale, Search, Settings, Shield, Target, Trophy, Utensils } from 'lucide-react';
+import EmptyState from './components/EmptyState.jsx';
+import QuickActions from './components/QuickActions.jsx';
+import StatCard from './components/StatCard.jsx';
+import UpdateBanner from './components/UpdateBanner.jsx';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler, BarElement);
 
@@ -51,6 +55,8 @@ const RECAP_KEY_PREFIX = 'powergraph_recap_';
 const REST_KEY_PREFIX = 'powergraph_rest_';
 const CHEAT_KEY_PREFIX = 'powergraph_cheat_';
 const WATER_KEY_PREFIX = 'powergraph_water_';
+const DEMO_DAYS_KEY_PREFIX = 'powergraph_demo_days_';
+const DEMO_WATER_KEY_PREFIX = 'powergraph_demo_water_';
 const THEME_KEY = 'powergraph_theme';
 const LAST_SECTION_KEY_PREFIX = 'powergraph_last_section_';
 const DRAFT_KEY_PREFIX = 'powergraph_draft_';
@@ -68,6 +74,11 @@ const PBKDF2_ITERATIONS = 210000;
 const APP_SECTION_IDS = ['dashboard', 'exercises', 'history', 'bodyweight', 'calories', 'ocenjevalec', 'rankings', 'advisor', 'settings', 'admin'];
 
 function todayKey() { return new Date().toISOString().slice(0, 10); }
+function dateOffsetKey(offsetDays) {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  return date.toISOString().slice(0, 10);
+}
 function getInitialTheme() {
   try {
     const saved = localStorage.getItem(THEME_KEY);
@@ -618,9 +629,22 @@ function loadRestDays(email) { return email ? loadDateList(getRestKey(email), ge
 function loadCheatDays(email) { return email ? loadDateList(getCheatKey(email), getLegacyCheatKey(email)) : []; }
 function getCustomExKey(email) { return `${CUSTOM_EX_KEY_PREFIX}${email}`; }
 function loadCustomExercises(email) { if (!email) return []; try { return JSON.parse(localStorage.getItem(getCustomExKey(email)) || '[]'); } catch { return []; } }
-function getWaterKey(email) { return `${WATER_KEY_PREFIX}${email}_${new Date().toISOString().slice(0, 10)}`; }
+function getWaterKey(email, date = new Date().toISOString().slice(0, 10)) { return `${WATER_KEY_PREFIX}${email}_${date}`; }
 function loadWaterMl(email) { if (!email) return 0; try { return Number(localStorage.getItem(getWaterKey(email)) || 0); } catch { return 0; } }
 function saveWaterMl(email, ml) { if (email) localStorage.setItem(getWaterKey(email), String(ml)); }
+function getDemoDaysKey(email) { return `${DEMO_DAYS_KEY_PREFIX}${email || ''}`; }
+function getDemoWaterKey(email, date = new Date().toISOString().slice(0, 10)) { return `${DEMO_WATER_KEY_PREFIX}${email || ''}_${date}`; }
+function readDemoDayMarkers(email) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(getDemoDaysKey(email)) || '{}');
+    return {
+      rest: Array.isArray(parsed.rest) ? parsed.rest : [],
+      cheat: Array.isArray(parsed.cheat) ? parsed.cheat : [],
+    };
+  } catch {
+    return { rest: [], cheat: [] };
+  }
+}
 function loadBodyWeight(email) {
   if (!email) return [];
   try {
@@ -723,7 +747,7 @@ const ui = {
     bestWeight: 'Najbolj\u0161a te\u017ea',
     streak: 'Zaporedni dnevi',
     recent: 'Zadnji treningi',
-    noHistory: 'Treningov \u0161e ni.',
+    noHistory: 'Treningov se ni. Dodaj prvi trening in zacni slediti napredku.',
     byExercise: 'Statistika po vajah',
     target: 'Target',
     primary: 'Primarni target',
@@ -842,7 +866,7 @@ const ui = {
     caloriesRemaining: 'Preostanek',
     caloriesProgress: 'Napredek dneva',
     mealSaved: 'Obrok shranjen.',
-    noMeals: 'Za izbrani datum \u0161e ni obrokov.',
+    noMeals: 'Danes se ni obrokov. Dodaj obrok ali kopiraj vcerajsnje obroke.',
     todayMeals: 'Danes',
     mealsHistory: 'Dnevni obroki',
     kcalShort: 'kcal',
@@ -884,7 +908,7 @@ const ui = {
     bwDate: 'Datum meritve',
     bwWeight: 'Teža (kg)',
     bwSave: 'Shrani meritev',
-    bwNoData: 'Še ni meritev.',
+    bwNoData: 'Ni se vnosov telesne teze. Dodaj trenutno telesno tezo.',
     tdeeTitle: 'Kalkulator kalorij',
     tdeeCurrentWeight: 'Trenutna teža (kg)',
     tdeeGoalWeight: 'Ciljna teža (kg)',
@@ -1142,6 +1166,13 @@ const ui = {
     dataPrivacy: 'Podatki in zasebnost',
     dataPrivacyDesc: 'Podatki so shranjeni lokalno v tem brskalniku, razen če je omogočen backend sync. Export je tvoja varnostna kopija, import jo naloži nazaj.',
     privacyPolicy: 'Politika zasebnosti',
+    demoDataTitle: 'Vzorčni podatki',
+    demoDataDesc: 'Dodaj realistične vzorčne treninge, obroke, težo in vodo za testiranje grafov.',
+    demoDataAdd: 'Try demo with sample data',
+    demoDataClear: 'Clear demo data only',
+    demoDataConfirm: 'This will add sample data to your account. Continue?',
+    demoDataAdded: 'Sample data added.',
+    demoDataCleared: 'Sample data removed.',
   },
   en: {
     app: 'PowerGraph',
@@ -1179,7 +1210,7 @@ const ui = {
     bestWeight: 'Best weight',
     streak: 'Streak days',
     recent: 'Recent workouts',
-    noHistory: 'No workouts yet.',
+    noHistory: 'No workouts yet. Add your first workout to start tracking progress.',
     byExercise: 'Stats by exercise',
     target: 'Targets',
     primary: 'Primary targeting',
@@ -1298,7 +1329,7 @@ const ui = {
     caloriesRemaining: 'Remaining',
     caloriesProgress: 'Daily progress',
     mealSaved: 'Meal saved.',
-    noMeals: 'There are no meals for the selected date.',
+    noMeals: 'No meals logged today. Add a meal or copy yesterday\'s meals.',
     todayMeals: 'Today',
     mealsHistory: 'Meals for the day',
     kcalShort: 'kcal',
@@ -1340,7 +1371,7 @@ const ui = {
     bwDate: 'Measurement date',
     bwWeight: 'Weight (kg)',
     bwSave: 'Save measurement',
-    bwNoData: 'No measurements yet.',
+    bwNoData: 'No weight entries yet. Add your current body weight.',
     tdeeTitle: 'Calorie Calculator',
     tdeeCurrentWeight: 'Current weight (kg)',
     tdeeGoalWeight: 'Goal weight (kg)',
@@ -1598,6 +1629,13 @@ const ui = {
     dataPrivacy: 'Data & Privacy',
     dataPrivacyDesc: 'Your data is saved locally in this browser unless backend sync is enabled. Export is your backup, import restores it.',
     privacyPolicy: 'Privacy policy',
+    demoDataTitle: 'Sample data',
+    demoDataDesc: 'Add realistic demo workouts, meals, weight, water, rest days, and cheat days to test graphs.',
+    demoDataAdd: 'Try demo with sample data',
+    demoDataClear: 'Clear demo data only',
+    demoDataConfirm: 'This will add sample data to your account. Continue?',
+    demoDataAdded: 'Sample data added.',
+    demoDataCleared: 'Sample data removed.',
   },
 };
 
@@ -2521,6 +2559,8 @@ const normalizeWorkout = (w, i = 0) => {
     weight: Number(w.weight ?? 0),
     setDetails: setDetails.length ? setDetails : [1],
     comment: w.comment ?? w.notes ?? '',
+    ...(w.demo ? { demo: true } : {}),
+    ...(w.copiedFromDate ? { copiedFromDate: w.copiedFromDate } : {}),
     ...(setWeights?.length ? { setWeights } : {}),
   };
 };
@@ -4775,6 +4815,116 @@ export default function App() {
     localStorage.removeItem(getBodyFatKey(currentUser));
     setToast(copy.cleared);
   }
+
+  function addDemoData() {
+    if (!currentUser) return;
+    const markers = readDemoDayMarkers(currentUser);
+    const markerRest = new Set(markers.rest);
+    const markerCheat = new Set(markers.cheat);
+    const today = todayKey;
+    const demoWaterToday = Number(localStorage.getItem(getDemoWaterKey(currentUser, today)) || 0);
+    const hasRealData =
+      workouts.some((item) => !item.demo) ||
+      calorieEntries.some((item) => !item.demo) ||
+      bodyWeightEntries.some((item) => !item.demo) ||
+      bodyFatHistory.some((item) => !item.demo) ||
+      calHistory.some((item) => !item.demo) ||
+      restDays.some((date) => !markerRest.has(date)) ||
+      cheatDays.some((date) => !markerCheat.has(date)) ||
+      Math.max(0, waterToday - demoWaterToday) > 0;
+    if (hasRealData && !window.confirm(copy.demoDataConfirm)) return;
+
+    const now = Date.now();
+    const demoWorkouts = [
+      { id: now + 1, date: dateOffsetKey(-12), exercise: 'Bench Press', weight: 62.5, setDetails: [12, 10, 8], demo: true },
+      { id: now + 2, date: dateOffsetKey(-10), exercise: 'Lat Pulldown', weight: 55, setDetails: [12, 12, 10], demo: true },
+      { id: now + 3, date: dateOffsetKey(-8), exercise: 'Squat', weight: 82.5, setDetails: [10, 8, 8], demo: true },
+      { id: now + 4, date: dateOffsetKey(-5), exercise: 'Overhead Press', weight: 35, setDetails: [10, 9, 8], demo: true },
+      { id: now + 5, date: dateOffsetKey(-3), exercise: 'Barbell Curl', weight: 27.5, setDetails: [12, 10, 10], demo: true },
+      { id: now + 6, date: dateOffsetKey(-1), exercise: 'Romanian Deadlift', weight: 90, setDetails: [10, 8, 8], demo: true },
+    ].map(normalizeWorkout);
+    const demoMeals = [
+      { id: now + 101, date: today, mealType: 'breakfast', name: 'Greek yogurt, oats, berries', calories: 510, protein: 36, carbs: 62, fat: 11, demo: true },
+      { id: now + 102, date: today, mealType: 'lunch', name: 'Chicken rice bowl', calories: 720, protein: 52, carbs: 86, fat: 14, demo: true },
+      { id: now + 103, date: today, mealType: 'snack', name: 'Protein shake and banana', calories: 310, protein: 31, carbs: 39, fat: 4, demo: true },
+      { id: now + 104, date: dateOffsetKey(-1), mealType: 'dinner', name: 'Salmon, potatoes, salad', calories: 680, protein: 44, carbs: 58, fat: 28, demo: true },
+      { id: now + 105, date: dateOffsetKey(-1), mealType: 'breakfast', name: 'Eggs and toast', calories: 460, protein: 28, carbs: 38, fat: 22, demo: true },
+    ];
+    const demoWeights = [
+      { id: now + 201, date: dateOffsetKey(-14), weight: 82.4, demo: true },
+      { id: now + 202, date: dateOffsetKey(-10), weight: 82.0, demo: true },
+      { id: now + 203, date: dateOffsetKey(-6), weight: 81.5, demo: true },
+      { id: now + 204, date: dateOffsetKey(-2), weight: 81.1, demo: true },
+    ];
+    const demoRest = [dateOffsetKey(-7)];
+    const demoCheat = [dateOffsetKey(-6)];
+    const demoCalHistory = [
+      { id: now + 301, date: today, name: 'Chicken rice bowl', grams: 420, kcalPer100: 171, total: 720, protein: 52, carbs: 86, fat: 14, demo: true },
+    ];
+    const demoBodyFat = [{
+      id: now + 401,
+      date: today,
+      demo: true,
+      photoCount: 0,
+      metrics: { gender: settings.gender || 'male', weight: demoWeights.at(-1).weight, height: settings.height || '' },
+      result: {
+        bodyFatPercent: settings.gender === 'female' ? 24.8 : 16.4,
+        category: settings.gender === 'female' ? 'Fitness' : 'Athletic',
+        confidence: 'sample',
+        fatMassKg: settings.gender === 'female' ? 20.1 : 13.3,
+        leanMassKg: settings.gender === 'female' ? 61 : 67.8,
+        description: 'Sample estimate for testing the dashboard.',
+      },
+    }];
+
+    setWorkouts((current) => [...current.filter((item) => !item.demo), ...demoWorkouts]);
+    setCalorieEntries((current) => [...current.filter((item) => !item.demo), ...demoMeals]);
+    setBodyWeightEntries((current) => [...current.filter((item) => !item.demo), ...demoWeights]);
+    setCalHistory((current) => [...current.filter((item) => !item.demo), ...demoCalHistory]);
+    setBodyFatHistory((current) => [...current.filter((item) => !item.demo), ...demoBodyFat]);
+    setRestDays((current) => [...new Set([...current.filter((date) => !markerRest.has(date)), ...demoRest])]);
+    setCheatDays((current) => [...new Set([...current.filter((date) => !markerCheat.has(date)), ...demoCheat])]);
+    localStorage.setItem(getDemoDaysKey(currentUser), JSON.stringify({ rest: demoRest, cheat: demoCheat }));
+
+    const demoWaterMl = 1250;
+    const previousDemoWater = Number(localStorage.getItem(getDemoWaterKey(currentUser, today)) || 0);
+    setWaterToday((current) => {
+      const next = Math.max(0, current - previousDemoWater) + demoWaterMl;
+      saveWaterMl(currentUser, next);
+      return next;
+    });
+    localStorage.setItem(getDemoWaterKey(currentUser, today), String(demoWaterMl));
+    setSelectedExercise('Bench Press');
+    setToast(copy.demoDataAdded);
+  }
+
+  function clearDemoData() {
+    if (!currentUser) return;
+    const markers = readDemoDayMarkers(currentUser);
+    const markerRest = new Set(markers.rest);
+    const markerCheat = new Set(markers.cheat);
+    const today = todayKey;
+    const demoWaterToday = Number(localStorage.getItem(getDemoWaterKey(currentUser, today)) || 0);
+
+    setWorkouts((current) => current.filter((item) => !item.demo));
+    setCalorieEntries((current) => current.filter((item) => !item.demo));
+    setBodyWeightEntries((current) => current.filter((item) => !item.demo));
+    setCalHistory((current) => current.filter((item) => !item.demo));
+    setBodyFatHistory((current) => current.filter((item) => !item.demo));
+    setRestDays((current) => current.filter((date) => !markerRest.has(date)));
+    setCheatDays((current) => current.filter((date) => !markerCheat.has(date)));
+    localStorage.removeItem(getDemoDaysKey(currentUser));
+    localStorage.removeItem(getDemoWaterKey(currentUser, today));
+    if (demoWaterToday > 0) {
+      setWaterToday((current) => {
+        const next = Math.max(0, current - demoWaterToday);
+        saveWaterMl(currentUser, next);
+        return next;
+      });
+    }
+    setToast(copy.demoDataCleared);
+  }
+
   function deleteWorkout(id) {
     if (!window.confirm(copy.deleteConfirmWorkout)) return;
     setWorkouts((current) => current.filter((item) => item.id !== id));
@@ -5551,6 +5701,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
       ...entry,
       id: now + index,
       date: todayKey,
+      copiedFromDate: yesterdayKey,
     }));
     setCalorieEntries((current) => [...current, ...copied]);
     setCalorieForm((current) => ({ ...current, date: todayKey }));
@@ -5572,11 +5723,14 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
       setToast(settings.language === 'sl' ? `Včeraj ni vnosa za: ${label}.` : `No yesterday ${label.toLowerCase()} found.`);
       return;
     }
+    const alreadyHasTypeToday = calorieEntries.some((entry) => entry.date === todayKey && entry.mealType === mealType);
+    if (alreadyHasTypeToday && !window.confirm(copy.copyYesterdayDuplicateConfirm)) return;
     const now = Date.now();
     const copied = meals.map((entry, index) => ({
       ...entry,
       id: now + index,
       date: todayKey,
+      copiedFromDate: yesterdayKey,
     }));
     setCalorieEntries((current) => [...current, ...copied]);
     setCalorieForm((current) => ({ ...current, date: todayKey, mealType }));
@@ -6002,10 +6156,10 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
 
         {activeSection === 'dashboard' && <>
           <div className="dashboard-grid dashboard-home-grid">
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow"><Utensils size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.dashboardTodayCalories}</p><h3 className="stat-value">{Math.round(todayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow"><Flame size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.streak}</p><h3 className="stat-value">{workoutStreak}</h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow"><Scale size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.dashboardBodyWeight}</p><h3 className="stat-value">{latestBodyWeightEntry ? formatWeight(latestBodyWeightEntry.weight, settings.units) : '-'}</h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon orange-glow"><Trophy size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.dashboardWeeklyVolume}</p><h3 className="stat-value">{formatVolume(weeklyVolumeKg, settings.units)}</h3></div></article>
+            <StatCard icon={<Utensils size={22} strokeWidth={2.2} />} title={copy.dashboardTodayCalories} value={Math.round(todayTotals.calories)} unit={copy.kcalShort} glow="blue" />
+            <StatCard icon={<Flame size={22} strokeWidth={2.2} />} title={copy.streak} value={workoutStreak} glow="green" />
+            <StatCard icon={<Scale size={22} strokeWidth={2.2} />} title={copy.dashboardBodyWeight} value={latestBodyWeightEntry ? formatWeight(latestBodyWeightEntry.weight, settings.units) : '-'} glow="purple" />
+            <StatCard icon={<Trophy size={22} strokeWidth={2.2} />} title={copy.dashboardWeeklyVolume} value={formatVolume(weeklyVolumeKg, settings.units)} glow="orange" />
             <section className="glass-panel daily-control-panel fade-in-up" {...tourAttrs('dashboard-overview')}>
               <div className="panel-header">
                 <h3>{settings.language === 'sl' ? 'Dnevni center' : 'Daily Control'}</h3>
@@ -6052,7 +6206,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                   ))}
                 </div>
               )}
-              <div className="chart-container">{selectedWorkouts.length ? <Line data={chartData} options={chartOptions} /> : <div className="empty-state"><h4>{copy.chart}</h4><p>{copy.noChart}</p></div>}</div>
+              <div className="chart-container">{selectedWorkouts.length ? <Line data={chartData} options={chartOptions} /> : <EmptyState title={copy.chart} body={copy.noChart} actionLabel={copy.addWorkout} onAction={() => goToFeature('dashboard', 'add-workout')} />}</div>
             </section>
 
             <section className="glass-panel action-panel fade-in-up" {...tourAttrs('add-workout')}>
@@ -6190,7 +6344,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                     <p style={{width:'100%',fontSize:'0.82rem',opacity:0.65,margin:'0.4rem 0 0',fontStyle:'italic'}}>"{w.comment}"</p>
                   )}
                 </article>
-              )) : <div className="empty-state"><p style={{fontSize:'2rem',marginBottom:'0.5rem'}}>≡</p><h4>{historySearch ? (settings.language === 'sl' ? 'Ni rezultatov' : 'No results') : copy.recent}</h4><p>{historySearch ? (settings.language === 'sl' ? 'Poskusi z drugim iskanjem.' : 'Try a different search.') : copy.noHistory}</p></div>}
+              )) : <EmptyState icon="+" title={historySearch ? (settings.language === 'sl' ? 'Ni rezultatov' : 'No results') : copy.recent} body={historySearch ? (settings.language === 'sl' ? 'Poskusi z drugim iskanjem.' : 'Try a different search.') : copy.noHistory} actionLabel={historySearch ? '' : copy.addWorkout} onAction={historySearch ? undefined : () => goToFeature('dashboard', 'add-workout')} />}
             </div>
           </section>
         )}
@@ -6362,9 +6516,9 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
 
         {activeSection === 'calories' && <>
           <div className="dashboard-grid">
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon blue-glow"><Utensils size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.caloriesConsumed}</p><h3 className="stat-value">{Math.round(selectedDayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon green-glow"><Target size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.calorieGoal}</p><h3 className="stat-value">{Math.round(settings.calorieGoal)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
-            <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow"><Flame size={22} strokeWidth={2.2} /></div><div><p className="stat-title">{copy.caloriesRemaining}</p><h3 className="stat-value">{Math.round(settings.calorieGoal - selectedDayTotals.calories)} <span className="unit">{copy.kcalShort}</span></h3></div></article>
+            <StatCard icon={<Utensils size={22} strokeWidth={2.2} />} title={copy.caloriesConsumed} value={Math.round(selectedDayTotals.calories)} unit={copy.kcalShort} glow="blue" />
+            <StatCard icon={<Target size={22} strokeWidth={2.2} />} title={copy.calorieGoal} value={Math.round(settings.calorieGoal)} unit={copy.kcalShort} glow="green" />
+            <StatCard icon={<Flame size={22} strokeWidth={2.2} />} title={copy.caloriesRemaining} value={Math.round(settings.calorieGoal - selectedDayTotals.calories)} unit={copy.kcalShort} glow="purple" />
 
             <section className="glass-panel chart-panel fade-in-up" {...tourAttrs('calorie-progress')}>
               <div className="panel-header"><h3>{copy.caloriesProgress}</h3><div className="settings-button-row panel-help-row">{helpButton('calories')}<button className={`action-btn-outline ${settings.calorieTrackerMode === 'simple' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'simple' }))}>{copy.simpleTracker}</button><button className={`action-btn-outline ${settings.calorieTrackerMode === 'advanced' ? 'active-filter' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, calorieTrackerMode: 'advanced' }))}>{copy.advancedTracker}</button><input type="date" value={calorieForm.date} onChange={(e) => setCalorieForm((c) => ({ ...c, date: e.target.value }))} /></div></div>
@@ -6405,7 +6559,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                 <div className="stats-block"><div className="stats-list"><div className="stats-row"><span>{copy.analytics}</span><strong>{analyticsRange === 'week' ? copy.weekly : copy.monthly}</strong></div><div className="stats-row"><span>{copy.caloriesConsumed}</span><strong>{Math.round(analyticsFood.calories)} {copy.kcalShort}</strong></div><div className="stats-row"><span>{copy.mealCount}</span><strong>{analyticsFood.entries}</strong></div>{settings.calorieTrackerMode === 'advanced' ? <div className="stats-row"><span>{copy.protein}</span><strong>{Math.round(analyticsFood.protein)} g</strong></div> : null}</div></div>
               </div>
               <div className="history-list">
-                {selectedDayEntries.length ? selectedDayEntries.map((entry) => <article className="history-item" key={entry.id}><div><h3>{entry.name}</h3><p>{({ breakfast: copy.breakfast, lunch: copy.lunch, dinner: copy.dinner, snack: copy.snack })[entry.mealType]}</p></div><div className="history-metrics"><span>{Math.round(entry.calories)} {copy.kcalShort}</span>{settings.calorieTrackerMode === 'advanced' ? <><span>P {Math.round(entry.protein)}g</span><span>C {Math.round(entry.carbs)}g</span><span>F {Math.round(entry.fat)}g</span></> : null}</div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={() => reuseMeal(entry)}>🔁 {copy.reuseMeal}</button><button className="action-btn-outline" type="button" onClick={() => startEditMeal(entry)}>{copy.edit}</button><button className="action-btn-outline danger-button" type="button" onClick={() => deleteMeal(entry.id)}>{copy.delete}</button></div></article>) : <div className="empty-state"><h4>{copy.caloriesTitle}</h4><p>{copy.noMeals}</p></div>}
+                {selectedDayEntries.length ? selectedDayEntries.map((entry) => <article className="history-item" key={entry.id}><div><h3>{entry.name}</h3><p>{({ breakfast: copy.breakfast, lunch: copy.lunch, dinner: copy.dinner, snack: copy.snack })[entry.mealType]}</p></div><div className="history-metrics"><span>{Math.round(entry.calories)} {copy.kcalShort}</span>{settings.calorieTrackerMode === 'advanced' ? <><span>P {Math.round(entry.protein)}g</span><span>C {Math.round(entry.carbs)}g</span><span>F {Math.round(entry.fat)}g</span></> : null}</div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={() => reuseMeal(entry)}>↻ {copy.reuseMeal}</button><button className="action-btn-outline" type="button" onClick={() => startEditMeal(entry)}>{copy.edit}</button><button className="action-btn-outline danger-button" type="button" onClick={() => deleteMeal(entry.id)}>{copy.delete}</button></div></article>) : <EmptyState title={copy.caloriesTitle} body={copy.noMeals} actionLabel={copy.addMeal} onAction={() => goToFeature('calories', 'add-meal')} />}
               </div>
             </section>
 
@@ -6606,7 +6760,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                   ))}
                 </div>
               </div>
-            ) : null}
+            ) : <EmptyState title={settings.language === 'sl' ? 'Ni ocen telesne mascobe' : 'No body fat estimates yet'} body={settings.language === 'sl' ? 'Dodaj meritve ali fotografije za prvo oceno.' : 'Add measurements or photos to create your first estimate.'} actionLabel={copy.bodyFatAddPhoto} onAction={() => bodyFatFrontRef.current?.click()} />}
           </section>
 
           {/* Cal history */}
@@ -6810,7 +6964,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           <div className="dashboard-grid">
             <section className="glass-panel chart-panel fade-in-up" {...tourAttrs('bodyweight-tracker')}>
               <div className="panel-header"><h3>{copy.bwTitle}</h3>{helpButton('bodyweight')}</div>
-              <div className="chart-container">{bwSorted.length ? <Line data={bodyWeightChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8' } }, y: { beginAtZero: false, grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8' } } } }} /> : <div className="empty-state"><p>{copy.bwNoData}</p></div>}</div>
+              <div className="chart-container">{bwSorted.length ? <Line data={bodyWeightChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8' } }, y: { beginAtZero: false, grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8' } } } }} /> : <EmptyState title={copy.bwTitle} body={copy.bwNoData} actionLabel={copy.bwAdd} onAction={() => goToFeature('bodyweight', 'bodyweight-tracker')} />}</div>
             </section>
             <section className="glass-panel action-panel fade-in-up">
               <div className="panel-header"><h3>{copy.bwAdd}</h3></div>
@@ -6973,7 +7127,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                   <div><h3>{e.weight} kg</h3><p>{formatDateValue(e.date, settings.dateFormat)}</p></div>
                   <button className="action-btn-outline danger-button" type="button" onClick={() => deleteBodyWeightEntry(e.id)}>{copy.delete}</button>
                 </article>
-              )) : <div className="empty-state"><p>{copy.bwNoData}</p></div>}</div>
+              )) : <EmptyState body={copy.bwNoData} actionLabel={copy.bwAdd} onAction={() => goToFeature('bodyweight', 'bodyweight-tracker')} />}</div>
             </section>
           </div>
         </>}
@@ -7245,6 +7399,14 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           <section className="glass-panel settings-section fade-in-up data-privacy-panel">
             <div className="panel-header"><h3>{copy.dataPrivacy}</h3>{helpButton('data')}</div>
             <p className="settings-copy">{copy.dataPrivacyDesc}</p>
+            <div className="settings-card demo-data-card">
+              <span className="settings-title">{copy.demoDataTitle}</span>
+              <p className="settings-copy">{copy.demoDataDesc}</p>
+              <div className="settings-button-row">
+                <button className="action-btn-outline" type="button" onClick={addDemoData}>{copy.demoDataAdd}</button>
+                <button className="action-btn-outline" type="button" onClick={clearDemoData}>{copy.demoDataClear}</button>
+              </div>
+            </div>
             <div className="settings-button-row privacy-actions-row">
               <button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button>
               <button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button>
@@ -7293,25 +7455,15 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           )}
 
           {quickActionsOpen && (
-            <div className="quick-actions-widget open">
-              <div className="quick-actions-menu glass-panel">
-                <div className="quick-actions-head">
-                  <strong>{slUi ? 'Akcije' : 'Actions'}</strong>
-                  <button className="context-help-btn" type="button" onClick={() => setQuickActionsOpen(false)} aria-label={slUi ? 'Zapri' : 'Close'}>x</button>
-                </div>
-                <div className="quick-actions-grid">
-                  {quickActions.map((action) => (
-                    <button key={action.id} type="button" className="quick-action-mini" onClick={() => runCommandAction(action)}>
-                      <span>{action.icon}</span>
-                      <strong>{action.label}</strong>
-                    </button>
-                  ))}
-                </div>
-                <button className="action-btn-outline full-width" type="button" onClick={() => { setCommandOpen(true); setQuickActionsOpen(false); }}>
-                  {slUi ? 'Odpri iskanje' : 'Open search'}
-                </button>
-              </div>
-            </div>
+            <QuickActions
+              actions={quickActions}
+              title={slUi ? 'Akcije' : 'Actions'}
+              closeLabel={slUi ? 'Zapri' : 'Close'}
+              searchLabel={slUi ? 'Odpri iskanje' : 'Open search'}
+              onClose={() => setQuickActionsOpen(false)}
+              onSearch={() => { setCommandOpen(true); setQuickActionsOpen(false); }}
+              onRun={runCommandAction}
+            />
           )}
         </>
       )}
@@ -7392,15 +7544,13 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
         </div>
       )}
       {swUpdatePending && (
-        <div className="sw-update-banner">
-          <span>{settings.language === 'sl' ? '🆕 Nova verzija je na voljo!' : '🆕 New version available!'}</span>
-          <div className="sw-update-actions">
-            <button className="action-btn-primary" style={{padding:'0.35rem 1rem',fontSize:'0.85rem'}} type="button" onClick={applyServiceWorkerUpdate}>
-              {settings.language === 'sl' ? 'Osveži' : 'Reload'}
-            </button>
-            <button className="action-btn-outline" style={{padding:'0.35rem 0.6rem',fontSize:'0.85rem'}} type="button" onClick={() => setSwUpdatePending(false)}>✕</button>
-          </div>
-        </div>
+        <UpdateBanner
+          message={settings.language === 'sl' ? 'Nova verzija je na voljo' : 'New version available'}
+          actionLabel={settings.language === 'sl' ? 'Posodobi zdaj' : 'Update now'}
+          dismissLabel={settings.language === 'sl' ? 'Zapri' : 'Dismiss'}
+          onUpdate={applyServiceWorkerUpdate}
+          onDismiss={() => setSwUpdatePending(false)}
+        />
       )}
       {toast ? <div className="toast-container"><div className="toast">{toast}</div></div> : null}
       {timerDone && (

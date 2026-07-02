@@ -1,51 +1,116 @@
 <!doctype html>
-<html lang="sl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Politika zasebnosti - PowerGraph</title>
+  <title>Privacy Policy - PowerGraph</title>
   <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b10;
+      --panel: #111821;
+      --border: rgba(148, 163, 184, 0.18);
+      --text: #f8fafc;
+      --muted: #a7b0bd;
+      --accent: #7dd3fc;
+    }
+
+    * { box-sizing: border-box; }
+
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      max-width: 760px;
-      margin: 0 auto;
-      padding: 2rem 1.5rem 4rem;
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background:
+        linear-gradient(180deg, rgba(56, 189, 248, 0.08), transparent 280px),
+        linear-gradient(180deg, #070b10 0%, #0b1118 100%);
+      color: var(--text);
       line-height: 1.7;
     }
-    h1 { color: #60a5fa; margin-bottom: 0.25rem; }
-    h2 { color: #93c5fd; margin-top: 2rem; font-size: 1.1rem; }
-    p, li { color: #94a3b8; }
-    a { color: #60a5fa; }
-    code { color: #bfdbfe; }
-    .updated { color: #64748b; font-size: 0.85rem; margin-bottom: 2rem; }
+
+    main {
+      width: min(920px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 44px 0 64px;
+    }
+
+    article {
+      padding: 28px;
+      background: rgba(17, 24, 33, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+    }
+
+    article + article { margin-top: 20px; }
+    h1 { margin: 0 0 6px; font-size: clamp(32px, 6vw, 54px); line-height: 1; }
+    h2 { margin: 28px 0 8px; color: var(--accent); font-size: 1.1rem; }
+    p, li { color: var(--muted); }
+    ul { padding-left: 1.25rem; }
+    a, code { color: var(--accent); }
+    code { background: rgba(125, 211, 252, 0.09); padding: 0.1rem 0.3rem; border-radius: 6px; }
+    .updated { color: #7b8796; font-size: 0.9rem; margin-bottom: 24px; }
   </style>
 </head>
 <body>
-  <h1>Politika zasebnosti</h1>
-  <p class="updated">Zadnja posodobitev: Junij 2026</p>
+  <main>
+    <article>
+      <h1>Privacy Policy</h1>
+      <p class="updated">Last updated: July 2026</p>
 
-  <h2>1. Kdo smo</h2>
-  <p>PowerGraph je fitness aplikacija za sledenje treningom, kalorijam in telesnemu napredku. Aplikacija je lahko uporabljena lokalno v brskalniku ali skupaj z opcijskim PowerGraph backendom.</p>
+      <h2>1. What PowerGraph Is</h2>
+      <p>PowerGraph is a fitness app for tracking workouts, calories, body weight, hydration, rankings, body fat estimates, and progress. The app can run locally in your browser, and backend sync is optional.</p>
 
-  <h2>2. Lokalni nacin</h2>
-  <p>Ce backend ni nastavljen, se podatki shranjujejo samo v vasem brskalniku prek <code>localStorage</code>. Ti podatki ostanejo na napravi, dokler jih ne izbrisete ali ne pocistite podatkov brskalnika.</p>
+      <h2>2. Local Browser Mode</h2>
+      <p>When backend sync is not configured, PowerGraph stores your data in your browser using <code>localStorage</code>. This data stays on your device until you clear it in Settings, import different data, or clear your browser storage.</p>
 
-  <h2>3. Opcijski backend sync</h2>
-  <p>Ce je aplikacija povezana z backendom, se lahko podatki o racunu, treningih, kalorijah, telesni tezi, rest/cheat dnevih, ocenah aplikacije in login dogodkih shranijo v SQLite bazo na serverju. Ta nacin omogoca backup, sync in admin pregled.</p>
+      <h2>3. Optional Backend Sync</h2>
+      <p>If backend sync is enabled, the backend may store account data, workouts, calorie and meal entries, body weight entries, body fat estimates, rest days, cheat days, app ratings, admin actions, and login events. Sync is used for backup, cross-device continuity, and admin review.</p>
 
-  <h2>4. AI in zunanji API-ji</h2>
-  <p>Funkcije za AI oceno hrane, sestavin, vaj ali telesne sestave uporabljajo server-side Gemini proxy. V tem primeru se besedilo ali slika, ki jo posljete v AI funkcijo, posreduje ponudniku AI storitve za obdelavo zahteve.</p>
-  <p>Iskanje kalorij lahko uporablja javne podatke ali lokalno bazo hrane. Pri zunanjem iskanju se poslje iskalni pojem, ne pa celoten profil uporabnika.</p>
+      <h2>4. AI Features</h2>
+      <p>AI food, ingredient, exercise, and body-related features may send the text or images you provide to the PowerGraph backend Gemini proxy. The frontend must never contain Gemini API keys, JWT secrets, or other private backend credentials.</p>
 
-  <h2>5. Backup in izbris</h2>
-  <p>Uporabnik lahko izvozi JSON backup ali pocisti lokalne podatke v nastavitvah aplikacije. Pri uporabi backend synca je za popoln izbris server podatkov potreben tudi izbris na backend strani.</p>
+      <h2>5. Exports, Imports, and Deletion</h2>
+      <ul>
+        <li>You can export a JSON backup from Settings.</li>
+        <li>You can import a JSON backup back into the app.</li>
+        <li>You can clear local browser data from Settings.</li>
+        <li>If backend sync is used, deleting local data does not automatically delete server-side data.</li>
+      </ul>
 
-  <h2>6. Varnost</h2>
-  <p>API kljuci in JWT skrivnosti morajo biti shranjeni samo na backendu. Ne vpisujte skrivnosti v frontend <code>VITE_*</code> spremenljivke, ker so vidne v brskalniku.</p>
+      <h2>6. Security Notes</h2>
+      <p>API keys and JWT secrets must stay on the backend only. Do not put secrets into frontend <code>VITE_*</code> variables because frontend variables are visible in the browser bundle.</p>
 
-  <h2>7. Kontakt</h2>
-  <p>Za vprasanja glede zasebnosti kontaktirajte: <a href="mailto:vid.oreskovic@gmail.com">vid.oreskovic@gmail.com</a></p>
+      <h2>7. Contact</h2>
+      <p>For privacy questions, contact: <a href="mailto:vid.oreskovic@gmail.com">vid.oreskovic@gmail.com</a></p>
+    </article>
+
+    <article lang="sl">
+      <h1>Politika zasebnosti</h1>
+      <p class="updated">Zadnja posodobitev: julij 2026</p>
+
+      <h2>1. Kaj je PowerGraph</h2>
+      <p>PowerGraph je fitness aplikacija za sledenje treningom, kalorijam, telesni teži, hidraciji, rangom, ocenam telesne maščobe in napredku. Aplikacija lahko deluje lokalno v brskalniku, backend sinhronizacija pa je opcijska.</p>
+
+      <h2>2. Lokalni način</h2>
+      <p>Če backend sync ni nastavljen, PowerGraph shranjuje podatke v tvojem brskalniku prek <code>localStorage</code>. Podatki ostanejo na napravi, dokler jih ne izbrišeš v nastavitvah, uvoziš drugih podatkov ali počistiš podatkov brskalnika.</p>
+
+      <h2>3. Opcijski backend sync</h2>
+      <p>Če je backend sync omogočen, se lahko na backendu shranijo račun, treningi, kalorije in obroki, telesna teža, ocene telesne maščobe, rest/cheat dnevi, ocene aplikacije, admin akcije in dogodki prijave.</p>
+
+      <h2>4. AI funkcije</h2>
+      <p>AI funkcije za hrano, sestavine, vaje in telo lahko pošljejo besedilo ali slike, ki jih vneseš, na PowerGraph backend Gemini proxy. Gemini API ključ, JWT skrivnosti in drugi zasebni ključi ne smejo biti v frontend <code>VITE_*</code> spremenljivkah.</p>
+
+      <h2>5. Izvoz, uvoz in izbris</h2>
+      <ul>
+        <li>V Settings lahko izvoziš JSON varnostno kopijo.</li>
+        <li>JSON varnostno kopijo lahko uvoziš nazaj v aplikacijo.</li>
+        <li>Lokalne podatke lahko izbrišeš v Settings.</li>
+        <li>Če uporabljaš backend sync, lokalni izbris ne izbriše nujno tudi podatkov na strežniku.</li>
+      </ul>
+
+      <h2>6. Varnost</h2>
+      <p>API ključi in JWT skrivnosti morajo ostati samo na backendu. Skrivnosti ne dodajaj v frontend <code>VITE_*</code> spremenljivke, ker so vidne v brskalniku.</p>
+    </article>
+  </main>
 </body>
 </html>

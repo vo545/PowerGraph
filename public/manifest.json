@@ -1,7 +1,7 @@
 {
   "name": "PowerGraph",
   "short_name": "PowerGraph",
-  "description": "Fitness tracker - treningi, kalorije, rang",
+  "description": "Fitness tracker for workouts, calories, body weight, hydration, rankings, and progress.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

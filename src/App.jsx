@@ -11,7 +11,31 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 const JWT_KEY_PREFIX = 'powergraph_jwt_';
-function getJwt(email) { return localStorage.getItem(`${JWT_KEY_PREFIX}${email}`) || ''; }
+function decodeJwtPayload(token) {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '=');
+    return JSON.parse(atob(normalized));
+  } catch {
+    return null;
+  }
+}
+function getJwt(email) {
+  const key = `${JWT_KEY_PREFIX}${email}`;
+  const token = localStorage.getItem(key) || '';
+  if (!token) return '';
+  const payload = decodeJwtPayload(token);
+  if (!payload) {
+    localStorage.removeItem(key);
+    return '';
+  }
+  if (payload?.exp && payload.exp * 1000 <= Date.now()) {
+    localStorage.removeItem(key);
+    return '';
+  }
+  return token;
+}
 function setJwt(email, token) { if (token) localStorage.setItem(`${JWT_KEY_PREFIX}${email}`, token); else localStorage.removeItem(`${JWT_KEY_PREFIX}${email}`); }
 async function apiCall(email, path, method = 'GET', body) {
   if (!API_URL) return null;
@@ -28,13 +52,13 @@ async function apiCall(email, path, method = 'GET', body) {
   } catch {}
   return null;
 }
-async function backendLogin(email, password) {
+async function backendLogin(email, password, mode = 'login') {
   if (!API_URL) return null;
   try {
-    let res = await fetch(`${API_URL}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+    let res = await fetch(`${API_URL}/api/auth/${mode === 'signup' ? 'register' : 'login'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
     if (res.ok) { const { token } = await res.json(); setJwt(email, token); return token; }
-    if (res.status === 401) {
-      res = await fetch(`${API_URL}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+    if (mode === 'signup' && res.status === 409) {
+      res = await fetch(`${API_URL}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
       if (res.ok) { const { token } = await res.json(); setJwt(email, token); return token; }
     }
   } catch {}
@@ -72,6 +96,9 @@ const AUTH_MAX_ATTEMPTS = 5;
 const AUTH_LOCK_MS = 15 * 60 * 1000;
 const PBKDF2_ITERATIONS = 210000;
 const APP_SECTION_IDS = ['dashboard', 'exercises', 'history', 'bodyweight', 'calories', 'ocenjevalec', 'rankings', 'advisor', 'settings', 'admin'];
+const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
+const MAX_IMPORT_FILE_BYTES = 20 * 1024 * 1024;
+const BACKUP_SCHEMA_VERSION = 3;
 
 function todayKey() { return new Date().toISOString().slice(0, 10); }
 function dateOffsetKey(offsetDays) {
@@ -650,17 +677,17 @@ function getLegacyCheatKey(email) { return `${CHEAT_KEY_PREFIX}${(email || '').s
 function loadDateList(primaryKey, legacyKey) {
   try {
     const primary = JSON.parse(localStorage.getItem(primaryKey) || '[]');
-    if (Array.isArray(primary) && primary.length) return primary;
+    if (Array.isArray(primary) && primary.length) return sanitizeDateArray(primary);
   } catch {}
   try {
     const legacy = JSON.parse(localStorage.getItem(legacyKey) || '[]');
-    return Array.isArray(legacy) ? legacy : [];
+    return sanitizeDateArray(legacy);
   } catch { return []; }
 }
 function loadRestDays(email) { return email ? loadDateList(getRestKey(email), getLegacyRestKey(email)) : []; }
 function loadCheatDays(email) { return email ? loadDateList(getCheatKey(email), getLegacyCheatKey(email)) : []; }
 function getCustomExKey(email) { return `${CUSTOM_EX_KEY_PREFIX}${email}`; }
-function loadCustomExercises(email) { if (!email) return []; try { return JSON.parse(localStorage.getItem(getCustomExKey(email)) || '[]'); } catch { return []; } }
+function loadCustomExercises(email) { if (!email) return []; try { const stored = JSON.parse(localStorage.getItem(getCustomExKey(email)) || '[]'); return Array.isArray(stored) ? stored.slice(0, 500).map(sanitizeCustomExercise).filter(Boolean) : []; } catch { return []; } }
 function getWaterKey(email, date = new Date().toISOString().slice(0, 10)) { return `${WATER_KEY_PREFIX}${email}_${date}`; }
 function loadWaterMl(email) { if (!email) return 0; try { return Number(localStorage.getItem(getWaterKey(email)) || 0); } catch { return 0; } }
 function saveWaterMl(email, ml) { if (email) localStorage.setItem(getWaterKey(email), String(ml)); }
@@ -681,22 +708,161 @@ function loadBodyWeight(email) {
   if (!email) return [];
   try {
     const stored = JSON.parse(localStorage.getItem(getBodyWeightKey(email)) || '[]');
-    return Array.isArray(stored) ? stored : [];
+    return Array.isArray(stored) ? stored.slice(0, 5000).map(sanitizeBodyWeightEntry).filter(Boolean) : [];
   } catch { return []; }
 }
 function loadCalHistory(email) {
   if (!email) return [];
   try {
     const stored = JSON.parse(localStorage.getItem(getCalHistoryKey(email)) || '[]');
-    return Array.isArray(stored) ? stored : [];
+    return Array.isArray(stored) ? stored.slice(0, 10000).map(sanitizeCalHistoryEntry).filter(Boolean) : [];
   } catch { return []; }
 }
 function loadBodyFatHistory(email) {
   if (!email) return [];
   try {
     const stored = JSON.parse(localStorage.getItem(getBodyFatKey(email)) || '[]');
-    return Array.isArray(stored) ? stored : [];
+    return Array.isArray(stored) ? stored.slice(0, 500).map(sanitizeBodyFatHistoryEntry).filter(Boolean) : [];
   } catch { return []; }
+}
+
+function isCleanDate(value) {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function cleanText(value, max = 160) {
+  return typeof value === 'string' ? value.trim().slice(0, max) : '';
+}
+
+function cleanNumber(value, min, max, fallback = 0) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return clampNumber(num, min, max);
+}
+
+async function sha256Text(value) {
+  const buffer = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return bytesToHex(new Uint8Array(buffer));
+}
+
+function sanitizeDateArray(list, limit = 5000) {
+  return Array.isArray(list) ? [...new Set(list.filter(isCleanDate))].slice(0, limit) : [];
+}
+
+function sanitizeMealEntry(entry, index = 0) {
+  if (!entry || typeof entry !== 'object') return null;
+  const name = cleanText(entry.name, 160);
+  const date = isCleanDate(entry.date) ? entry.date : todayKey();
+  if (!name) return null;
+  const mealType = VALID_MEAL_TYPES.includes(entry.mealType) ? entry.mealType : 'snack';
+  return {
+    id: Number.isSafeInteger(Number(entry.id)) ? Number(entry.id) : Date.now() + index,
+    date,
+    mealType,
+    name,
+    calories: Math.round(cleanNumber(entry.calories, 0, 20000, 0)),
+    protein: Number(cleanNumber(entry.protein, 0, 1000, 0).toFixed(1)),
+    carbs: Number(cleanNumber(entry.carbs, 0, 2000, 0).toFixed(1)),
+    fat: Number(cleanNumber(entry.fat, 0, 1000, 0).toFixed(1)),
+    ...(entry.demo ? { demo: true } : {}),
+  };
+}
+
+function sanitizeBodyWeightEntry(entry, index = 0) {
+  if (!entry || typeof entry !== 'object') return null;
+  const weight = cleanNumber(entry.weight, 20, 400, NaN);
+  if (!Number.isFinite(weight)) return null;
+  return {
+    id: Number.isSafeInteger(Number(entry.id)) ? Number(entry.id) : Date.now() + index,
+    date: isCleanDate(entry.date) ? entry.date : todayKey(),
+    weight: Number(weight.toFixed(1)),
+    ...(entry.demo ? { demo: true } : {}),
+  };
+}
+
+function sanitizeCalHistoryEntry(entry, index = 0) {
+  if (!entry || typeof entry !== 'object') return null;
+  const name = cleanText(entry.name, 160);
+  if (!name) return null;
+  return {
+    id: Number.isSafeInteger(Number(entry.id)) ? Number(entry.id) : Date.now() + index,
+    date: isCleanDate(entry.date) ? entry.date : todayKey(),
+    name,
+    grams: Math.round(cleanNumber(entry.grams, 0, 20000, 0)),
+    kcalPer100: Math.round(cleanNumber(entry.kcalPer100 ?? entry.kcal_per_100, 0, 2000, 0)),
+    total: Math.round(cleanNumber(entry.total, 0, 50000, 0)),
+    protein: Number(cleanNumber(entry.protein, 0, 1000, 0).toFixed(1)),
+    carbs: Number(cleanNumber(entry.carbs, 0, 2000, 0).toFixed(1)),
+    fat: Number(cleanNumber(entry.fat, 0, 1000, 0).toFixed(1)),
+  };
+}
+
+function sanitizeCustomExercise(entry, index = 0) {
+  if (!entry || typeof entry !== 'object') return null;
+  const name = cleanText(entry.name, 90);
+  if (!name) return null;
+  const section = MUSCLE_KEYS.includes(entry.section) ? entry.section : 'Chest';
+  const cleanLocale = (value) => ({
+    en: cleanText(value?.en, 260),
+    sl: cleanText(value?.sl, 260),
+  });
+  return {
+    id: Number.isSafeInteger(Number(entry.id)) ? Number(entry.id) : Date.now() + index,
+    name,
+    section,
+    howTo: cleanLocale(entry.howTo),
+    cues: cleanLocale(entry.cues),
+    targets: cleanLocale(entry.targets),
+    primary: cleanLocale(entry.primary),
+  };
+}
+
+function sanitizeBodyFatHistoryEntry(entry, index = 0) {
+  if (!entry || typeof entry !== 'object') return null;
+  const result = entry.result && typeof entry.result === 'object' ? entry.result : {};
+  return {
+    id: Number.isSafeInteger(Number(entry.id)) ? Number(entry.id) : Date.now() + index,
+    date: isCleanDate(entry.date) ? entry.date : todayKey(),
+    photoCount: Math.round(cleanNumber(entry.photoCount, 0, 3, 0)),
+    metrics: entry.metrics && typeof entry.metrics === 'object' ? {
+      gender: entry.metrics.gender === 'female' ? 'female' : 'male',
+      age: cleanNumber(entry.metrics.age, 5, 100, 0),
+      height: cleanNumber(entry.metrics.height, 80, 250, 0),
+      weight: cleanNumber(entry.metrics.weight, 20, 400, 0),
+      waist: cleanNumber(entry.metrics.waist, 0, 250, 0),
+      neck: cleanNumber(entry.metrics.neck, 0, 100, 0),
+      hip: cleanNumber(entry.metrics.hip, 0, 250, 0),
+    } : {},
+    result: {
+      bodyFatPercent: Number(cleanNumber(result.bodyFatPercent, 3, 60, 0).toFixed(1)),
+      confidence: ['low', 'moderate', 'high'].includes(result.confidence) ? result.confidence : 'low',
+      category: cleanText(result.category, 80),
+      description: cleanText(result.description, 300),
+      fatMassKg: result.fatMassKg == null ? null : Number(cleanNumber(result.fatMassKg, 0, 300, 0).toFixed(1)),
+      leanMassKg: result.leanMassKg == null ? null : Number(cleanNumber(result.leanMassKg, 0, 300, 0).toFixed(1)),
+      methods: Array.isArray(result.methods) ? result.methods.slice(0, 8).map((method) => ({
+        name: cleanText(method.name, 80),
+        value: Number(cleanNumber(method.value, 0, 80, 0).toFixed(1)),
+      })).filter((method) => method.name) : [],
+    },
+  };
+}
+
+function sanitizeBackupPayload(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const workoutsRaw = Array.isArray(raw) ? raw : raw.workouts;
+  if (!Array.isArray(workoutsRaw)) return null;
+  return {
+    workouts: workoutsRaw.slice(0, 5000).map(normalizeWorkout),
+    calorieEntries: (Array.isArray(raw.calorieEntries) ? raw.calorieEntries : []).slice(0, 10000).map(sanitizeMealEntry).filter(Boolean),
+    settings: raw.settings ? sanitizeSettings(raw.settings) : null,
+    calHistory: (Array.isArray(raw.calHistory) ? raw.calHistory : []).slice(0, 10000).map(sanitizeCalHistoryEntry).filter(Boolean),
+    bodyFatHistory: (Array.isArray(raw.bodyFatHistory) ? raw.bodyFatHistory : []).slice(0, 500).map(sanitizeBodyFatHistoryEntry).filter(Boolean),
+    bodyWeightEntries: (Array.isArray(raw.bodyWeightEntries) ? raw.bodyWeightEntries : []).slice(0, 5000).map(sanitizeBodyWeightEntry).filter(Boolean),
+    restDays: sanitizeDateArray(raw.restDays),
+    cheatDays: sanitizeDateArray(raw.cheatDays),
+    customExercises: (Array.isArray(raw.customExercises) ? raw.customExercises : []).slice(0, 500).map(sanitizeCustomExercise).filter(Boolean),
+  };
 }
 
 const LANGUAGE_OPTIONS = [
@@ -2595,21 +2761,21 @@ ADDITIONAL_GYM_EXERCISES.forEach((exercise) => {
 
 const normalizeWorkout = (w, i = 0) => {
   const setDetails = (Array.isArray(w.setDetails) ? w.setDetails : [])
-    .map((v) => Number(v) || 0)
+    .map((v) => Math.round(cleanNumber(v, 1, 500, 0)))
     .filter((v) => v > 0);
   const setWeights = Array.isArray(w.setWeights)
-    ? w.setWeights.map((v) => Number(v) || 0).filter((v) => v > 0)
+    ? w.setWeights.map((v) => cleanNumber(v, 0, 1000, 0)).filter((v) => v > 0)
     : null;
   return {
-    id: w.id ?? Date.now() + i,
-    date: w.date ?? new Date().toISOString().slice(0, 10),
-    exercise: w.exercise ?? 'Bench Press',
-    weight: Number(w.weight ?? 0),
-    setDetails: setDetails.length ? setDetails : [1],
-    comment: w.comment ?? w.notes ?? '',
+    id: Number.isSafeInteger(Number(w.id)) ? Number(w.id) : Date.now() + i,
+    date: isCleanDate(w.date) ? w.date : todayKey(),
+    exercise: cleanText(w.exercise, 120) || 'Bench Press',
+    weight: cleanNumber(w.weight, 0, 1000, 0),
+    setDetails: setDetails.length ? setDetails.slice(0, 50) : [1],
+    comment: cleanText(w.comment ?? w.notes, 1200),
     ...(w.demo ? { demo: true } : {}),
-    ...(w.copiedFromDate ? { copiedFromDate: w.copiedFromDate } : {}),
-    ...(setWeights?.length ? { setWeights } : {}),
+    ...(isCleanDate(w.copiedFromDate) ? { copiedFromDate: w.copiedFromDate } : {}),
+    ...(setWeights?.length ? { setWeights: setWeights.slice(0, 50) } : {}),
   };
 };
 const getSetCount = (w) => w.setDetails.length;
@@ -2839,6 +3005,12 @@ function requestNotificationPermission() {
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();
   }
+}
+
+async function requestPersistentStorage() {
+  try {
+    if (navigator.storage?.persist) await navigator.storage.persist();
+  } catch {}
 }
 
 function recordLogin(email, type) {
@@ -4441,6 +4613,7 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     localStorage.setItem(SESSION_KEY, currentUser);
+    requestPersistentStorage();
     const nextSettings = loadSettings(currentUser);
     const nextWorkoutDraft = loadDraft(currentUser, 'workoutForm', getDefaultWorkoutForm());
     const nextIngredientDraft = loadDraft(currentUser, 'ingredientForm', { mode: 'quick', query: '', items: [{ name: '', grams: '100' }] });
@@ -4641,8 +4814,8 @@ export default function App() {
     return () => { clearTimeout(id); setSyncing(false); };
   }, [currentUser, workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory]);
 
-  async function hydrateFromBackend(email, password) {
-    const token = await backendLogin(email, password);
+  async function hydrateFromBackend(email, password, mode = 'login') {
+    const token = await backendLogin(email, password, mode);
     if (!token) return;
     const data = await pullFromBackend(email);
     await applyRemoteData(email, data);
@@ -4713,7 +4886,7 @@ export default function App() {
         }));
         clearAuthThrottle(email);
         await pushLoginLog(email, 'signup');
-        await hydrateFromBackend(email, password);
+        await hydrateFromBackend(email, password, 'signup');
         setCurrentUser(email);
         setTutorialStep(0);
         setShowTutorial(true);
@@ -4730,7 +4903,7 @@ export default function App() {
           updateStoredUserPassword(email, await hashPassword(password));
         }
         await pushLoginLog(email, 'login');
-        await hydrateFromBackend(email, password);
+        await hydrateFromBackend(email, password, 'login');
         setCurrentUser(email);
       }
       setAuthForm({ email: '', password: '', confirmPassword: '', gender: 'male' });
@@ -4778,10 +4951,8 @@ export default function App() {
     setFormData((c) => ({ ...c, weight: '', setDetails: [''], setWeights: [''] }));
     setToast(copy.saved);
   }
-  function exportData() {
-    const backup = {
-      version: 2,
-      exportedAt: new Date().toISOString(),
+  async function exportData() {
+    const data = {
       workouts,
       calorieEntries,
       settings,
@@ -4791,6 +4962,15 @@ export default function App() {
       restDays,
       cheatDays,
       customExercises,
+    };
+    const checksum = await sha256Text(JSON.stringify(data));
+    const backup = {
+      version: BACKUP_SCHEMA_VERSION,
+      app: 'PowerGraph',
+      exportedAt: new Date().toISOString(),
+      profile: { emailHash: await sha256Text(currentUser || '') },
+      integrity: { algorithm: 'SHA-256', checksum },
+      data,
     };
     downloadFile(`powergraph-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2), 'application/json');
     setSettings((c) => ({ ...c, lastBackupAt: new Date().toISOString() }));
@@ -4817,21 +4997,31 @@ export default function App() {
   function importData(event) {
     const [file] = event.target.files ?? [];
     if (!file) return;
+    if (file.size > MAX_IMPORT_FILE_BYTES) {
+      setToast(copy.importFail);
+      event.target.value = '';
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const parsed = JSON.parse(String(reader.result));
-        const imported = Array.isArray(parsed) ? parsed : parsed.workouts;
-        if (!Array.isArray(imported)) throw new Error('invalid');
-        setWorkouts(imported.map(normalizeWorkout));
-        if (Array.isArray(parsed.calorieEntries)) setCalorieEntries(parsed.calorieEntries);
-        if (parsed.settings) setSettings(sanitizeSettings(parsed.settings));
-        if (Array.isArray(parsed.calHistory)) setCalHistory(parsed.calHistory);
-        if (Array.isArray(parsed.bodyFatHistory)) setBodyFatHistory(parsed.bodyFatHistory);
-        if (Array.isArray(parsed.bodyWeightEntries)) setBodyWeightEntries(parsed.bodyWeightEntries);
-        if (Array.isArray(parsed.restDays)) setRestDays(parsed.restDays);
-        if (Array.isArray(parsed.cheatDays)) setCheatDays(parsed.cheatDays);
-        if (Array.isArray(parsed.customExercises)) setCustomExercises(parsed.customExercises);
+        const payload = parsed?.data && parsed?.integrity ? parsed.data : parsed;
+        if (parsed?.integrity?.checksum) {
+          const actual = await sha256Text(JSON.stringify(payload));
+          if (!constantTimeEqual(actual, parsed.integrity.checksum)) throw new Error('checksum');
+        }
+        const cleanBackup = sanitizeBackupPayload(payload);
+        if (!cleanBackup) throw new Error('invalid');
+        setWorkouts(cleanBackup.workouts);
+        setCalorieEntries(cleanBackup.calorieEntries);
+        if (cleanBackup.settings) setSettings(cleanBackup.settings);
+        setCalHistory(cleanBackup.calHistory);
+        setBodyFatHistory(cleanBackup.bodyFatHistory);
+        setBodyWeightEntries(cleanBackup.bodyWeightEntries);
+        setRestDays(cleanBackup.restDays);
+        setCheatDays(cleanBackup.cheatDays);
+        setCustomExercises(cleanBackup.customExercises);
         setToast(copy.importDone);
       } catch {
         setToast(copy.importFail);

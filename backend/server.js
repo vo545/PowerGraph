@@ -11,6 +11,11 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').toLowerCase();
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '14d';
+const AUTH_WINDOW_MS = 15 * 60 * 1000;
+const AUTH_MAX_ATTEMPTS = Number(process.env.AUTH_MAX_ATTEMPTS || 8);
+const authAttempts = new Map();
+const VALID_MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
 
 // JWT_SECRET je obvezen — brez njega se strežnik ne zažene
 if (!process.env.JWT_SECRET) {
@@ -107,6 +112,45 @@ db.exec(`
 // ── Middleware ─────────────────────────────────────────────────────────────
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json({ limit: '6mb' }));
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
+function normalizeEmail(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase().slice(0, 254) : '';
+}
+
+function rateLimitAuth(req, res, next) {
+  const email = normalizeEmail(req.body?.email) || 'unknown';
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  const key = `${ip}:${email}`;
+  const now = Date.now();
+  const current = authAttempts.get(key) || { count: 0, resetAt: now + AUTH_WINDOW_MS };
+  if (current.resetAt < now) {
+    authAttempts.set(key, { count: 1, resetAt: now + AUTH_WINDOW_MS });
+    next();
+    return;
+  }
+  if (current.count >= AUTH_MAX_ATTEMPTS) {
+    res.status(429).json({ error: 'Too many attempts. Try again later.' });
+    return;
+  }
+  current.count += 1;
+  authAttempts.set(key, current);
+  next();
+}
+
+function clearAuthLimit(req) {
+  const email = normalizeEmail(req.body?.email) || 'unknown';
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  authAttempts.delete(`${ip}:${email}`);
+}
 
 function requireAuth(req, res, next) {
   const auth = req.headers.authorization;
@@ -155,6 +199,12 @@ function asCleanDate(value) {
 function asPositiveId(value) {
   const id = Number(value);
   return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+function asBoundedNumber(value, min, max, fallback = 0) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.min(max, Math.max(min, num));
 }
 
 function insertWithOptionalId(stmtWithId, stmtWithoutId, id, values) {
@@ -213,38 +263,42 @@ function normalizeGenerationConfig(body) {
 }
 
 // ── Prijava / Registracija ─────────────────────────────────────────────────
-app.post('/api/auth/register', async (req, res) => {
-  const { email, password } = req.body ?? {};
+app.post('/api/auth/register', rateLimitAuth, async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  const { password } = req.body ?? {};
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
-  if (password.length < 6) return res.status(400).json({ error: 'Password too short' });
+  if (password.length < 10 || password.length > 256) return res.status(400).json({ error: 'Password does not meet policy' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email' });
 
   try {
     // bcrypt s 12 rundami — zaščita pred brute-force
     const hash = await bcrypt.hash(password, 12);
-    const result = db.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)').run(email.toLowerCase().trim(), hash);
+    const result = db.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)').run(email, hash);
     db.prepare('INSERT INTO login_logs (email, type, ip) VALUES (?, ?, ?)').run(email, 'register', req.ip);
-    const token = jwt.sign({ userId: result.lastInsertRowid, email: email.toLowerCase().trim() }, JWT_SECRET, { expiresIn: '30d' });
-    res.status(201).json({ token, email: email.toLowerCase().trim() });
+    clearAuthLimit(req);
+    const token = jwt.sign({ userId: result.lastInsertRowid, email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    res.status(201).json({ token, email });
   } catch (err) {
-    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') return res.status(409).json({ error: 'User already exists' });
+    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') return res.status(409).json({ error: 'Unable to create account' });
     console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body ?? {};
+app.post('/api/auth/login', rateLimitAuth, async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  const { password } = req.body ?? {};
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase().trim());
-  if (!user) return res.status(401).json({ error: 'User not found' });
+  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  if (!user) return res.status(401).json({ error: 'Email or password is incorrect' });
 
   const valid = await bcrypt.compare(password, user.password_hash);
-  if (!valid) return res.status(401).json({ error: 'Wrong password' });
+  if (!valid) return res.status(401).json({ error: 'Email or password is incorrect' });
 
   db.prepare('INSERT INTO login_logs (email, type, ip) VALUES (?, ?, ?)').run(email, 'login', req.ip);
-  const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+  clearAuthLimit(req);
+  const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
   res.json({ token, email: user.email });
 });
 
@@ -435,8 +489,12 @@ app.get('/api/ratings', requireAuth, (req, res) => {
 
 app.post('/api/ratings', requireAuth, (req, res) => {
   const { stars, comment, privateComment, date } = req.body ?? {};
-  if (!comment || !stars) return res.status(400).json({ error: 'Missing fields' });
-  const result = db.prepare('INSERT INTO ratings (email, stars, comment, private_comment, date) VALUES (?, ?, ?, ?, ?)').run(req.user.email, Number(stars), comment, privateComment || '', date || new Date().toISOString().slice(0, 10));
+  const cleanStars = Math.round(asBoundedNumber(stars, 1, 5, 0));
+  const cleanComment = typeof comment === 'string' ? comment.trim().slice(0, 1200) : '';
+  const cleanPrivate = typeof privateComment === 'string' ? privateComment.trim().slice(0, 1200) : '';
+  const cleanDate = asCleanDate(date) || new Date().toISOString().slice(0, 10);
+  if (!cleanComment || !cleanStars) return res.status(400).json({ error: 'Missing fields' });
+  const result = db.prepare('INSERT INTO ratings (email, stars, comment, private_comment, date) VALUES (?, ?, ?, ?, ?)').run(req.user.email, cleanStars, cleanComment, cleanPrivate, cleanDate);
   res.status(201).json({ id: result.lastInsertRowid });
 });
 
@@ -465,6 +523,17 @@ app.post('/api/sync', requireAuth, (req, res) => {
   const restDays = Array.isArray(body.restDays) ? body.restDays : [];
   const cheatDays = Array.isArray(body.cheatDays) ? body.cheatDays : [];
   const calHistory = Array.isArray(body.calHistory) ? body.calHistory : [];
+  const limits = { workouts: 5000, calories: 10000, bodyWeight: 5000, restDays: 5000, cheatDays: 5000, calHistory: 10000 };
+  if (
+    workouts.length > limits.workouts ||
+    calories.length > limits.calories ||
+    bodyWeight.length > limits.bodyWeight ||
+    restDays.length > limits.restDays ||
+    cheatDays.length > limits.cheatDays ||
+    calHistory.length > limits.calHistory
+  ) {
+    return res.status(413).json({ error: 'Sync payload too large' });
+  }
 
   const workoutWithId = db.prepare('INSERT INTO workouts (id, user_id, date, exercise, sets, weight, set_details, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
   const workoutWithoutId = db.prepare('INSERT INTO workouts (user_id, date, exercise, sets, weight, set_details, notes) VALUES (?, ?, ?, ?, ?, ?, ?)');
@@ -486,25 +555,27 @@ app.post('/api/sync', requireAuth, (req, res) => {
     db.prepare('DELETE FROM cheat_days WHERE user_id=?').run(uid);
     db.prepare('DELETE FROM cal_history WHERE user_id=?').run(uid);
 
-    workouts.slice(0, 5000).forEach((w) => {
+    workouts.forEach((w) => {
       const date = asCleanDate(w.date);
       const exercise = typeof w.exercise === 'string' ? w.exercise.trim().slice(0, 120) : '';
-      const setDetails = Array.isArray(w.setDetails) ? w.setDetails.map(Number).filter(v => v > 0) : [];
+      const setDetails = Array.isArray(w.setDetails) ? w.setDetails.map(v => Math.round(asBoundedNumber(v, 1, 500, 0))).filter(v => v > 0).slice(0, 50) : [];
       if (!date || !exercise || !setDetails.length) return;
-      const weight = Number(w.weight) || 0;
+      const setWeights = Array.isArray(w.setWeights) ? w.setWeights.map(v => asBoundedNumber(v, 0, 1000, 0)).slice(0, 50) : null;
+      const weight = asBoundedNumber(w.weight, 0, 1000, 0);
       const notes = String(w.comment ?? w.notes ?? '').slice(0, 1200);
       insertWithOptionalId(
         workoutWithId,
         workoutWithoutId,
         asPositiveId(w.id),
-        [uid, date, exercise, setDetails.length, weight, serializeWorkoutSets(setDetails, w.setWeights), notes]
+        [uid, date, exercise, setDetails.length, weight, serializeWorkoutSets(setDetails, setWeights), notes]
       );
     });
 
-    calories.slice(0, 10000).forEach((entry) => {
+    calories.forEach((entry) => {
       const date = asCleanDate(entry.date);
       const name = typeof entry.name === 'string' ? entry.name.trim().slice(0, 160) : '';
       if (!date || !name) return;
+      const mealType = String(entry.mealType || entry.meal_type || 'breakfast').slice(0, 40);
       insertWithOptionalId(
         calorieWithId,
         calorieWithoutId,
@@ -512,37 +583,39 @@ app.post('/api/sync', requireAuth, (req, res) => {
         [
           uid,
           date,
-          String(entry.mealType || entry.meal_type || 'breakfast').slice(0, 40),
+          VALID_MEAL_TYPES.has(mealType) ? mealType : 'snack',
           name,
-          Number(entry.calories) || 0,
-          Number(entry.protein) || 0,
-          Number(entry.carbs) || 0,
-          Number(entry.fat) || 0,
+          asBoundedNumber(entry.calories, 0, 20000, 0),
+          asBoundedNumber(entry.protein, 0, 1000, 0),
+          asBoundedNumber(entry.carbs, 0, 2000, 0),
+          asBoundedNumber(entry.fat, 0, 1000, 0),
         ]
       );
     });
 
     const seenBodyDates = new Set();
-    bodyWeight.slice(0, 5000).forEach((entry) => {
+    bodyWeight.forEach((entry) => {
       const date = asCleanDate(entry.date);
+      const weight = asBoundedNumber(entry.weight, 20, 400, NaN);
+      if (!Number.isFinite(weight)) return;
       if (!date || seenBodyDates.has(date)) return;
       seenBodyDates.add(date);
       insertWithOptionalId(
         bodyWeightWithId,
         bodyWeightWithoutId,
         asPositiveId(entry.id),
-        [uid, date, Number(entry.weight) || 0]
+        [uid, date, weight]
       );
     });
 
-    [...new Set(restDays)].slice(0, 5000).forEach((date) => {
+    [...new Set(restDays)].forEach((date) => {
       if (asCleanDate(date)) insertRestDay.run(uid, date);
     });
-    [...new Set(cheatDays)].slice(0, 5000).forEach((date) => {
+    [...new Set(cheatDays)].forEach((date) => {
       if (asCleanDate(date)) insertCheatDay.run(uid, date);
     });
 
-    calHistory.slice(0, 10000).forEach((entry) => {
+    calHistory.forEach((entry) => {
       const date = asCleanDate(entry.date);
       const name = typeof entry.name === 'string' ? entry.name.trim().slice(0, 160) : '';
       if (!date || !name) return;
@@ -554,9 +627,9 @@ app.post('/api/sync', requireAuth, (req, res) => {
           uid,
           date,
           name,
-          Number(entry.grams) || 0,
-          Number(entry.kcalPer100 ?? entry.kcal_per_100) || 0,
-          Number(entry.total) || 0,
+          asBoundedNumber(entry.grams, 0, 20000, 0),
+          asBoundedNumber(entry.kcalPer100 ?? entry.kcal_per_100, 0, 2000, 0),
+          asBoundedNumber(entry.total, 0, 50000, 0),
         ]
       );
     });

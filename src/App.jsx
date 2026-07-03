@@ -81,7 +81,6 @@ const CHEAT_KEY_PREFIX = 'powergraph_cheat_';
 const WATER_KEY_PREFIX = 'powergraph_water_';
 const DEMO_DAYS_KEY_PREFIX = 'powergraph_demo_days_';
 const DEMO_WATER_KEY_PREFIX = 'powergraph_demo_water_';
-const THEME_KEY = 'powergraph_theme';
 const LAST_SECTION_KEY_PREFIX = 'powergraph_last_section_';
 const DRAFT_KEY_PREFIX = 'powergraph_draft_';
 const SETTINGS_KEY_PREFIX = 'powergraph_settings_';
@@ -108,15 +107,82 @@ function dateOffsetKey(offsetDays) {
   date.setDate(date.getDate() + offsetDays);
   return date.toISOString().slice(0, 10);
 }
-function getInitialTheme() {
-  try {
-    const saved = localStorage.getItem(THEME_KEY);
-    if (saved === 'dark' || saved === 'light') return saved;
-    return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-  } catch {
-    return 'dark';
-  }
+
+function normalizeHexColor(value, fallback = '#7aa2f7') {
+  if (typeof value !== 'string') return fallback;
+  const clean = value.trim();
+  return /^#[0-9a-fA-F]{6}$/.test(clean) ? clean.toLowerCase() : fallback;
 }
+
+function hexToRgb(hex) {
+  const clean = normalizeHexColor(hex).slice(1);
+  return {
+    r: parseInt(clean.slice(0, 2), 16),
+    g: parseInt(clean.slice(2, 4), 16),
+    b: parseInt(clean.slice(4, 6), 16),
+  };
+}
+
+function rgbToHex(r, g, b) {
+  const toHex = (value) => Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function hslToHex(h, s, l) {
+  const hue = ((h % 360) + 360) % 360;
+  const sat = Math.max(0, Math.min(100, s)) / 100;
+  const light = Math.max(0, Math.min(100, l)) / 100;
+  const c = (1 - Math.abs(2 * light - 1)) * sat;
+  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const m = light - c / 2;
+  let r = 0; let g = 0; let b = 0;
+  if (hue < 60) [r, g, b] = [c, x, 0];
+  else if (hue < 120) [r, g, b] = [x, c, 0];
+  else if (hue < 180) [r, g, b] = [0, c, x];
+  else if (hue < 240) [r, g, b] = [0, x, c];
+  else if (hue < 300) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+  return rgbToHex((r + m) * 255, (g + m) * 255, (b + m) * 255);
+}
+
+function mixHex(hex, targetHex, amount) {
+  const source = hexToRgb(hex);
+  const target = hexToRgb(targetHex);
+  const pct = Math.max(0, Math.min(1, amount));
+  return rgbToHex(
+    source.r + (target.r - source.r) * pct,
+    source.g + (target.g - source.g) * pct,
+    source.b + (target.b - source.b) * pct
+  );
+}
+
+function shiftHexTone(hex, tone = 0) {
+  const amount = Math.min(0.72, Math.abs(Number(tone) || 0) / 100);
+  return tone >= 0 ? mixHex(hex, '#ffffff', amount) : mixHex(hex, '#05070a', amount);
+}
+
+function getContrastHex(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.62 ? '#071018' : '#ffffff';
+}
+
+function makeHoneycombPalette() {
+  const hues = [210, 225, 240, 255, 275, 295, 315, 335, 355, 15, 35, 52, 70, 95, 120, 145, 170, 190];
+  const rows = [
+    { start: 0, count: 7, light: 28, sat: 72 },
+    { start: 16, count: 9, light: 38, sat: 76 },
+    { start: 14, count: 11, light: 48, sat: 78 },
+    { start: 12, count: 13, light: 58, sat: 80 },
+    { start: 10, count: 15, light: 68, sat: 82 },
+    { start: 8, count: 13, light: 78, sat: 72 },
+    { start: 6, count: 11, light: 55, sat: 86 },
+    { start: 4, count: 9, light: 42, sat: 82 },
+    { start: 2, count: 7, light: 30, sat: 74 },
+  ];
+  return rows.map((row) => Array.from({ length: row.count }, (_, index) => hslToHex(hues[(row.start + index) % hues.length], row.sat, row.light)));
+}
+
 function getLastSectionKey(email) { return `${LAST_SECTION_KEY_PREFIX}${email}`; }
 function getDraftKey(email, name) { return `${DRAFT_KEY_PREFIX}${email}_${name}`; }
 function getInitialSection(email) {
@@ -978,7 +1044,17 @@ const BACKGROUND_PRESETS = [
   { id: 'mono', color: '#cbd5e1', label: { en: 'Monochrome', sl: 'Monokrom', es: 'Monocromo', pt: 'Monocromatico', fr: 'Monochrome', tr: 'Monokrom', ar: 'Monochrome', ja: 'Mono', zh: 'Mono', ru: 'Mono' } },
 ];
 const SUPPORTED_BACKGROUNDS = BACKGROUND_PRESETS.map((item) => item.id);
-const defaultSettings = { units: 'kg', language: 'en', backgroundAccent: 'blue', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, waterGoalMl: 2500, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
+const HONEYCOMB_PALETTE = makeHoneycombPalette();
+const APPEARANCE_PATTERNS = [
+  { id: 'grid', label: { en: 'Grid', sl: 'Mreza' } },
+  { id: 'dots', label: { en: 'Dots', sl: 'Pike' } },
+  { id: 'diagonal', label: { en: 'Diagonal', sl: 'Diagonalno' } },
+  { id: 'mesh', label: { en: 'Mesh', sl: 'Mreza +' } },
+  { id: 'none', label: { en: 'Clean', sl: 'Cisto' } },
+];
+const APPEARANCE_TONES = [-36, -24, -12, 0, 12, 24, 36, 48];
+const SUPPORTED_PATTERNS = APPEARANCE_PATTERNS.map((item) => item.id);
+const defaultSettings = { units: 'kg', language: 'en', backgroundAccent: 'blue', primaryColor: '#7aa2f7', secondaryColor: '#c9a66b', primaryTone: -4, secondaryTone: -10, backgroundPattern: 'grid', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, waterGoalMl: 2500, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
 const defaultAdminConfig = {
   appName: 'PowerGraph',
   announcementEnabled: false,
@@ -1049,6 +1125,17 @@ const ui = {
     language: 'Jezik',
     backgroundAccent: 'Barva ozadja',
     backgroundAccentDesc: 'Izberi barvo, ki se uporabi za ozadje, gumbe in glavne poudarke.',
+    appearanceTitle: 'Izgled',
+    appearanceDesc: 'Nastavi primarno in sekundarno barvo, svetlost ter subtilen vzorec ozadja.',
+    primaryColor: 'Primarna',
+    secondaryColor: 'Sekundarna',
+    colorTab: 'Barva',
+    shadeTab: 'Temneje / svetleje',
+    patternTab: 'Vzorec',
+    darker: 'Temneje',
+    lighter: 'Svetleje',
+    selectedColor: 'Izbrana barva',
+    preview: 'Predogled',
     dateFormat: 'Na\u010din zapisa datuma',
     backupReminder: 'Opomnik za backup',
     lastBackup: 'Zadnji backup',
@@ -1544,6 +1631,17 @@ const ui = {
     language: 'Language',
     backgroundAccent: 'Background color',
     backgroundAccentDesc: 'Choose the color used for the background, buttons, and main highlights.',
+    appearanceTitle: 'Appearance',
+    appearanceDesc: 'Set primary and secondary colors, brightness, and a subtle background pattern.',
+    primaryColor: 'Primary',
+    secondaryColor: 'Secondary',
+    colorTab: 'Color',
+    shadeTab: 'Darker / lighter',
+    patternTab: 'Pattern',
+    darker: 'Darker',
+    lighter: 'Lighter',
+    selectedColor: 'Selected color',
+    preview: 'Preview',
     dateFormat: 'Date format',
     backupReminder: 'Backup reminder',
     lastBackup: 'Last backup',
@@ -3040,6 +3138,11 @@ function sanitizeSettings(input) {
     if (input.units === 'kg' || input.units === 'lbs') safe.units = input.units;
     if (SUPPORTED_LANGUAGES.includes(input.language)) safe.language = input.language;
     if (SUPPORTED_BACKGROUNDS.includes(input.backgroundAccent)) safe.backgroundAccent = input.backgroundAccent;
+    if (typeof input.primaryColor === 'string') safe.primaryColor = normalizeHexColor(input.primaryColor, safe.primaryColor);
+    if (typeof input.secondaryColor === 'string') safe.secondaryColor = normalizeHexColor(input.secondaryColor, safe.secondaryColor);
+    if (Number.isFinite(Number(input.primaryTone))) safe.primaryTone = Math.max(-60, Math.min(60, Number(input.primaryTone)));
+    if (Number.isFinite(Number(input.secondaryTone))) safe.secondaryTone = Math.max(-60, Math.min(60, Number(input.secondaryTone)));
+    if (SUPPORTED_PATTERNS.includes(input.backgroundPattern)) safe.backgroundPattern = input.backgroundPattern;
     if (['DD.MM.YYYY', 'YYYY-MM-DD', 'MM/DD/YYYY'].includes(input.dateFormat)) safe.dateFormat = input.dateFormat;
     if ([3, 7, 14, 30].includes(Number(input.backupReminderDays))) safe.backupReminderDays = Number(input.backupReminderDays);
     if (typeof input.lastBackupAt === 'string') safe.lastBackupAt = input.lastBackupAt;
@@ -4263,7 +4366,6 @@ export default function App() {
   const bodyFatBackRef = useRef(null);
   const mainContentRef = useRef(null);
   const commandInputRef = useRef(null);
-  const [theme, setTheme] = useState(getInitialTheme);
   const [currentUser, setCurrentUser] = useState(() => initialSessionEmail);
   const aiEnabled = Boolean(API_URL && currentUser && getJwt(currentUser));
   const [workouts, setWorkouts] = useState(() => loadWorkouts(initialSessionEmail));
@@ -4369,8 +4471,39 @@ export default function App() {
   const [recoverySnapshots, setRecoverySnapshots] = useState(() => loadRecoverySnapshots(initialSessionEmail));
   const [storageInfo, setStorageInfo] = useState(null);
   const [todayKey, setTodayKey] = useState(() => dateOffsetKey(0));
+  const [appearanceTarget, setAppearanceTarget] = useState('primary');
+  const [appearanceTab, setAppearanceTab] = useState('color');
 
   const copy = getCopy(settings.language);
+  const primaryBaseColor = normalizeHexColor(settings.primaryColor, defaultSettings.primaryColor);
+  const secondaryBaseColor = normalizeHexColor(settings.secondaryColor, defaultSettings.secondaryColor);
+  const primaryColor = shiftHexTone(primaryBaseColor, settings.primaryTone);
+  const secondaryColor = shiftHexTone(secondaryBaseColor, settings.secondaryTone);
+  const appearanceActiveColor = appearanceTarget === 'primary' ? primaryBaseColor : secondaryBaseColor;
+  const appearanceActiveTone = appearanceTarget === 'primary' ? settings.primaryTone : settings.secondaryTone;
+  const appearanceActiveFinalColor = shiftHexTone(appearanceActiveColor, appearanceActiveTone);
+  const appearanceTabs = [
+    ['color', copy.colorTab],
+    ['shade', copy.shadeTab],
+    ['pattern', copy.patternTab],
+  ];
+  const setAppearanceColor = (target, color) => {
+    setSettings((current) => ({
+      ...current,
+      [target === 'primary' ? 'primaryColor' : 'secondaryColor']: normalizeHexColor(color),
+    }));
+  };
+  const setAppearanceTone = (target, tone) => {
+    setSettings((current) => ({
+      ...current,
+      [target === 'primary' ? 'primaryTone' : 'secondaryTone']: Math.max(-60, Math.min(60, Number(tone) || 0)),
+    }));
+  };
+  const cycleAppearanceTab = (direction) => {
+    const index = appearanceTabs.findIndex(([id]) => id === appearanceTab);
+    const next = (index + direction + appearanceTabs.length) % appearanceTabs.length;
+    setAppearanceTab(appearanceTabs[next][0]);
+  };
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
   const sectionDescriptions = {
     dashboard: settings.language === 'sl' ? 'Pregled napredka, statistike in hiter vnos novega treninga.' : 'A quick overview of progress, stats, and fast workout logging.',
@@ -4805,10 +4938,33 @@ export default function App() {
     return () => window.removeEventListener('sw-updated', handleSwUpdate);
   }, []);
 
-  useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem(THEME_KEY, theme); }, [theme]);
   useEffect(() => {
-    document.documentElement.dataset.accent = settings.backgroundAccent || defaultSettings.backgroundAccent;
-  }, [settings.backgroundAccent]);
+    const root = document.documentElement;
+    const primary = hexToRgb(primaryColor);
+    const secondary = hexToRgb(secondaryColor);
+    const primaryStrong = hexToRgb(shiftHexTone(primaryBaseColor, Math.min(48, Number(settings.primaryTone || 0) + 24)));
+    const pageOne = mixHex('#06090d', primaryColor, 0.16);
+    const pageTwo = mixHex('#0b1017', secondaryColor, 0.12);
+    root.removeAttribute('data-theme');
+    root.dataset.accent = 'custom';
+    root.dataset.pattern = settings.backgroundPattern || defaultSettings.backgroundPattern;
+    root.style.setProperty('--custom-primary', primaryColor);
+    root.style.setProperty('--custom-secondary', secondaryColor);
+    root.style.setProperty('--accent-rgb', `${primary.r}, ${primary.g}, ${primary.b}`);
+    root.style.setProperty('--accent-strong-rgb', `${primaryStrong.r}, ${primaryStrong.g}, ${primaryStrong.b}`);
+    root.style.setProperty('--secondary-rgb', `${secondary.r}, ${secondary.g}, ${secondary.b}`);
+    root.style.setProperty('--accent-contrast', getContrastHex(primaryColor));
+    root.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`);
+    root.style.setProperty('--accent-soft', `rgba(${primary.r}, ${primary.g}, ${primary.b}, 0.095)`);
+    root.style.setProperty('--accent-border', `rgba(${primary.r}, ${primary.g}, ${primary.b}, 0.28)`);
+    root.style.setProperty('--accent-shadow', `rgba(${primary.r}, ${primary.g}, ${primary.b}, 0.16)`);
+    root.style.setProperty('--primary', primaryColor);
+    root.style.setProperty('--primary-glow', shiftHexTone(primaryBaseColor, Math.min(55, Number(settings.primaryTone || 0) + 22)));
+    root.style.setProperty('--secondary', secondaryColor);
+    root.style.setProperty('--secondary-glow', shiftHexTone(secondaryBaseColor, Math.min(55, Number(settings.secondaryTone || 0) + 20)));
+    root.style.setProperty('--page-bg-1', pageOne);
+    root.style.setProperty('--page-bg-2', pageTwo);
+  }, [primaryBaseColor, primaryColor, secondaryBaseColor, secondaryColor, settings.backgroundPattern, settings.primaryTone, settings.secondaryTone]);
   useEffect(() => {
     document.title = adminConfig.appName || copy.app;
   }, [adminConfig.appName, copy.app]);
@@ -6605,6 +6761,83 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
     setTimeout(() => { setFeedbackOpen(false); setFeedbackSent(false); }, 1800);
   }
 
+  const appearanceEditor = (
+    <article className="settings-card settings-card-wide appearance-card">
+      <div className="appearance-card-header">
+        <div>
+          <span className="settings-title">{copy.appearanceTitle}</span>
+          <p className="settings-copy">{copy.appearanceDesc}</p>
+        </div>
+        <div className="appearance-preview" style={{ '--preview-primary': primaryColor, '--preview-secondary': secondaryColor }}>
+          <span>{copy.preview}</span>
+          <strong />
+        </div>
+      </div>
+      <div className="appearance-segment" role="tablist" aria-label={copy.appearanceTitle}>
+        <button className={appearanceTarget === 'primary' ? 'active' : ''} type="button" onClick={() => setAppearanceTarget('primary')} aria-selected={appearanceTarget === 'primary'}>
+          <span className="appearance-dot" style={{ background: primaryColor }} />
+          {copy.primaryColor}
+        </button>
+        <button className={appearanceTarget === 'secondary' ? 'active' : ''} type="button" onClick={() => setAppearanceTarget('secondary')} aria-selected={appearanceTarget === 'secondary'}>
+          <span className="appearance-dot" style={{ background: secondaryColor }} />
+          {copy.secondaryColor}
+        </button>
+      </div>
+      <div className="appearance-tabbar" role="tablist" aria-label={copy.appearanceTitle}>
+        <button className="appearance-arrow" type="button" onClick={() => cycleAppearanceTab(-1)} aria-label="Previous tab">‹</button>
+        {appearanceTabs.map(([id, label]) => <button key={id} className={appearanceTab === id ? 'active' : ''} type="button" onClick={() => setAppearanceTab(id)} aria-selected={appearanceTab === id}>{label}</button>)}
+        <button className="appearance-arrow" type="button" onClick={() => cycleAppearanceTab(1)} aria-label="Next tab">›</button>
+      </div>
+      {appearanceTab === 'color' && (
+        <div className="appearance-color-panel">
+          <div className="honeycomb-picker" role="grid" aria-label={copy.selectedColor}>
+            {HONEYCOMB_PALETTE.map((row, rowIndex) => (
+              <div className="honeycomb-row" key={`row-${rowIndex}`}>
+                {row.map((color) => {
+                  const selected = appearanceActiveColor === color;
+                  return <button key={`${rowIndex}-${color}`} className={`honeycomb-cell ${selected ? 'active' : ''}`} type="button" style={{ background: color }} onClick={() => setAppearanceColor(appearanceTarget, color)} aria-label={color} aria-pressed={selected} />;
+                })}
+              </div>
+            ))}
+          </div>
+          <label className="appearance-native-color">
+            <span>{copy.selectedColor}</span>
+            <input type="color" value={appearanceActiveColor} onChange={(event) => setAppearanceColor(appearanceTarget, event.target.value)} />
+            <strong>{appearanceActiveColor}</strong>
+          </label>
+        </div>
+      )}
+      {appearanceTab === 'shade' && (
+        <div className="appearance-shade-panel">
+          <div className="shade-scale" role="radiogroup" aria-label={copy.shadeTab}>
+            {APPEARANCE_TONES.map((tone) => {
+              const color = shiftHexTone(appearanceActiveColor, tone);
+              const active = Math.round(Number(appearanceActiveTone) || 0) === tone;
+              return (
+                <button key={tone} className={active ? 'active' : ''} type="button" onClick={() => setAppearanceTone(appearanceTarget, tone)} aria-pressed={active}>
+                  <span style={{ background: color }} />
+                  <small>{tone < 0 ? copy.darker : tone > 0 ? copy.lighter : copy.selectedColor}</small>
+                </button>
+              );
+            })}
+          </div>
+          <input className="appearance-tone-slider" type="range" min="-60" max="60" step="1" value={appearanceActiveTone} onChange={(event) => setAppearanceTone(appearanceTarget, event.target.value)} />
+          <div className="appearance-current-swatch" style={{ background: appearanceActiveFinalColor, color: getContrastHex(appearanceActiveFinalColor) }}>{appearanceActiveFinalColor}</div>
+        </div>
+      )}
+      {appearanceTab === 'pattern' && (
+        <div className="appearance-pattern-grid" role="radiogroup" aria-label={copy.patternTab}>
+          {APPEARANCE_PATTERNS.map((pattern) => (
+            <button key={pattern.id} className={`pattern-choice pattern-${pattern.id} ${settings.backgroundPattern === pattern.id ? 'active' : ''}`} type="button" onClick={() => setSettings((current) => ({ ...current, backgroundPattern: pattern.id }))} aria-pressed={settings.backgroundPattern === pattern.id}>
+              <span />
+              {getLocalizedLabel(pattern.label, settings.language)}
+            </button>
+          ))}
+        </div>
+      )}
+    </article>
+  );
+
   const navIconProps = { size: 18, strokeWidth: 2.2 };
   const NAV_ICONS = {
     dashboard: <Home {...navIconProps} />,
@@ -6916,16 +7149,6 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             </button>
             <button className="context-help-btn topbar-help-btn" type="button" onClick={() => setHelpTopic('tutorial')} title={copy.tutorialOpen} aria-label={copy.tutorialOpen}>?</button>
             <span className="user-chip">{getUserBadge(currentUser)}</span>
-            <button
-              className="theme-toggle"
-              type="button"
-              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              data-mode={theme}
-              onClick={() => setTheme((c) => (c === 'dark' ? 'light' : 'dark'))}
-            >
-              <span aria-hidden="true">{theme === 'dark' ? 'LT' : 'DK'}</span>
-            </button>
             <button className="action-btn-outline" type="button" onClick={logout}>{copy.logout}</button>
           </div>
         </header>
@@ -8246,7 +8469,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           </section>
         )}
 
-        {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article id="settings-language-card" className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => { setHelpTopic(null); setSettings((c) => ({ ...c, language: e.target.value })); }}><option value="en">English</option>{LANGUAGE_OPTIONS.filter((option) => option.id !== 'en').map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></article><article className="settings-card settings-card-wide"><div className="settings-actions settings-actions-stacked"><div><span className="settings-title">{copy.backgroundAccent}</span><p className="settings-copy">{copy.backgroundAccentDesc}</p></div><div className="accent-picker" role="radiogroup" aria-label={copy.backgroundAccent}>{BACKGROUND_PRESETS.map((preset) => <button key={preset.id} className={`accent-choice ${settings.backgroundAccent === preset.id ? 'active' : ''}`} type="button" onClick={() => setSettings((c) => ({ ...c, backgroundAccent: preset.id }))} aria-pressed={settings.backgroundAccent === preset.id}><span className="accent-swatch" style={{ background: preset.color }} />{getLocalizedLabel(preset.label, settings.language)}</button>)}</div></div></article><article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.installApp}</span><p className="settings-copy">{copy.installAppDesc}</p></div><div>{isInStandaloneMode ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installDone}</span> : isIos ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installIos}</span> : <button className="action-btn-outline" type="button" onClick={triggerInstall} disabled={!installPrompt}>{copy.installBtn}</button>}</div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.showFeedbackBtn}</span><p className="settings-copy">{copy.showFeedbackBtnDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => setSettings(c => ({...c, showFeedbackBtn: !c.showFeedbackBtn}))}>{settings.showFeedbackBtn ? '✓ On' : 'Off'}</button></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.tutorialOpen}</span><p className="settings-copy">{copy.tutorialOpenDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => { setTutorialStep(0); setShowTutorial(true); }}>{copy.tutorialOpen}</button></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
+        {activeSection === 'settings' && <section className="glass-panel settings-section fade-in-up"><div className="panel-header"><h3>{copy.settings}</h3></div><div className="settings-grid"><article className="settings-card"><label className="settings-label" htmlFor="units">{copy.units}</label><select id="units" className="premium-select full-width" value={settings.units} onChange={(e) => setSettings((c) => ({ ...c, units: e.target.value }))}><option value="kg">kg</option><option value="lbs">lbs</option></select></article><article id="settings-language-card" className="settings-card"><label className="settings-label" htmlFor="lang">{copy.language}</label><select id="lang" className="premium-select full-width" value={settings.language} onChange={(e) => { setHelpTopic(null); setSettings((c) => ({ ...c, language: e.target.value })); }}><option value="en">English</option>{LANGUAGE_OPTIONS.filter((option) => option.id !== 'en').map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></article>{appearanceEditor}<article className="settings-card"><label className="settings-label" htmlFor="dateFormat">{copy.dateFormat}</label><select id="dateFormat" className="premium-select full-width" value={settings.dateFormat} onChange={(e) => setSettings((c) => ({ ...c, dateFormat: e.target.value }))}><option value="DD.MM.YYYY">DD.MM.YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option><option value="MM/DD/YYYY">MM/DD/YYYY</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="backup">{copy.backupReminder}</label><select id="backup" className="premium-select full-width" value={settings.backupReminderDays} onChange={(e) => setSettings((c) => ({ ...c, backupReminderDays: Number(e.target.value) }))}><option value={3}>3 {copy.days}</option><option value={7}>7 {copy.days}</option><option value={14}>14 {copy.days}</option><option value={30}>30 {copy.days}</option></select></article><article className="settings-card"><label className="settings-label" htmlFor="calorieGoal">{copy.calorieGoal}</label><input id="calorieGoal" type="number" min="1000" step="50" value={settings.calorieGoal} onChange={(e) => setSettings((c) => ({ ...c, calorieGoal: Number(e.target.value) || 2200 }))} /></article><article className="settings-card"><label className="settings-label" htmlFor="trackerMode">{copy.trackerMode}</label><select id="trackerMode" className="premium-select full-width" value={settings.calorieTrackerMode} onChange={(e) => setSettings((c) => ({ ...c, calorieTrackerMode: e.target.value }))}><option value="simple">{copy.simpleTracker}</option><option value="advanced">{copy.advancedTracker}</option></select></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.lastBackup}</span><p className="settings-copy">{settings.lastBackupAt ? formatDateValue(settings.lastBackupAt.slice(0, 10), settings.dateFormat) : copy.never}</p></div><div className="settings-button-row"><button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button><button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button></div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.installApp}</span><p className="settings-copy">{copy.installAppDesc}</p></div><div>{isInStandaloneMode ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installDone}</span> : isIos ? <span style={{color:'var(--text-secondary)',fontSize:'14px'}}>{copy.installIos}</span> : <button className="action-btn-outline" type="button" onClick={triggerInstall} disabled={!installPrompt}>{copy.installBtn}</button>}</div></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.showFeedbackBtn}</span><p className="settings-copy">{copy.showFeedbackBtnDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => setSettings(c => ({...c, showFeedbackBtn: !c.showFeedbackBtn}))}>{settings.showFeedbackBtn ? '✓ On' : 'Off'}</button></div></article><article className="settings-card settings-card-wide"><div className="settings-actions"><div><span className="settings-title">{copy.tutorialOpen}</span><p className="settings-copy">{copy.tutorialOpenDesc}</p></div><button className="action-btn-outline" type="button" onClick={() => { setTutorialStep(0); setShowTutorial(true); }}>{copy.tutorialOpen}</button></div></article><article className="settings-card settings-card-wide danger-card"><div className="settings-actions"><div><span className="settings-title">{copy.clear}</span><p className="settings-copy">{copy.backupText}</p></div><button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button></div></article></div><input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importData} /></section>}
         {activeSection === 'settings' && (
           <section className="glass-panel settings-section fade-in-up data-privacy-panel">
             <div className="panel-header"><h3>{copy.dataPrivacy}</h3>{helpButton('data')}</div>

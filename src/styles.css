@@ -4620,6 +4620,20 @@ textarea,
   color: var(--primary-glow);
 }
 
+.action-btn-outline:disabled,
+.mini-btn:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.action-btn-outline:disabled:hover,
+.mini-btn:disabled:hover {
+  background: rgba(255, 255, 255, 0.025);
+  border-color: rgba(148, 163, 184, 0.16);
+  color: var(--text-primary);
+}
+
 .active-filter,
 .chart-ex-btn-active {
   background: rgba(163, 230, 53, 0.11) !important;
@@ -7286,7 +7300,7 @@ body {
   min-width: 150px;
 }
 
-.demo-data-card {
+.data-recovery-card {
   margin: 16px 0;
   display: grid;
   gap: 10px;
@@ -7412,7 +7426,7 @@ body {
     gap: 6px;
   }
 
-  .demo-data-card .settings-button-row,
+  .data-recovery-card .settings-button-row,
   .privacy-actions-row {
     display: grid;
     grid-template-columns: 1fr;

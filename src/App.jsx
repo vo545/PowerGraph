@@ -98,7 +98,9 @@ const PBKDF2_ITERATIONS = 210000;
 const APP_SECTION_IDS = ['dashboard', 'exercises', 'history', 'bodyweight', 'calories', 'ocenjevalec', 'rankings', 'advisor', 'settings', 'admin'];
 const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 const MAX_IMPORT_FILE_BYTES = 20 * 1024 * 1024;
-const BACKUP_SCHEMA_VERSION = 3;
+const BACKUP_SCHEMA_VERSION = 4;
+const RECOVERY_KEY_PREFIX = 'powergraph_recovery_';
+const MAX_RECOVERY_SNAPSHOTS = 3;
 
 function todayKey() { return new Date().toISOString().slice(0, 10); }
 function dateOffsetKey(offsetDays) {
@@ -726,6 +728,54 @@ function loadBodyFatHistory(email) {
   } catch { return []; }
 }
 
+function getRecoveryKey(email) { return `${RECOVERY_KEY_PREFIX}${email || ''}`; }
+
+function getBackupCounts(data = {}) {
+  return {
+    workouts: Array.isArray(data.workouts) ? data.workouts.length : 0,
+    meals: Array.isArray(data.calorieEntries) ? data.calorieEntries.length : 0,
+    weights: Array.isArray(data.bodyWeightEntries) ? data.bodyWeightEntries.length : 0,
+    estimates: Array.isArray(data.calHistory) ? data.calHistory.length : 0,
+  };
+}
+
+function loadRecoverySnapshots(email) {
+  if (!email) return [];
+  try {
+    const stored = JSON.parse(localStorage.getItem(getRecoveryKey(email)) || '[]');
+    if (!Array.isArray(stored)) return [];
+    return stored
+      .filter((item) => item && typeof item === 'object' && item.data && item.createdAt)
+      .slice(0, MAX_RECOVERY_SNAPSHOTS);
+  } catch {
+    return [];
+  }
+}
+
+function saveRecoverySnapshots(email, snapshots) {
+  if (!email) return false;
+  const safeSnapshots = Array.isArray(snapshots) ? snapshots.slice(0, MAX_RECOVERY_SNAPSHOTS) : [];
+  try {
+    localStorage.setItem(getRecoveryKey(email), JSON.stringify(safeSnapshots));
+    return true;
+  } catch {
+    try {
+      localStorage.setItem(getRecoveryKey(email), JSON.stringify(safeSnapshots.slice(0, 1)));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+function formatBytes(bytes) {
+  const value = Number(bytes) || 0;
+  if (value <= 0) return '0 KB';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const index = Math.min(units.length - 1, Math.floor(Math.log(value) / Math.log(1024)));
+  return `${(value / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+}
+
 function isCleanDate(value) {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
@@ -862,6 +912,7 @@ function sanitizeBackupPayload(raw) {
     restDays: sanitizeDateArray(raw.restDays),
     cheatDays: sanitizeDateArray(raw.cheatDays),
     customExercises: (Array.isArray(raw.customExercises) ? raw.customExercises : []).slice(0, 500).map(sanitizeCustomExercise).filter(Boolean),
+    waterToday: Object.prototype.hasOwnProperty.call(raw, 'waterToday') ? Math.round(cleanNumber(raw.waterToday, 0, 20000, 0)) : null,
   };
 }
 
@@ -939,6 +990,7 @@ const ui = {
     trainingLoad: 'Obremenitev treninga',
     mealCount: '\u0160tevilo obrokov',
     workouts: 'Treningi',
+    meals: 'Obroki',
     totalSets: 'Skupaj serij',
     totalReps: 'Skupaj ponovitev',
     totalVolume: 'Skupni volumen',
@@ -1379,6 +1431,18 @@ const ui = {
     demoDataConfirm: 'This will add sample data to your account. Continue?',
     demoDataAdded: 'Sample data added.',
     demoDataCleared: 'Sample data removed.',
+    recoveryTitle: 'Safety snapshot',
+    recoveryDesc: 'PowerGraph shrani lokalno obnovitveno kopijo pred importom, restore ali brisanjem podatkov.',
+    recoveryCreate: 'Shrani snapshot',
+    recoveryRestore: 'Obnovi zadnji snapshot',
+    recoveryNone: 'Ni shranjenih recovery snapshotov.',
+    recoverySaved: 'Safety snapshot shranjen.',
+    recoveryRestored: 'Safety snapshot obnovljen.',
+    recoveryRestoreConfirm: 'Obnovim zadnji safety snapshot? Trenutno stanje bo tudi shranjeno kot snapshot.',
+    storageUsed: 'Poraba prostora',
+    storagePersistent: 'Persistent storage',
+    storageProtected: 'Zasciteno',
+    storageBestEffort: 'Best effort',
   },
   en: {
     app: 'PowerGraph',
@@ -1410,6 +1474,7 @@ const ui = {
     trainingLoad: 'Training load',
     mealCount: 'Meal count',
     workouts: 'Workouts',
+    meals: 'Meals',
     totalSets: 'Total sets',
     totalReps: 'Total reps',
     totalVolume: 'Total volume',
@@ -1850,6 +1915,18 @@ const ui = {
     demoDataConfirm: 'This will add sample data to your account. Continue?',
     demoDataAdded: 'Sample data added.',
     demoDataCleared: 'Sample data removed.',
+    recoveryTitle: 'Safety snapshot',
+    recoveryDesc: 'PowerGraph keeps a local recovery copy before import, restore, or data deletion.',
+    recoveryCreate: 'Save snapshot',
+    recoveryRestore: 'Restore latest snapshot',
+    recoveryNone: 'No recovery snapshots saved yet.',
+    recoverySaved: 'Safety snapshot saved.',
+    recoveryRestored: 'Safety snapshot restored.',
+    recoveryRestoreConfirm: 'Restore the latest safety snapshot? Your current state will also be saved as a snapshot.',
+    storageUsed: 'Storage used',
+    storagePersistent: 'Persistent storage',
+    storageProtected: 'Protected',
+    storageBestEffort: 'Best effort',
   },
 };
 
@@ -4156,6 +4233,9 @@ export default function App() {
   const [reverseCalDailyKcal, setReverseCalDailyKcal] = useState('');
   const [reverseCalResult, setReverseCalResult] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [recoverySnapshots, setRecoverySnapshots] = useState(() => loadRecoverySnapshots(initialSessionEmail));
+  const [storageInfo, setStorageInfo] = useState(null);
+  const [todayKey, setTodayKey] = useState(() => dateOffsetKey(0));
 
   const copy = getCopy(settings.language);
   const sectionNames = { Chest: copy.chest, Legs: copy.legs, Triceps: copy.triceps, Biceps: copy.biceps, Forearms: copy.forearms, Shoulders: copy.shoulders, 'Stamina/Cardio': copy.cardio, Back: copy.back, Abs: copy.abs };
@@ -4413,7 +4493,6 @@ export default function App() {
   const selectedDayEntries = useMemo(() => calorieEntries.filter((entry) => entry.date === calorieForm.date), [calorieEntries, calorieForm.date]);
   const selectedDayTotals = useMemo(() => selectedDayEntries.reduce((acc, entry) => ({ calories: acc.calories + Number(entry.calories || 0), protein: acc.protein + Number(entry.protein || 0), carbs: acc.carbs + Number(entry.carbs || 0), fat: acc.fat + Number(entry.fat || 0) }), { calories: 0, protein: 0, carbs: 0, fat: 0 }), [selectedDayEntries]);
   const dashboardBodyWeightKg = useMemo(() => getLatestBodyWeightKg(bodyWeightEntries, settings.gender || 'male'), [bodyWeightEntries, settings.gender]);
-  const todayKey = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const todayWorkouts = useMemo(() => workouts.filter((workout) => workout.date === todayKey), [todayKey, workouts]);
   const todayCalories = useMemo(() => calorieEntries.filter((entry) => entry.date === todayKey), [calorieEntries, todayKey]);
   const todayTotals = useMemo(() => todayCalories.reduce((acc, entry) => ({ calories: acc.calories + Number(entry.calories || 0), protein: acc.protein + Number(entry.protein || 0), carbs: acc.carbs + Number(entry.carbs || 0), fat: acc.fat + Number(entry.fat || 0) }), { calories: 0, protein: 0, carbs: 0, fat: 0 }), [todayCalories]);
@@ -4429,6 +4508,14 @@ export default function App() {
   }, [customExercises, dashboardBodyWeightKg, workouts]);
   const hasProgressData = workouts.length || calorieEntries.length || bodyWeightEntries.length || waterToday > 0;
   const waterGoalMl = Math.max(1000, Number(tdeeResult?.waterMl || settings.waterGoalMl || defaultSettings.waterGoalMl));
+  const latestRecoverySnapshot = recoverySnapshots[0] || null;
+  const latestRecoveryCounts = latestRecoverySnapshot?.counts || (latestRecoverySnapshot ? getBackupCounts(latestRecoverySnapshot.data) : null);
+  const latestRecoveryLabel = latestRecoverySnapshot
+    ? new Date(latestRecoverySnapshot.createdAt).toLocaleString(settings.language === 'sl' ? 'sl-SI' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
+    : copy.never;
+  const storageUsageLabel = storageInfo
+    ? `${formatBytes(storageInfo.usage)} / ${storageInfo.quota ? formatBytes(storageInfo.quota) : '-'}`
+    : '-';
   const dailyControl = useMemo(() => {
     const lastWorkoutDate = sortedWorkouts[0]?.date || '';
     const daysSinceWorkout = lastWorkoutDate ? Math.max(0, Math.floor((new Date(todayKey) - new Date(lastWorkoutDate)) / 86400000)) : null;
@@ -4628,6 +4715,7 @@ export default function App() {
     setAdminBonus(loadAdminBonus(currentUser));
     setCustomExercises(loadCustomExercises(currentUser));
     setWaterToday(loadWaterMl(currentUser));
+    setRecoverySnapshots(loadRecoverySnapshots(currentUser));
     setFormData(nextWorkoutDraft);
     setCalorieForm(loadDraft(currentUser, 'mealForm', getDefaultMealForm()));
     setBwForm(loadDraft(currentUser, 'bodyWeightForm', getDefaultBodyWeightForm()));
@@ -4657,6 +4745,17 @@ export default function App() {
       localStorage.setItem(getRecapKey(currentUser), currentMonthKey);
     }
   }, [currentUser]);
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const next = dateOffsetKey(0);
+      setTodayKey((current) => (current === next ? current : next));
+    }, 60000);
+    return () => window.clearInterval(id);
+  }, []);
+  useEffect(() => {
+    if (!currentUser) return;
+    setWaterToday(loadWaterMl(currentUser));
+  }, [currentUser, todayKey]);
   useEffect(() => {
     if (!currentUser) return;
     if (activeSection === 'admin' && currentUser !== ADMIN_EMAIL) return;
@@ -4718,6 +4817,27 @@ export default function App() {
     if (!currentUser) return;
     localStorage.setItem(getCustomExKey(currentUser), JSON.stringify(customExercises));
   }, [currentUser, customExercises]);
+  useEffect(() => {
+    if (!currentUser || activeSection !== 'settings') return;
+    let cancelled = false;
+    async function refreshStorageInfo() {
+      try {
+        const estimate = await navigator.storage?.estimate?.();
+        const persisted = await navigator.storage?.persisted?.();
+        if (!cancelled) {
+          setStorageInfo({
+            usage: estimate?.usage || 0,
+            quota: estimate?.quota || 0,
+            persisted: Boolean(persisted),
+          });
+        }
+      } catch {
+        if (!cancelled) setStorageInfo(null);
+      }
+    }
+    refreshStorageInfo();
+    return () => { cancelled = true; };
+  }, [activeSection, bodyWeightEntries.length, calorieEntries.length, calHistory.length, currentUser, recoverySnapshots.length, waterToday, workouts.length]);
   useEffect(() => {
     timerAlarmFnRef.current = () => {
       playTimerAlarm();
@@ -4808,11 +4928,11 @@ export default function App() {
     setSyncing(true);
     const id = setTimeout(async () => {
       try {
-        await apiCall(currentUser, '/api/sync', 'POST', { workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory });
+        await apiCall(currentUser, '/api/sync', 'POST', { workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory, waterToday, waterDate: todayKey });
       } finally { setSyncing(false); }
     }, 1500);
     return () => { clearTimeout(id); setSyncing(false); };
-  }, [currentUser, workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory]);
+  }, [currentUser, workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory, waterToday, todayKey]);
 
   async function hydrateFromBackend(email, password, mode = 'login') {
     const token = await backendLogin(email, password, mode);
@@ -4931,6 +5051,10 @@ export default function App() {
     setRecapData(null);
     setRestDays([]);
     setCheatDays([]);
+    setCustomExercises([]);
+    setWaterToday(0);
+    setRecoverySnapshots([]);
+    setStorageInfo(null);
   }
 
   function changeSet(index, value) { setFormData((c) => ({ ...c, setDetails: c.setDetails.map((item, i) => (i === index ? value : item)) })); }
@@ -4951,8 +5075,9 @@ export default function App() {
     setFormData((c) => ({ ...c, weight: '', setDetails: [''], setWeights: [''] }));
     setToast(copy.saved);
   }
-  async function exportData() {
-    const data = {
+
+  function buildBackupData() {
+    return {
       workouts,
       calorieEntries,
       settings,
@@ -4962,7 +5087,75 @@ export default function App() {
       restDays,
       cheatDays,
       customExercises,
+      waterToday,
     };
+  }
+
+  function persistRecoverySnapshotList(nextSnapshots) {
+    const saved = saveRecoverySnapshots(currentUser, nextSnapshots);
+    if (saved) setRecoverySnapshots(loadRecoverySnapshots(currentUser));
+    return saved;
+  }
+
+  function createRecoverySnapshot(reason = 'manual') {
+    if (!currentUser) return null;
+    try {
+      const data = buildBackupData();
+      const snapshot = {
+        id: Date.now(),
+        reason,
+        createdAt: new Date().toISOString(),
+        counts: getBackupCounts(data),
+        data,
+      };
+      const existing = loadRecoverySnapshots(currentUser).filter((item) => item.id !== snapshot.id);
+      const next = [snapshot, ...existing].slice(0, MAX_RECOVERY_SNAPSHOTS);
+      return persistRecoverySnapshotList(next) ? snapshot : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function applyCleanBackup(cleanBackup) {
+    setWorkouts(cleanBackup.workouts);
+    setCalorieEntries(cleanBackup.calorieEntries);
+    if (cleanBackup.settings) setSettings(cleanBackup.settings);
+    setCalHistory(cleanBackup.calHistory);
+    setBodyFatHistory(cleanBackup.bodyFatHistory);
+    setBodyWeightEntries(cleanBackup.bodyWeightEntries);
+    setRestDays(cleanBackup.restDays);
+    setCheatDays(cleanBackup.cheatDays);
+    setCustomExercises(cleanBackup.customExercises);
+    if (cleanBackup.waterToday !== null && cleanBackup.waterToday !== undefined) {
+      setWaterToday(cleanBackup.waterToday);
+      saveWaterMl(currentUser, cleanBackup.waterToday);
+    }
+  }
+
+  function manualRecoverySnapshot() {
+    const snapshot = createRecoverySnapshot('manual');
+    setToast(snapshot ? copy.recoverySaved : copy.importFail);
+  }
+
+  function restoreRecoverySnapshot(snapshotId = recoverySnapshots[0]?.id) {
+    const snapshot = recoverySnapshots.find((item) => item.id === snapshotId);
+    if (!snapshot) {
+      setToast(copy.recoveryNone);
+      return;
+    }
+    if (!window.confirm(copy.recoveryRestoreConfirm)) return;
+    createRecoverySnapshot('before-restore');
+    const cleanBackup = sanitizeBackupPayload(snapshot.data);
+    if (!cleanBackup) {
+      setToast(copy.importFail);
+      return;
+    }
+    applyCleanBackup(cleanBackup);
+    setToast(copy.recoveryRestored);
+  }
+
+  async function exportData() {
+    const data = buildBackupData();
     const checksum = await sha256Text(JSON.stringify(data));
     const backup = {
       version: BACKUP_SCHEMA_VERSION,
@@ -5013,15 +5206,8 @@ export default function App() {
         }
         const cleanBackup = sanitizeBackupPayload(payload);
         if (!cleanBackup) throw new Error('invalid');
-        setWorkouts(cleanBackup.workouts);
-        setCalorieEntries(cleanBackup.calorieEntries);
-        if (cleanBackup.settings) setSettings(cleanBackup.settings);
-        setCalHistory(cleanBackup.calHistory);
-        setBodyFatHistory(cleanBackup.bodyFatHistory);
-        setBodyWeightEntries(cleanBackup.bodyWeightEntries);
-        setRestDays(cleanBackup.restDays);
-        setCheatDays(cleanBackup.cheatDays);
-        setCustomExercises(cleanBackup.customExercises);
+        createRecoverySnapshot('before-import');
+        applyCleanBackup(cleanBackup);
         setToast(copy.importDone);
       } catch {
         setToast(copy.importFail);
@@ -5033,6 +5219,7 @@ export default function App() {
   }
   function clearData() {
     if (!window.confirm(copy.clearConfirm)) return;
+    createRecoverySnapshot('before-clear');
     setWorkouts([]);
     setCalorieEntries([]);
     setCalHistory([]);
@@ -5048,10 +5235,16 @@ export default function App() {
     setIngredientMode('quick');
     setIngredientQuery('');
     setIngredientItems([{ name: '', grams: '100' }]);
+    localStorage.removeItem(getWorkoutStorageKey(currentUser));
+    localStorage.removeItem(getCaloriesStorageKey(currentUser));
+    localStorage.removeItem(getCalHistoryKey(currentUser));
+    localStorage.removeItem(getBodyWeightKey(currentUser));
     localStorage.removeItem(getRestKey(currentUser));
     localStorage.removeItem(getCheatKey(currentUser));
     localStorage.removeItem(getCustomExKey(currentUser));
     localStorage.removeItem(getBodyFatKey(currentUser));
+    setWaterToday(0);
+    saveWaterMl(currentUser, 0);
     setToast(copy.cleared);
   }
 
@@ -5198,6 +5391,7 @@ export default function App() {
   }
   function resetWater() {
     if (!window.confirm(copy.deleteConfirmWater)) return;
+    createRecoverySnapshot('before-water-reset');
     setWaterToday(0);
     saveWaterMl(currentUser, 0);
   }
@@ -7844,12 +8038,20 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           <section className="glass-panel settings-section fade-in-up data-privacy-panel">
             <div className="panel-header"><h3>{copy.dataPrivacy}</h3>{helpButton('data')}</div>
             <p className="settings-copy">{copy.dataPrivacyDesc}</p>
-            <div className="settings-card demo-data-card">
-              <span className="settings-title">{copy.demoDataTitle}</span>
-              <p className="settings-copy">{copy.demoDataDesc}</p>
+            <div className="settings-card data-recovery-card">
+              <span className="settings-title">{copy.recoveryTitle}</span>
+              <p className="settings-copy">{copy.recoveryDesc}</p>
+              <div className="stats-list">
+                <div className="stats-row"><span>{copy.lastBackup}</span><strong>{latestRecoveryLabel}</strong></div>
+                <div className="stats-row"><span>{copy.workouts}</span><strong>{latestRecoveryCounts ? latestRecoveryCounts.workouts : 0}</strong></div>
+                <div className="stats-row"><span>{copy.meals}</span><strong>{latestRecoveryCounts ? latestRecoveryCounts.meals : 0}</strong></div>
+                <div className="stats-row"><span>{copy.storageUsed}</span><strong>{storageUsageLabel}</strong></div>
+                <div className="stats-row"><span>{copy.storagePersistent}</span><strong>{storageInfo?.persisted ? copy.storageProtected : copy.storageBestEffort}</strong></div>
+              </div>
+              {!recoverySnapshots.length && <p className="settings-copy">{copy.recoveryNone}</p>}
               <div className="settings-button-row">
-                <button className="action-btn-outline" type="button" onClick={addDemoData}>{copy.demoDataAdd}</button>
-                <button className="action-btn-outline" type="button" onClick={clearDemoData}>{copy.demoDataClear}</button>
+                <button className="action-btn-outline" type="button" onClick={manualRecoverySnapshot}>{copy.recoveryCreate}</button>
+                <button className="action-btn-outline" type="button" onClick={() => restoreRecoverySnapshot()} disabled={!recoverySnapshots.length}>{copy.recoveryRestore}</button>
               </div>
             </div>
             <div className="settings-button-row privacy-actions-row">

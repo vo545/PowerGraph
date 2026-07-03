@@ -128,23 +128,6 @@ function rgbToHex(r, g, b) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-function hslToHex(h, s, l) {
-  const hue = ((h % 360) + 360) % 360;
-  const sat = Math.max(0, Math.min(100, s)) / 100;
-  const light = Math.max(0, Math.min(100, l)) / 100;
-  const c = (1 - Math.abs(2 * light - 1)) * sat;
-  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
-  const m = light - c / 2;
-  let r = 0; let g = 0; let b = 0;
-  if (hue < 60) [r, g, b] = [c, x, 0];
-  else if (hue < 120) [r, g, b] = [x, c, 0];
-  else if (hue < 180) [r, g, b] = [0, c, x];
-  else if (hue < 240) [r, g, b] = [0, x, c];
-  else if (hue < 300) [r, g, b] = [x, 0, c];
-  else [r, g, b] = [c, 0, x];
-  return rgbToHex((r + m) * 255, (g + m) * 255, (b + m) * 255);
-}
-
 function mixHex(hex, targetHex, amount) {
   const source = hexToRgb(hex);
   const target = hexToRgb(targetHex);
@@ -167,20 +150,18 @@ function getContrastHex(hex) {
   return luminance > 0.62 ? '#071018' : '#ffffff';
 }
 
-function makeHoneycombPalette() {
-  const hues = [210, 225, 240, 255, 275, 295, 315, 335, 355, 15, 35, 52, 70, 95, 120, 145, 170, 190];
-  const rows = [
-    { start: 0, count: 7, light: 28, sat: 72 },
-    { start: 16, count: 9, light: 38, sat: 76 },
-    { start: 14, count: 11, light: 48, sat: 78 },
-    { start: 12, count: 13, light: 58, sat: 80 },
-    { start: 10, count: 15, light: 68, sat: 82 },
-    { start: 8, count: 13, light: 78, sat: 72 },
-    { start: 6, count: 11, light: 55, sat: 86 },
-    { start: 4, count: 9, light: 42, sat: 82 },
-    { start: 2, count: 7, light: 30, sat: 74 },
-  ];
-  return rows.map((row) => Array.from({ length: row.count }, (_, index) => hslToHex(hues[(row.start + index) % hues.length], row.sat, row.light)));
+function getHexLuminance(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const channel = (value) => {
+    const next = value / 255;
+    return next <= 0.03928 ? next / 12.92 : ((next + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+function hexToRgba(hex, alpha) {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, alpha))})`;
 }
 
 function getLastSectionKey(email) { return `${LAST_SECTION_KEY_PREFIX}${email}`; }
@@ -1044,7 +1025,6 @@ const BACKGROUND_PRESETS = [
   { id: 'mono', color: '#cbd5e1', label: { en: 'Monochrome', sl: 'Monokrom', es: 'Monocromo', pt: 'Monocromatico', fr: 'Monochrome', tr: 'Monokrom', ar: 'Monochrome', ja: 'Mono', zh: 'Mono', ru: 'Mono' } },
 ];
 const SUPPORTED_BACKGROUNDS = BACKGROUND_PRESETS.map((item) => item.id);
-const HONEYCOMB_PALETTE = makeHoneycombPalette();
 const APPEARANCE_PATTERNS = [
   { id: 'grid', label: { en: 'Grid', sl: 'Mreza' } },
   { id: 'dots', label: { en: 'Dots', sl: 'Pike' } },
@@ -1052,9 +1032,8 @@ const APPEARANCE_PATTERNS = [
   { id: 'mesh', label: { en: 'Mesh', sl: 'Mreza +' } },
   { id: 'none', label: { en: 'Clean', sl: 'Cisto' } },
 ];
-const APPEARANCE_TONES = [-36, -24, -12, 0, 12, 24, 36, 48];
 const SUPPORTED_PATTERNS = APPEARANCE_PATTERNS.map((item) => item.id);
-const defaultSettings = { units: 'kg', language: 'en', backgroundAccent: 'blue', primaryColor: '#7aa2f7', secondaryColor: '#c9a66b', primaryTone: -4, secondaryTone: -10, backgroundPattern: 'grid', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, waterGoalMl: 2500, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
+const defaultSettings = { units: 'kg', language: 'en', backgroundAccent: 'blue', primaryColor: '#080d12', secondaryColor: '#7aa2f7', secondaryColor2: '#c9a66b', secondaryColorCount: 2, backgroundPattern: 'grid', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, waterGoalMl: 2500, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
 const defaultAdminConfig = {
   appName: 'PowerGraph',
   announcementEnabled: false,
@@ -1126,7 +1105,7 @@ const ui = {
     backgroundAccent: 'Barva ozadja',
     backgroundAccentDesc: 'Izberi barvo, ki se uporabi za ozadje, gumbe in glavne poudarke.',
     appearanceTitle: 'Izgled',
-    appearanceDesc: 'Nastavi primarno in sekundarno barvo, svetlost ter subtilen vzorec ozadja.',
+    appearanceDesc: 'Nastavi osnovno barvo appa, sekundarne accent barve in subtilen vzorec ozadja.',
     primaryColor: 'Primarna',
     secondaryColor: 'Sekundarna',
     colorTab: 'Barva',
@@ -1135,6 +1114,11 @@ const ui = {
     darker: 'Temneje',
     lighter: 'Svetleje',
     selectedColor: 'Izbrana barva',
+    secondaryColorCount: 'Stevilo sekundarnih barv',
+    oneColor: '1 barva',
+    twoColors: '2 barvi',
+    accentOne: 'Accent 1',
+    accentTwo: 'Accent 2',
     preview: 'Predogled',
     dateFormat: 'Na\u010din zapisa datuma',
     backupReminder: 'Opomnik za backup',
@@ -1632,7 +1616,7 @@ const ui = {
     backgroundAccent: 'Background color',
     backgroundAccentDesc: 'Choose the color used for the background, buttons, and main highlights.',
     appearanceTitle: 'Appearance',
-    appearanceDesc: 'Set primary and secondary colors, brightness, and a subtle background pattern.',
+    appearanceDesc: 'Set the app base color, secondary accent colors, and a subtle background pattern.',
     primaryColor: 'Primary',
     secondaryColor: 'Secondary',
     colorTab: 'Color',
@@ -1641,6 +1625,11 @@ const ui = {
     darker: 'Darker',
     lighter: 'Lighter',
     selectedColor: 'Selected color',
+    secondaryColorCount: 'Secondary colors',
+    oneColor: '1 color',
+    twoColors: '2 colors',
+    accentOne: 'Accent 1',
+    accentTwo: 'Accent 2',
     preview: 'Preview',
     dateFormat: 'Date format',
     backupReminder: 'Backup reminder',
@@ -3140,8 +3129,8 @@ function sanitizeSettings(input) {
     if (SUPPORTED_BACKGROUNDS.includes(input.backgroundAccent)) safe.backgroundAccent = input.backgroundAccent;
     if (typeof input.primaryColor === 'string') safe.primaryColor = normalizeHexColor(input.primaryColor, safe.primaryColor);
     if (typeof input.secondaryColor === 'string') safe.secondaryColor = normalizeHexColor(input.secondaryColor, safe.secondaryColor);
-    if (Number.isFinite(Number(input.primaryTone))) safe.primaryTone = Math.max(-60, Math.min(60, Number(input.primaryTone)));
-    if (Number.isFinite(Number(input.secondaryTone))) safe.secondaryTone = Math.max(-60, Math.min(60, Number(input.secondaryTone)));
+    if (typeof input.secondaryColor2 === 'string') safe.secondaryColor2 = normalizeHexColor(input.secondaryColor2, safe.secondaryColor2);
+    if (Number(input.secondaryColorCount) === 1 || Number(input.secondaryColorCount) === 2) safe.secondaryColorCount = Number(input.secondaryColorCount);
     if (SUPPORTED_PATTERNS.includes(input.backgroundPattern)) safe.backgroundPattern = input.backgroundPattern;
     if (['DD.MM.YYYY', 'YYYY-MM-DD', 'MM/DD/YYYY'].includes(input.dateFormat)) safe.dateFormat = input.dateFormat;
     if ([3, 7, 14, 30].includes(Number(input.backupReminderDays))) safe.backupReminderDays = Number(input.backupReminderDays);
@@ -4473,30 +4462,26 @@ export default function App() {
   const [todayKey, setTodayKey] = useState(() => dateOffsetKey(0));
   const [appearanceTarget, setAppearanceTarget] = useState('primary');
   const [appearanceTab, setAppearanceTab] = useState('color');
+  const [secondaryColorSlot, setSecondaryColorSlot] = useState(1);
 
   const copy = getCopy(settings.language);
   const primaryBaseColor = normalizeHexColor(settings.primaryColor, defaultSettings.primaryColor);
   const secondaryBaseColor = normalizeHexColor(settings.secondaryColor, defaultSettings.secondaryColor);
-  const primaryColor = shiftHexTone(primaryBaseColor, settings.primaryTone);
-  const secondaryColor = shiftHexTone(secondaryBaseColor, settings.secondaryTone);
-  const appearanceActiveColor = appearanceTarget === 'primary' ? primaryBaseColor : secondaryBaseColor;
-  const appearanceActiveTone = appearanceTarget === 'primary' ? settings.primaryTone : settings.secondaryTone;
-  const appearanceActiveFinalColor = shiftHexTone(appearanceActiveColor, appearanceActiveTone);
+  const secondaryAltBaseColor = normalizeHexColor(settings.secondaryColor2, defaultSettings.secondaryColor2);
+  const secondaryColorCount = Number(settings.secondaryColorCount) === 1 ? 1 : 2;
+  const secondaryActiveColor = secondaryColorSlot === 2 && secondaryColorCount === 2 ? secondaryAltBaseColor : secondaryBaseColor;
+  const appBaseColor = primaryBaseColor;
+  const accentColor = secondaryBaseColor;
+  const accentSecondColor = secondaryColorCount === 2 ? secondaryAltBaseColor : secondaryBaseColor;
+  const appearanceActiveColor = appearanceTarget === 'primary' ? primaryBaseColor : secondaryActiveColor;
   const appearanceTabs = [
     ['color', copy.colorTab],
-    ['shade', copy.shadeTab],
     ['pattern', copy.patternTab],
   ];
   const setAppearanceColor = (target, color) => {
     setSettings((current) => ({
       ...current,
-      [target === 'primary' ? 'primaryColor' : 'secondaryColor']: normalizeHexColor(color),
-    }));
-  };
-  const setAppearanceTone = (target, tone) => {
-    setSettings((current) => ({
-      ...current,
-      [target === 'primary' ? 'primaryTone' : 'secondaryTone']: Math.max(-60, Math.min(60, Number(tone) || 0)),
+      [target === 'primary' ? 'primaryColor' : (secondaryColorSlot === 2 && secondaryColorCount === 2 ? 'secondaryColor2' : 'secondaryColor')]: normalizeHexColor(color),
     }));
   };
   const cycleAppearanceTab = (direction) => {
@@ -4940,31 +4925,50 @@ export default function App() {
 
   useEffect(() => {
     const root = document.documentElement;
-    const primary = hexToRgb(primaryColor);
-    const secondary = hexToRgb(secondaryColor);
-    const primaryStrong = hexToRgb(shiftHexTone(primaryBaseColor, Math.min(48, Number(settings.primaryTone || 0) + 24)));
-    const pageOne = mixHex('#06090d', primaryColor, 0.16);
-    const pageTwo = mixHex('#0b1017', secondaryColor, 0.12);
+    const accent = hexToRgb(accentColor);
+    const accentSecond = hexToRgb(accentSecondColor);
+    const accentStrong = hexToRgb(shiftHexTone(accentColor, 28));
+    const lightBase = getHexLuminance(appBaseColor) > 0.5;
+    const pageOne = lightBase ? mixHex(appBaseColor, '#ffffff', 0.68) : mixHex(appBaseColor, '#02040a', 0.46);
+    const pageTwo = lightBase ? mixHex(appBaseColor, '#f1f5f9', 0.78) : mixHex(appBaseColor, '#0b1017', 0.5);
+    const glass = lightBase ? mixHex(appBaseColor, '#ffffff', 0.82) : mixHex(appBaseColor, '#101820', 0.58);
+    const glassHover = lightBase ? mixHex(appBaseColor, '#ffffff', 0.9) : mixHex(appBaseColor, '#162231', 0.6);
+    const panel = lightBase ? mixHex(appBaseColor, '#ffffff', 0.88) : mixHex(appBaseColor, '#111923', 0.62);
+    const panelSoft = lightBase ? mixHex(appBaseColor, '#f8fafc', 0.84) : mixHex(appBaseColor, '#172332', 0.58);
+    const field = lightBase ? mixHex(appBaseColor, '#ffffff', 0.9) : mixHex(appBaseColor, '#05080d', 0.5);
     root.removeAttribute('data-theme');
     root.dataset.accent = 'custom';
     root.dataset.pattern = settings.backgroundPattern || defaultSettings.backgroundPattern;
-    root.style.setProperty('--custom-primary', primaryColor);
-    root.style.setProperty('--custom-secondary', secondaryColor);
-    root.style.setProperty('--accent-rgb', `${primary.r}, ${primary.g}, ${primary.b}`);
-    root.style.setProperty('--accent-strong-rgb', `${primaryStrong.r}, ${primaryStrong.g}, ${primaryStrong.b}`);
-    root.style.setProperty('--secondary-rgb', `${secondary.r}, ${secondary.g}, ${secondary.b}`);
-    root.style.setProperty('--accent-contrast', getContrastHex(primaryColor));
-    root.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`);
-    root.style.setProperty('--accent-soft', `rgba(${primary.r}, ${primary.g}, ${primary.b}, 0.095)`);
-    root.style.setProperty('--accent-border', `rgba(${primary.r}, ${primary.g}, ${primary.b}, 0.28)`);
-    root.style.setProperty('--accent-shadow', `rgba(${primary.r}, ${primary.g}, ${primary.b}, 0.16)`);
-    root.style.setProperty('--primary', primaryColor);
-    root.style.setProperty('--primary-glow', shiftHexTone(primaryBaseColor, Math.min(55, Number(settings.primaryTone || 0) + 22)));
-    root.style.setProperty('--secondary', secondaryColor);
-    root.style.setProperty('--secondary-glow', shiftHexTone(secondaryBaseColor, Math.min(55, Number(settings.secondaryTone || 0) + 20)));
+    root.style.setProperty('--custom-primary', appBaseColor);
+    root.style.setProperty('--custom-secondary', accentColor);
+    root.style.setProperty('--custom-secondary-2', accentSecondColor);
+    root.style.setProperty('--bg-base', pageOne);
+    root.style.setProperty('--bg-glass', hexToRgba(glass, lightBase ? 0.94 : 0.96));
+    root.style.setProperty('--bg-glass-hover', hexToRgba(glassHover, lightBase ? 0.98 : 0.99));
+    root.style.setProperty('--bg-panel', panel);
+    root.style.setProperty('--bg-panel-soft', panelSoft);
+    root.style.setProperty('--field-bg', field);
+    root.style.setProperty('--text-primary', lightBase ? '#101828' : '#f8fafc');
+    root.style.setProperty('--text-secondary', lightBase ? '#5e6a78' : '#a9b4c3');
+    root.style.setProperty('--border-glass', lightBase ? 'rgba(15, 23, 42, 0.13)' : 'rgba(148, 163, 184, 0.18)');
+    root.style.setProperty('--border-strong', lightBase ? 'rgba(15, 23, 42, 0.23)' : 'rgba(226, 232, 240, 0.25)');
+    root.style.setProperty('--shadow-glass', lightBase ? '0 18px 48px rgba(15, 23, 42, 0.12)' : '0 24px 70px rgba(0, 0, 0, 0.36)');
+    root.style.setProperty('--surface-highlight', lightBase ? 'rgba(255, 255, 255, 0.72)' : 'rgba(255, 255, 255, 0.04)');
+    root.style.setProperty('--accent-rgb', `${accent.r}, ${accent.g}, ${accent.b}`);
+    root.style.setProperty('--accent-strong-rgb', `${accentStrong.r}, ${accentStrong.g}, ${accentStrong.b}`);
+    root.style.setProperty('--secondary-rgb', `${accentSecond.r}, ${accentSecond.g}, ${accentSecond.b}`);
+    root.style.setProperty('--accent-contrast', getContrastHex(accentColor));
+    root.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${accentColor} 0%, ${accentSecondColor} 100%)`);
+    root.style.setProperty('--accent-soft', `rgba(${accent.r}, ${accent.g}, ${accent.b}, 0.095)`);
+    root.style.setProperty('--accent-border', `rgba(${accent.r}, ${accent.g}, ${accent.b}, 0.28)`);
+    root.style.setProperty('--accent-shadow', `rgba(${accent.r}, ${accent.g}, ${accent.b}, 0.16)`);
+    root.style.setProperty('--primary', accentColor);
+    root.style.setProperty('--primary-glow', shiftHexTone(accentColor, lightBase ? -12 : 22));
+    root.style.setProperty('--secondary', accentSecondColor);
+    root.style.setProperty('--secondary-glow', shiftHexTone(accentSecondColor, lightBase ? -10 : 20));
     root.style.setProperty('--page-bg-1', pageOne);
     root.style.setProperty('--page-bg-2', pageTwo);
-  }, [primaryBaseColor, primaryColor, secondaryBaseColor, secondaryColor, settings.backgroundPattern, settings.primaryTone, settings.secondaryTone]);
+  }, [accentColor, accentSecondColor, appBaseColor, settings.backgroundPattern]);
   useEffect(() => {
     document.title = adminConfig.appName || copy.app;
   }, [adminConfig.appName, copy.app]);
@@ -6768,18 +6772,18 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           <span className="settings-title">{copy.appearanceTitle}</span>
           <p className="settings-copy">{copy.appearanceDesc}</p>
         </div>
-        <div className="appearance-preview" style={{ '--preview-primary': primaryColor, '--preview-secondary': secondaryColor }}>
+        <div className="appearance-preview" style={{ '--preview-primary': appBaseColor, '--preview-secondary': accentColor, '--preview-secondary-2': accentSecondColor }}>
           <span>{copy.preview}</span>
           <strong />
         </div>
       </div>
       <div className="appearance-segment" role="tablist" aria-label={copy.appearanceTitle}>
         <button className={appearanceTarget === 'primary' ? 'active' : ''} type="button" onClick={() => setAppearanceTarget('primary')} aria-selected={appearanceTarget === 'primary'}>
-          <span className="appearance-dot" style={{ background: primaryColor }} />
+          <span className="appearance-dot" style={{ background: appBaseColor }} />
           {copy.primaryColor}
         </button>
         <button className={appearanceTarget === 'secondary' ? 'active' : ''} type="button" onClick={() => setAppearanceTarget('secondary')} aria-selected={appearanceTarget === 'secondary'}>
-          <span className="appearance-dot" style={{ background: secondaryColor }} />
+          <span className="appearance-dot" style={{ background: accentColor }} />
           {copy.secondaryColor}
         </button>
       </div>
@@ -6790,39 +6794,26 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
       </div>
       {appearanceTab === 'color' && (
         <div className="appearance-color-panel">
-          <div className="honeycomb-picker" role="grid" aria-label={copy.selectedColor}>
-            {HONEYCOMB_PALETTE.map((row, rowIndex) => (
-              <div className="honeycomb-row" key={`row-${rowIndex}`}>
-                {row.map((color) => {
-                  const selected = appearanceActiveColor === color;
-                  return <button key={`${rowIndex}-${color}`} className={`honeycomb-cell ${selected ? 'active' : ''}`} type="button" style={{ background: color }} onClick={() => setAppearanceColor(appearanceTarget, color)} aria-label={color} aria-pressed={selected} />;
-                })}
-              </div>
-            ))}
-          </div>
           <label className="appearance-native-color">
             <span>{copy.selectedColor}</span>
             <input type="color" value={appearanceActiveColor} onChange={(event) => setAppearanceColor(appearanceTarget, event.target.value)} />
             <strong>{appearanceActiveColor}</strong>
           </label>
-        </div>
-      )}
-      {appearanceTab === 'shade' && (
-        <div className="appearance-shade-panel">
-          <div className="shade-scale" role="radiogroup" aria-label={copy.shadeTab}>
-            {APPEARANCE_TONES.map((tone) => {
-              const color = shiftHexTone(appearanceActiveColor, tone);
-              const active = Math.round(Number(appearanceActiveTone) || 0) === tone;
-              return (
-                <button key={tone} className={active ? 'active' : ''} type="button" onClick={() => setAppearanceTone(appearanceTarget, tone)} aria-pressed={active}>
-                  <span style={{ background: color }} />
-                  <small>{tone < 0 ? copy.darker : tone > 0 ? copy.lighter : copy.selectedColor}</small>
-                </button>
-              );
-            })}
-          </div>
-          <input className="appearance-tone-slider" type="range" min="-60" max="60" step="1" value={appearanceActiveTone} onChange={(event) => setAppearanceTone(appearanceTarget, event.target.value)} />
-          <div className="appearance-current-swatch" style={{ background: appearanceActiveFinalColor, color: getContrastHex(appearanceActiveFinalColor) }}>{appearanceActiveFinalColor}</div>
+          {appearanceTarget === 'secondary' && (
+            <div className="secondary-color-options">
+              <span>{copy.secondaryColorCount}</span>
+              <div className="appearance-choice-row">
+                <button className={secondaryColorCount === 1 ? 'active' : ''} type="button" onClick={() => { setSecondaryColorSlot(1); setSettings((current) => ({ ...current, secondaryColorCount: 1 })); }}>{copy.oneColor}</button>
+                <button className={secondaryColorCount === 2 ? 'active' : ''} type="button" onClick={() => setSettings((current) => ({ ...current, secondaryColorCount: 2 }))}>{copy.twoColors}</button>
+              </div>
+              {secondaryColorCount === 2 && (
+                <div className="appearance-choice-row">
+                  <button className={secondaryColorSlot === 1 ? 'active' : ''} type="button" onClick={() => setSecondaryColorSlot(1)}><span className="appearance-dot" style={{ background: accentColor }} />{copy.accentOne}</button>
+                  <button className={secondaryColorSlot === 2 ? 'active' : ''} type="button" onClick={() => setSecondaryColorSlot(2)}><span className="appearance-dot" style={{ background: accentSecondColor }} />{copy.accentTwo}</button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
       {appearanceTab === 'pattern' && (

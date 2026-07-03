@@ -690,9 +690,40 @@ function loadRestDays(email) { return email ? loadDateList(getRestKey(email), ge
 function loadCheatDays(email) { return email ? loadDateList(getCheatKey(email), getLegacyCheatKey(email)) : []; }
 function getCustomExKey(email) { return `${CUSTOM_EX_KEY_PREFIX}${email}`; }
 function loadCustomExercises(email) { if (!email) return []; try { const stored = JSON.parse(localStorage.getItem(getCustomExKey(email)) || '[]'); return Array.isArray(stored) ? stored.slice(0, 500).map(sanitizeCustomExercise).filter(Boolean) : []; } catch { return []; } }
+function getWaterKeyPrefix(email) { return `${WATER_KEY_PREFIX}${email || ''}_`; }
 function getWaterKey(email, date = new Date().toISOString().slice(0, 10)) { return `${WATER_KEY_PREFIX}${email}_${date}`; }
 function loadWaterMl(email) { if (!email) return 0; try { return Number(localStorage.getItem(getWaterKey(email)) || 0); } catch { return 0; } }
-function saveWaterMl(email, ml) { if (email) localStorage.setItem(getWaterKey(email), String(ml)); }
+function saveWaterMl(email, ml, date) { if (email) localStorage.setItem(getWaterKey(email, date), String(ml)); }
+function loadWaterEntries(email) {
+  if (!email) return [];
+  const prefix = getWaterKeyPrefix(email);
+  try {
+    return Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
+      .filter((key) => key?.startsWith(prefix))
+      .map((key) => ({ date: key.slice(prefix.length), ml: Number(localStorage.getItem(key) || 0) }))
+      .filter((entry) => isCleanDate(entry.date) && Number.isFinite(entry.ml) && entry.ml >= 0)
+      .map((entry) => ({ date: entry.date, ml: Math.round(clampNumber(entry.ml, 0, 20000)) }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-5000);
+  } catch {
+    return [];
+  }
+}
+function clearWaterEntries(email) {
+  if (!email) return;
+  const prefix = getWaterKeyPrefix(email);
+  try {
+    Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
+      .filter((key) => key?.startsWith(prefix))
+      .forEach((key) => localStorage.removeItem(key));
+  } catch {}
+}
+function saveWaterEntries(email, entries) {
+  if (!email || !Array.isArray(entries)) return;
+  entries.forEach((entry) => {
+    if (isCleanDate(entry.date)) saveWaterMl(email, Math.round(clampNumber(Number(entry.ml) || 0, 0, 20000)), entry.date);
+  });
+}
 function getDemoDaysKey(email) { return `${DEMO_DAYS_KEY_PREFIX}${email || ''}`; }
 function getDemoWaterKey(email, date = new Date().toISOString().slice(0, 10)) { return `${DEMO_WATER_KEY_PREFIX}${email || ''}_${date}`; }
 function readDemoDayMarkers(email) {
@@ -736,6 +767,7 @@ function getBackupCounts(data = {}) {
     meals: Array.isArray(data.calorieEntries) ? data.calorieEntries.length : 0,
     weights: Array.isArray(data.bodyWeightEntries) ? data.bodyWeightEntries.length : 0,
     estimates: Array.isArray(data.calHistory) ? data.calHistory.length : 0,
+    waterDays: Array.isArray(data.waterEntries) ? data.waterEntries.length : 0,
   };
 }
 
@@ -797,6 +829,13 @@ async function sha256Text(value) {
 
 function sanitizeDateArray(list, limit = 5000) {
   return Array.isArray(list) ? [...new Set(list.filter(isCleanDate))].slice(0, limit) : [];
+}
+
+function sanitizeWaterEntry(entry) {
+  if (!entry || typeof entry !== 'object') return null;
+  const date = isCleanDate(entry.date) ? entry.date : '';
+  if (!date) return null;
+  return { date, ml: Math.round(cleanNumber(entry.ml, 0, 20000, 0)) };
 }
 
 function sanitizeMealEntry(entry, index = 0) {
@@ -912,6 +951,7 @@ function sanitizeBackupPayload(raw) {
     restDays: sanitizeDateArray(raw.restDays),
     cheatDays: sanitizeDateArray(raw.cheatDays),
     customExercises: (Array.isArray(raw.customExercises) ? raw.customExercises : []).slice(0, 500).map(sanitizeCustomExercise).filter(Boolean),
+    waterEntries: (Array.isArray(raw.waterEntries) ? raw.waterEntries : []).slice(0, 5000).map(sanitizeWaterEntry).filter(Boolean),
     waterToday: Object.prototype.hasOwnProperty.call(raw, 'waterToday') ? Math.round(cleanNumber(raw.waterToday, 0, 20000, 0)) : null,
   };
 }
@@ -1435,14 +1475,25 @@ const ui = {
     recoveryDesc: 'PowerGraph shrani lokalno obnovitveno kopijo pred importom, restore ali brisanjem podatkov.',
     recoveryCreate: 'Shrani snapshot',
     recoveryRestore: 'Obnovi zadnji snapshot',
+    recoveryClear: 'Izbrisi snapshot',
     recoveryNone: 'Ni shranjenih recovery snapshotov.',
     recoverySaved: 'Safety snapshot shranjen.',
     recoveryRestored: 'Safety snapshot obnovljen.',
+    recoveryCleared: 'Safety snapshoti izbrisani.',
     recoveryRestoreConfirm: 'Obnovim zadnji safety snapshot? Trenutno stanje bo tudi shranjeno kot snapshot.',
+    recoveryClearConfirm: 'Izbrisem lokalne safety snapshote?',
     storageUsed: 'Poraba prostora',
     storagePersistent: 'Persistent storage',
     storageProtected: 'Zasciteno',
     storageBestEffort: 'Best effort',
+    waterDays: 'Dnevi vode',
+    exportEncrypted: 'Encrypted export',
+    encryptedExportPrompt: 'Vnesi geslo za encrypted backup. Brez tega gesla backupa ne bo mogoce obnoviti.',
+    encryptedExportConfirm: 'Ponovi geslo za encrypted backup.',
+    encryptedExportWeak: 'Uporabi vsaj 10 znakov za backup geslo.',
+    encryptedExportMismatch: 'Gesli se ne ujemata.',
+    encryptedBackupDone: 'Encrypted backup ustvarjen.',
+    encryptedImportPrompt: 'Ta backup je encrypted. Vnesi backup geslo.',
   },
   en: {
     app: 'PowerGraph',
@@ -1919,14 +1970,25 @@ const ui = {
     recoveryDesc: 'PowerGraph keeps a local recovery copy before import, restore, or data deletion.',
     recoveryCreate: 'Save snapshot',
     recoveryRestore: 'Restore latest snapshot',
+    recoveryClear: 'Delete snapshots',
     recoveryNone: 'No recovery snapshots saved yet.',
     recoverySaved: 'Safety snapshot saved.',
     recoveryRestored: 'Safety snapshot restored.',
+    recoveryCleared: 'Safety snapshots deleted.',
     recoveryRestoreConfirm: 'Restore the latest safety snapshot? Your current state will also be saved as a snapshot.',
+    recoveryClearConfirm: 'Delete local safety snapshots?',
     storageUsed: 'Storage used',
     storagePersistent: 'Persistent storage',
     storageProtected: 'Protected',
     storageBestEffort: 'Best effort',
+    waterDays: 'Water days',
+    exportEncrypted: 'Encrypted export',
+    encryptedExportPrompt: 'Enter a password for the encrypted backup. Without it, this backup cannot be restored.',
+    encryptedExportConfirm: 'Repeat the encrypted backup password.',
+    encryptedExportWeak: 'Use at least 10 characters for the backup password.',
+    encryptedExportMismatch: 'Passwords do not match.',
+    encryptedBackupDone: 'Encrypted backup created.',
+    encryptedImportPrompt: 'This backup is encrypted. Enter the backup password.',
   },
 };
 
@@ -3518,6 +3580,14 @@ function mergeStrings(local, remote) {
   return [...new Set([...local, ...remote])];
 }
 
+function mergeWaterEntries(local, remote) {
+  const map = new Map((Array.isArray(local) ? local : []).map((entry) => [entry.date, entry]));
+  (Array.isArray(remote) ? remote : []).map(sanitizeWaterEntry).filter(Boolean).forEach((entry) => {
+    map.set(entry.date, entry);
+  });
+  return [...map.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
 async function applyRemoteData(email, remoteData) {
   if (!remoteData) return;
   const lw = loadWorkouts(email);
@@ -3536,14 +3606,77 @@ async function applyRemoteData(email, remoteData) {
   const lcalh = loadCalHistory(email);
   const mcalh = mergeById(lcalh, remoteData.calHistory || []);
   if (mcalh.length > lcalh.length) localStorage.setItem(getCalHistoryKey(email), JSON.stringify(mcalh));
+  const remoteWater = [
+    ...(Array.isArray(remoteData.waterEntries) ? remoteData.waterEntries : []),
+    ...(isCleanDate(remoteData.waterDate) && remoteData.waterToday !== undefined ? [{ date: remoteData.waterDate, ml: remoteData.waterToday }] : []),
+  ];
+  const mergedWater = mergeWaterEntries(loadWaterEntries(email), remoteWater);
+  if (mergedWater.length) saveWaterEntries(email, mergedWater);
 }
 
 function bytesToBase64(bytes) {
-  return btoa(String.fromCharCode(...bytes));
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
 }
 
 function base64ToBytes(value) {
   return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+}
+
+async function deriveBackupKey(passphrase, salt, iterations = PBKDF2_ITERATIONS) {
+  if (!window.crypto?.subtle) throw new Error('crypto-unavailable');
+  const keyMaterial = await window.crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(passphrase),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+  return window.crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptBackupJson(json, passphrase) {
+  const salt = window.crypto.getRandomValues(new Uint8Array(16));
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveBackupKey(passphrase, salt);
+  const cipherBuffer = await window.crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    new TextEncoder().encode(json)
+  );
+  return {
+    crypto: {
+      algorithm: 'AES-GCM',
+      kdf: 'PBKDF2-SHA256',
+      iterations: PBKDF2_ITERATIONS,
+      salt: bytesToBase64(salt),
+      iv: bytesToBase64(iv),
+    },
+    payload: bytesToBase64(new Uint8Array(cipherBuffer)),
+  };
+}
+
+async function decryptBackupJson(envelope, passphrase) {
+  const cryptoMeta = envelope?.crypto || {};
+  if (cryptoMeta.algorithm !== 'AES-GCM' || cryptoMeta.kdf !== 'PBKDF2-SHA256') throw new Error('unsupported-encryption');
+  const salt = base64ToBytes(String(cryptoMeta.salt || ''));
+  const iv = base64ToBytes(String(cryptoMeta.iv || ''));
+  const payload = base64ToBytes(String(envelope.payload || ''));
+  const iterations = Math.round(cleanNumber(cryptoMeta.iterations, 100000, 600000, PBKDF2_ITERATIONS));
+  if (salt.length < 16 || iv.length !== 12 || !payload.length) throw new Error('invalid-encrypted-backup');
+  const key = await deriveBackupKey(passphrase, salt, iterations);
+  const plainBuffer = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, payload);
+  return new TextDecoder().decode(plainBuffer);
 }
 
 function bytesToHex(bytes) {
@@ -4928,7 +5061,7 @@ export default function App() {
     setSyncing(true);
     const id = setTimeout(async () => {
       try {
-        await apiCall(currentUser, '/api/sync', 'POST', { workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory, waterToday, waterDate: todayKey });
+        await apiCall(currentUser, '/api/sync', 'POST', { workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory, waterEntries: loadWaterEntries(currentUser), waterToday, waterDate: todayKey });
       } finally { setSyncing(false); }
     }, 1500);
     return () => { clearTimeout(id); setSyncing(false); };
@@ -5087,6 +5220,7 @@ export default function App() {
       restDays,
       cheatDays,
       customExercises,
+      waterEntries: loadWaterEntries(currentUser),
       waterToday,
     };
   }
@@ -5126,9 +5260,18 @@ export default function App() {
     setRestDays(cleanBackup.restDays);
     setCheatDays(cleanBackup.cheatDays);
     setCustomExercises(cleanBackup.customExercises);
+    clearWaterEntries(currentUser);
+    saveWaterEntries(currentUser, cleanBackup.waterEntries);
+    const restoredTodayEntry = cleanBackup.waterEntries.find((entry) => entry.date === todayKey);
     if (cleanBackup.waterToday !== null && cleanBackup.waterToday !== undefined) {
       setWaterToday(cleanBackup.waterToday);
       saveWaterMl(currentUser, cleanBackup.waterToday);
+    } else if (restoredTodayEntry) {
+      setWaterToday(restoredTodayEntry.ml);
+      saveWaterMl(currentUser, restoredTodayEntry.ml);
+    } else {
+      setWaterToday(0);
+      saveWaterMl(currentUser, 0);
     }
   }
 
@@ -5154,6 +5297,42 @@ export default function App() {
     setToast(copy.recoveryRestored);
   }
 
+  function clearRecoverySnapshots() {
+    if (!recoverySnapshots.length) {
+      setToast(copy.recoveryNone);
+      return;
+    }
+    if (!window.confirm(copy.recoveryClearConfirm)) return;
+    try {
+      localStorage.removeItem(getRecoveryKey(currentUser));
+      setRecoverySnapshots([]);
+      setToast(copy.recoveryCleared);
+    } catch {
+      setToast(copy.importFail);
+    }
+  }
+
+  async function readBackupPayload(parsed) {
+    if (parsed?.encrypted) {
+      const passphrase = window.prompt(copy.encryptedImportPrompt);
+      if (!passphrase) throw new Error('cancelled');
+      const decrypted = JSON.parse(await decryptBackupJson(parsed, passphrase));
+      const payload = decrypted?.data || decrypted;
+      const checksum = decrypted?.integrity?.checksum || decrypted?.checksum;
+      if (checksum) {
+        const actual = await sha256Text(JSON.stringify(payload));
+        if (!constantTimeEqual(actual, checksum)) throw new Error('checksum');
+      }
+      return payload;
+    }
+    const payload = parsed?.data && parsed?.integrity ? parsed.data : parsed;
+    if (parsed?.integrity?.checksum) {
+      const actual = await sha256Text(JSON.stringify(payload));
+      if (!constantTimeEqual(actual, parsed.integrity.checksum)) throw new Error('checksum');
+    }
+    return payload;
+  }
+
   async function exportData() {
     const data = buildBackupData();
     const checksum = await sha256Text(JSON.stringify(data));
@@ -5169,6 +5348,44 @@ export default function App() {
     setSettings((c) => ({ ...c, lastBackupAt: new Date().toISOString() }));
     setToast(copy.backupDone);
   }
+
+  async function exportEncryptedData() {
+    try {
+      const passphrase = window.prompt(copy.encryptedExportPrompt);
+      if (!passphrase) return;
+      if (passphrase.length < 10) {
+        setToast(copy.encryptedExportWeak);
+        return;
+      }
+      const confirmPassphrase = window.prompt(copy.encryptedExportConfirm);
+      if (confirmPassphrase !== passphrase) {
+        setToast(copy.encryptedExportMismatch);
+        return;
+      }
+      const data = buildBackupData();
+      const checksum = await sha256Text(JSON.stringify(data));
+      const encrypted = await encryptBackupJson(JSON.stringify({
+        version: BACKUP_SCHEMA_VERSION,
+        exportedAt: new Date().toISOString(),
+        integrity: { algorithm: 'SHA-256', checksum },
+        data,
+      }), passphrase);
+      const backup = {
+        version: BACKUP_SCHEMA_VERSION,
+        app: 'PowerGraph',
+        exportedAt: new Date().toISOString(),
+        encrypted: true,
+        profile: { emailHash: await sha256Text(currentUser || '') },
+        ...encrypted,
+      };
+      downloadFile(`powergraph-encrypted-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2), 'application/json');
+      setSettings((c) => ({ ...c, lastBackupAt: new Date().toISOString() }));
+      setToast(copy.encryptedBackupDone);
+    } catch {
+      setToast(copy.importFail);
+    }
+  }
+
   function saveMeal(event) {
     event.preventDefault();
     if (!calorieForm.name || !calorieForm.calories || !calorieForm.date) return;
@@ -5199,18 +5416,14 @@ export default function App() {
     reader.onload = async () => {
       try {
         const parsed = JSON.parse(String(reader.result));
-        const payload = parsed?.data && parsed?.integrity ? parsed.data : parsed;
-        if (parsed?.integrity?.checksum) {
-          const actual = await sha256Text(JSON.stringify(payload));
-          if (!constantTimeEqual(actual, parsed.integrity.checksum)) throw new Error('checksum');
-        }
+        const payload = await readBackupPayload(parsed);
         const cleanBackup = sanitizeBackupPayload(payload);
         if (!cleanBackup) throw new Error('invalid');
         createRecoverySnapshot('before-import');
         applyCleanBackup(cleanBackup);
         setToast(copy.importDone);
-      } catch {
-        setToast(copy.importFail);
+      } catch (error) {
+        if (error?.message !== 'cancelled') setToast(copy.importFail);
       } finally {
         event.target.value = '';
       }
@@ -5243,8 +5456,8 @@ export default function App() {
     localStorage.removeItem(getCheatKey(currentUser));
     localStorage.removeItem(getCustomExKey(currentUser));
     localStorage.removeItem(getBodyFatKey(currentUser));
+    clearWaterEntries(currentUser);
     setWaterToday(0);
-    saveWaterMl(currentUser, 0);
     setToast(copy.cleared);
   }
 
@@ -8045,6 +8258,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                 <div className="stats-row"><span>{copy.lastBackup}</span><strong>{latestRecoveryLabel}</strong></div>
                 <div className="stats-row"><span>{copy.workouts}</span><strong>{latestRecoveryCounts ? latestRecoveryCounts.workouts : 0}</strong></div>
                 <div className="stats-row"><span>{copy.meals}</span><strong>{latestRecoveryCounts ? latestRecoveryCounts.meals : 0}</strong></div>
+                <div className="stats-row"><span>{copy.waterDays}</span><strong>{latestRecoveryCounts ? latestRecoveryCounts.waterDays : 0}</strong></div>
                 <div className="stats-row"><span>{copy.storageUsed}</span><strong>{storageUsageLabel}</strong></div>
                 <div className="stats-row"><span>{copy.storagePersistent}</span><strong>{storageInfo?.persisted ? copy.storageProtected : copy.storageBestEffort}</strong></div>
               </div>
@@ -8052,10 +8266,12 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               <div className="settings-button-row">
                 <button className="action-btn-outline" type="button" onClick={manualRecoverySnapshot}>{copy.recoveryCreate}</button>
                 <button className="action-btn-outline" type="button" onClick={() => restoreRecoverySnapshot()} disabled={!recoverySnapshots.length}>{copy.recoveryRestore}</button>
+                <button className="action-btn-outline danger-button" type="button" onClick={clearRecoverySnapshots} disabled={!recoverySnapshots.length}>{copy.recoveryClear}</button>
               </div>
             </div>
             <div className="settings-button-row privacy-actions-row">
               <button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button>
+              <button className="action-btn-outline" type="button" onClick={exportEncryptedData}>{copy.exportEncrypted}</button>
               <button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button>
               <a className="action-btn-outline privacy-link-btn" href={`${import.meta.env.BASE_URL}privacy.html`} target="_blank" rel="noreferrer">{copy.privacyPolicy}</a>
               <button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button>

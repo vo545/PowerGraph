@@ -100,6 +100,14 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS water_entries (
+    user_id INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    ml REAL NOT NULL,
+    PRIMARY KEY (user_id, date),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS login_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL,
@@ -510,7 +518,9 @@ app.get('/api/sync', requireAuth, (req, res) => {
   const cheatDays = db.prepare('SELECT date FROM cheat_days WHERE user_id = ?').all(uid).map(r => r.date);
   const calHistory = db.prepare('SELECT id, date, name, grams, kcal_per_100, total FROM cal_history WHERE user_id = ? ORDER BY id DESC').all(uid)
     .map(h => ({ id: h.id, date: h.date, name: h.name, grams: h.grams, kcalPer100: h.kcal_per_100, total: h.total }));
-  res.json({ workouts, calories, bodyWeight, restDays, cheatDays, calHistory });
+  const waterEntries = db.prepare('SELECT date, ml FROM water_entries WHERE user_id = ? ORDER BY date ASC').all(uid)
+    .map(w => ({ date: w.date, ml: w.ml }));
+  res.json({ workouts, calories, bodyWeight, restDays, cheatDays, calHistory, waterEntries });
 });
 
 // Bulk sync write
@@ -523,14 +533,20 @@ app.post('/api/sync', requireAuth, (req, res) => {
   const restDays = Array.isArray(body.restDays) ? body.restDays : [];
   const cheatDays = Array.isArray(body.cheatDays) ? body.cheatDays : [];
   const calHistory = Array.isArray(body.calHistory) ? body.calHistory : [];
-  const limits = { workouts: 5000, calories: 10000, bodyWeight: 5000, restDays: 5000, cheatDays: 5000, calHistory: 10000 };
+  const hasWaterSync = Array.isArray(body.waterEntries) || (asCleanDate(body.waterDate) && body.waterToday !== undefined);
+  const waterEntries = Array.isArray(body.waterEntries) ? [...body.waterEntries] : [];
+  if (asCleanDate(body.waterDate) && body.waterToday !== undefined) {
+    waterEntries.push({ date: body.waterDate, ml: body.waterToday });
+  }
+  const limits = { workouts: 5000, calories: 10000, bodyWeight: 5000, restDays: 5000, cheatDays: 5000, calHistory: 10000, waterEntries: 5000 };
   if (
     workouts.length > limits.workouts ||
     calories.length > limits.calories ||
     bodyWeight.length > limits.bodyWeight ||
     restDays.length > limits.restDays ||
     cheatDays.length > limits.cheatDays ||
-    calHistory.length > limits.calHistory
+    calHistory.length > limits.calHistory ||
+    waterEntries.length > limits.waterEntries
   ) {
     return res.status(413).json({ error: 'Sync payload too large' });
   }
@@ -545,6 +561,7 @@ app.post('/api/sync', requireAuth, (req, res) => {
   const calHistoryWithoutId = db.prepare('INSERT INTO cal_history (user_id, date, name, grams, kcal_per_100, total) VALUES (?, ?, ?, ?, ?, ?)');
   const insertRestDay = db.prepare('INSERT OR IGNORE INTO rest_days (user_id, date) VALUES (?, ?)');
   const insertCheatDay = db.prepare('INSERT OR IGNORE INTO cheat_days (user_id, date) VALUES (?, ?)');
+  const insertWaterEntry = db.prepare('INSERT OR REPLACE INTO water_entries (user_id, date, ml) VALUES (?, ?, ?)');
 
   try {
     db.exec('BEGIN');
@@ -554,6 +571,7 @@ app.post('/api/sync', requireAuth, (req, res) => {
     db.prepare('DELETE FROM rest_days WHERE user_id=?').run(uid);
     db.prepare('DELETE FROM cheat_days WHERE user_id=?').run(uid);
     db.prepare('DELETE FROM cal_history WHERE user_id=?').run(uid);
+    if (hasWaterSync) db.prepare('DELETE FROM water_entries WHERE user_id=?').run(uid);
 
     workouts.forEach((w) => {
       const date = asCleanDate(w.date);
@@ -633,6 +651,16 @@ app.post('/api/sync', requireAuth, (req, res) => {
         ]
       );
     });
+
+    if (hasWaterSync) {
+      const seenWaterDates = new Set();
+      waterEntries.forEach((entry) => {
+        const date = asCleanDate(entry.date);
+        if (!date || seenWaterDates.has(date)) return;
+        seenWaterDates.add(date);
+        insertWaterEntry.run(uid, date, asBoundedNumber(entry.ml, 0, 20000, 0));
+      });
+    }
 
     db.exec('COMMIT');
     res.json({ ok: true });

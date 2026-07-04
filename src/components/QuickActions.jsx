@@ -12,7 +12,10 @@ export default function QuickActions({ actions, title = 'Actions', closeLabel = 
           {actions.map((action) => (
             <button key={action.id} type="button" className="quick-action-mini" onClick={() => onRun(action)}>
               <span>{action.icon}</span>
-              <strong>{action.label}</strong>
+              <span className="quick-action-copy">
+                <strong>{action.label}</strong>
+                {action.description ? <small>{action.description}</small> : null}
+              </span>
             </button>
           ))}
         </div>

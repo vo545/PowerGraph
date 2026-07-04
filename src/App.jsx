@@ -3,71 +3,17 @@ import { BarElement, CategoryScale, Chart as ChartJS, Filler, LinearScale, LineE
 import { Bar, Line } from 'react-chartjs-2';
 import { ClipboardList, Dumbbell, Flame, Home, Lightbulb, Scale, Search, Settings, Shield, Target, Trophy, Utensils } from 'lucide-react';
 import EmptyState from './components/EmptyState.jsx';
+import ProgressBar from './components/ProgressBar.jsx';
 import QuickActions from './components/QuickActions.jsx';
+import SectionHeader from './components/SectionHeader.jsx';
 import StatCard from './components/StatCard.jsx';
 import UpdateBanner from './components/UpdateBanner.jsx';
+import { API_URL, apiCall, backendLogin, getJwt, getJwtStorageKey, pullFromBackend, setJwt } from './services/api.js';
+import { getContrastHex, getHexLuminance, hexToRgb, hexToRgba, mixHex, normalizeHexColor, shiftHexTone } from './utils/colors.js';
+import { dateOffsetKey, todayKey } from './utils/dates.js';
+import { createDailyControlSummary, sumNutritionTotals } from './utils/metrics.js';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler, BarElement);
-
-const API_URL = import.meta.env.VITE_API_URL || '';
-const JWT_KEY_PREFIX = 'powergraph_jwt_';
-function decodeJwtPayload(token) {
-  try {
-    const payload = token.split('.')[1];
-    if (!payload) return null;
-    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '=');
-    return JSON.parse(atob(normalized));
-  } catch {
-    return null;
-  }
-}
-function getJwt(email) {
-  const key = `${JWT_KEY_PREFIX}${email}`;
-  const token = localStorage.getItem(key) || '';
-  if (!token) return '';
-  const payload = decodeJwtPayload(token);
-  if (!payload) {
-    localStorage.removeItem(key);
-    return '';
-  }
-  if (payload?.exp && payload.exp * 1000 <= Date.now()) {
-    localStorage.removeItem(key);
-    return '';
-  }
-  return token;
-}
-function setJwt(email, token) { if (token) localStorage.setItem(`${JWT_KEY_PREFIX}${email}`, token); else localStorage.removeItem(`${JWT_KEY_PREFIX}${email}`); }
-async function apiCall(email, path, method = 'GET', body) {
-  if (!API_URL) return null;
-  const token = getJwt(email);
-  if (!token) return null;
-  try {
-    const res = await fetch(`${API_URL}${path}`, {
-      method,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-    });
-    if (res.ok) return res.json();
-    if (res.status === 401) setJwt(email, '');
-  } catch {}
-  return null;
-}
-async function backendLogin(email, password, mode = 'login') {
-  if (!API_URL) return null;
-  try {
-    let res = await fetch(`${API_URL}/api/auth/${mode === 'signup' ? 'register' : 'login'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-    if (res.ok) { const { token } = await res.json(); setJwt(email, token); return token; }
-    if (mode === 'signup' && res.status === 409) {
-      res = await fetch(`${API_URL}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-      if (res.ok) { const { token } = await res.json(); setJwt(email, token); return token; }
-    }
-  } catch {}
-  return null;
-}
-async function pullFromBackend(email) {
-  const data = await apiCall(email, '/api/sync');
-  return data;
-}
 
 const WORKOUTS_KEY_PREFIX = 'powergraph_workouts_';
 const CALORIES_KEY_PREFIX = 'powergraph_calories_';
@@ -79,8 +25,6 @@ const RECAP_KEY_PREFIX = 'powergraph_recap_';
 const REST_KEY_PREFIX = 'powergraph_rest_';
 const CHEAT_KEY_PREFIX = 'powergraph_cheat_';
 const WATER_KEY_PREFIX = 'powergraph_water_';
-const DEMO_DAYS_KEY_PREFIX = 'powergraph_demo_days_';
-const DEMO_WATER_KEY_PREFIX = 'powergraph_demo_water_';
 const LAST_SECTION_KEY_PREFIX = 'powergraph_last_section_';
 const DRAFT_KEY_PREFIX = 'powergraph_draft_';
 const SETTINGS_KEY_PREFIX = 'powergraph_settings_';
@@ -100,69 +44,6 @@ const MAX_IMPORT_FILE_BYTES = 20 * 1024 * 1024;
 const BACKUP_SCHEMA_VERSION = 4;
 const RECOVERY_KEY_PREFIX = 'powergraph_recovery_';
 const MAX_RECOVERY_SNAPSHOTS = 3;
-
-function todayKey() { return new Date().toISOString().slice(0, 10); }
-function dateOffsetKey(offsetDays) {
-  const date = new Date();
-  date.setDate(date.getDate() + offsetDays);
-  return date.toISOString().slice(0, 10);
-}
-
-function normalizeHexColor(value, fallback = '#0b1f4d') {
-  if (typeof value !== 'string') return fallback;
-  const clean = value.trim();
-  return /^#[0-9a-fA-F]{6}$/.test(clean) ? clean.toLowerCase() : fallback;
-}
-
-function hexToRgb(hex) {
-  const clean = normalizeHexColor(hex).slice(1);
-  return {
-    r: parseInt(clean.slice(0, 2), 16),
-    g: parseInt(clean.slice(2, 4), 16),
-    b: parseInt(clean.slice(4, 6), 16),
-  };
-}
-
-function rgbToHex(r, g, b) {
-  const toHex = (value) => Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, '0');
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-function mixHex(hex, targetHex, amount) {
-  const source = hexToRgb(hex);
-  const target = hexToRgb(targetHex);
-  const pct = Math.max(0, Math.min(1, amount));
-  return rgbToHex(
-    source.r + (target.r - source.r) * pct,
-    source.g + (target.g - source.g) * pct,
-    source.b + (target.b - source.b) * pct
-  );
-}
-
-function shiftHexTone(hex, tone = 0) {
-  const amount = Math.min(0.72, Math.abs(Number(tone) || 0) / 100);
-  return tone >= 0 ? mixHex(hex, '#ffffff', amount) : mixHex(hex, '#05070a', amount);
-}
-
-function getContrastHex(hex) {
-  const { r, g, b } = hexToRgb(hex);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.62 ? '#071018' : '#ffffff';
-}
-
-function getHexLuminance(hex) {
-  const { r, g, b } = hexToRgb(hex);
-  const channel = (value) => {
-    const next = value / 255;
-    return next <= 0.03928 ? next / 12.92 : ((next + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
-}
-
-function hexToRgba(hex, alpha) {
-  const { r, g, b } = hexToRgb(hex);
-  return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, alpha))})`;
-}
 
 function getLastSectionKey(email) { return `${LAST_SECTION_KEY_PREFIX}${email}`; }
 function getDraftKey(email, name) { return `${DRAFT_KEY_PREFIX}${email}_${name}`; }
@@ -770,19 +651,6 @@ function saveWaterEntries(email, entries) {
   entries.forEach((entry) => {
     if (isCleanDate(entry.date)) saveWaterMl(email, Math.round(clampNumber(Number(entry.ml) || 0, 0, 20000)), entry.date);
   });
-}
-function getDemoDaysKey(email) { return `${DEMO_DAYS_KEY_PREFIX}${email || ''}`; }
-function getDemoWaterKey(email, date = new Date().toISOString().slice(0, 10)) { return `${DEMO_WATER_KEY_PREFIX}${email || ''}_${date}`; }
-function readDemoDayMarkers(email) {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(getDemoDaysKey(email)) || '{}');
-    return {
-      rest: Array.isArray(parsed.rest) ? parsed.rest : [],
-      cheat: Array.isArray(parsed.cheat) ? parsed.cheat : [],
-    };
-  } catch {
-    return { rest: [], cheat: [] };
-  }
 }
 function loadBodyWeight(email) {
   if (!email) return [];
@@ -1532,13 +1400,6 @@ const ui = {
     dataPrivacy: 'Podatki in zasebnost',
     dataPrivacyDesc: 'Podatki so shranjeni lokalno v tem brskalniku, razen če je omogočen backend sync. Export je tvoja varnostna kopija, import jo naloži nazaj.',
     privacyPolicy: 'Politika zasebnosti',
-    demoDataTitle: 'Vzorčni podatki',
-    demoDataDesc: 'Dodaj realistične vzorčne treninge, obroke, težo in vodo za testiranje grafov.',
-    demoDataAdd: 'Try demo with sample data',
-    demoDataClear: 'Clear demo data only',
-    demoDataConfirm: 'This will add sample data to your account. Continue?',
-    demoDataAdded: 'Sample data added.',
-    demoDataCleared: 'Sample data removed.',
     recoveryTitle: 'Safety snapshot',
     recoveryDesc: 'PowerGraph shrani lokalno obnovitveno kopijo pred importom, restore ali brisanjem podatkov.',
     recoveryCreate: 'Shrani snapshot',
@@ -2040,13 +1901,6 @@ const ui = {
     dataPrivacy: 'Data & Privacy',
     dataPrivacyDesc: 'Your data is saved locally in this browser unless backend sync is enabled. Export is your backup, import restores it.',
     privacyPolicy: 'Privacy policy',
-    demoDataTitle: 'Sample data',
-    demoDataDesc: 'Add realistic demo workouts, meals, weight, water, rest days, and cheat days to test graphs.',
-    demoDataAdd: 'Try demo with sample data',
-    demoDataClear: 'Clear demo data only',
-    demoDataConfirm: 'This will add sample data to your account. Continue?',
-    demoDataAdded: 'Sample data added.',
-    demoDataCleared: 'Sample data removed.',
     recoveryTitle: 'Safety snapshot',
     recoveryDesc: 'PowerGraph keeps a local recovery copy before import, restore, or data deletion.',
     recoveryCreate: 'Save snapshot',
@@ -4741,11 +4595,11 @@ export default function App() {
   const selectedFormExerciseInfo = getExerciseInfo(formData.exercise);
   const calorieEntriesSorted = useMemo(() => [...calorieEntries].sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id), [calorieEntries]);
   const selectedDayEntries = useMemo(() => calorieEntries.filter((entry) => entry.date === calorieForm.date), [calorieEntries, calorieForm.date]);
-  const selectedDayTotals = useMemo(() => selectedDayEntries.reduce((acc, entry) => ({ calories: acc.calories + Number(entry.calories || 0), protein: acc.protein + Number(entry.protein || 0), carbs: acc.carbs + Number(entry.carbs || 0), fat: acc.fat + Number(entry.fat || 0) }), { calories: 0, protein: 0, carbs: 0, fat: 0 }), [selectedDayEntries]);
+  const selectedDayTotals = useMemo(() => sumNutritionTotals(selectedDayEntries), [selectedDayEntries]);
   const dashboardBodyWeightKg = useMemo(() => getLatestBodyWeightKg(bodyWeightEntries, settings.gender || 'male'), [bodyWeightEntries, settings.gender]);
   const todayWorkouts = useMemo(() => workouts.filter((workout) => workout.date === todayKey), [todayKey, workouts]);
   const todayCalories = useMemo(() => calorieEntries.filter((entry) => entry.date === todayKey), [calorieEntries, todayKey]);
-  const todayTotals = useMemo(() => todayCalories.reduce((acc, entry) => ({ calories: acc.calories + Number(entry.calories || 0), protein: acc.protein + Number(entry.protein || 0), carbs: acc.carbs + Number(entry.carbs || 0), fat: acc.fat + Number(entry.fat || 0) }), { calories: 0, protein: 0, carbs: 0, fat: 0 }), [todayCalories]);
+  const todayTotals = useMemo(() => sumNutritionTotals(todayCalories), [todayCalories]);
   const latestBodyWeightEntry = useMemo(() => [...bodyWeightEntries].sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id)[0] || null, [bodyWeightEntries]);
   const workoutStreak = useMemo(() => calculateStreak(workouts), [workouts]);
   const weeklyVolumeKg = useMemo(() => {
@@ -4767,29 +4621,19 @@ export default function App() {
     ? `${formatBytes(storageInfo.usage)} / ${storageInfo.quota ? formatBytes(storageInfo.quota) : '-'}`
     : '-';
   const dailyControl = useMemo(() => {
-    const lastWorkoutDate = sortedWorkouts[0]?.date || '';
-    const daysSinceWorkout = lastWorkoutDate ? Math.max(0, Math.floor((new Date(todayKey) - new Date(lastWorkoutDate)) / 86400000)) : null;
-    const trainedToday = todayWorkouts.length > 0;
-    const restToday = restDays.includes(todayKey);
-    const calorieGoal = Math.max(1, Number(settings.calorieGoal) || defaultSettings.calorieGoal);
-    const calorieDelta = Math.round(calorieGoal - todayTotals.calories);
-    const calorieAccuracy = todayTotals.calories > 0 ? Math.max(0, 100 - Math.min(100, Math.abs(calorieDelta) / calorieGoal * 100)) : 35;
-    const hydrationPct = Math.min(100, Math.round((waterToday / waterGoalMl) * 100));
-    const trainingScore = trainedToday ? 100 : restToday ? 82 : daysSinceWorkout === null ? 45 : daysSinceWorkout <= 1 ? 70 : daysSinceWorkout <= 3 ? 55 : 35;
-    const score = Math.round(clampNumber(trainingScore * 0.4 + hydrationPct * 0.3 + calorieAccuracy * 0.3, 0, 100));
-    const label = score >= 85 ? 'locked in' : score >= 65 ? 'on track' : score >= 45 ? 'needs attention' : 'reset day';
-    const isSl = settings.language === 'sl';
-    const trainingText = trainedToday
-      ? isSl
-        ? `${todayWorkouts.length} ${todayWorkouts.length === 1 ? 'trening' : 'treningov'} danes`
-        : `${todayWorkouts.length} ${todayWorkouts.length === 1 ? 'session' : 'sessions'} logged`
-      : restToday
-        ? (isSl ? 'pocitek oznacen' : 'rest day marked')
-        : daysSinceWorkout === null
-          ? (isSl ? 'se brez treningov' : 'no sessions yet')
-          : (isSl ? `${daysSinceWorkout} dni od treninga` : `${daysSinceWorkout}d since training`);
-    return { score, label, hydrationPct, calorieDelta, trainingText, waterGoalMl };
-  }, [restDays, settings.calorieGoal, settings.language, sortedWorkouts, todayKey, todayTotals.calories, todayWorkouts, waterGoalMl, waterToday]);
+    return createDailyControlSummary({
+      sortedWorkouts,
+      todayKey,
+      todayWorkouts,
+      restDays,
+      calorieGoal: settings.calorieGoal || defaultSettings.calorieGoal,
+      todayTotals,
+      waterToday,
+      waterGoalMl,
+      language: settings.language,
+      bodyWeightKg: dashboardBodyWeightKg,
+    });
+  }, [dashboardBodyWeightKg, restDays, settings.calorieGoal, settings.language, sortedWorkouts, todayKey, todayTotals, todayWorkouts, waterGoalMl, waterToday]);
   const overall = useMemo(() => workouts.reduce((a, w) => ({ workouts: a.workouts + 1, sets: a.sets + getSetCount(w), reps: a.reps + getTotalReps(w), volumeKg: a.volumeKg + getWorkoutVolumeKg(w, dashboardBodyWeightKg, customExercises), bestKg: Math.max(a.bestKg, w.weight) }), { workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }), [customExercises, dashboardBodyWeightKg, workouts]);
   const selectedStats = useMemo(() => selectedWorkouts.reduce((a, w) => ({ workouts: a.workouts + 1, sets: a.sets + getSetCount(w), reps: a.reps + getTotalReps(w), volumeKg: a.volumeKg + getWorkoutVolumeKg(w, dashboardBodyWeightKg, customExercises), bestKg: Math.max(a.bestKg, w.weight) }), { workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }), [customExercises, dashboardBodyWeightKg, selectedWorkouts]);
   const perExercise = useMemo(() => Object.values(workouts.reduce((map, w) => { const item = map[w.exercise] ?? { name: w.exercise, workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }; item.workouts += 1; item.sets += getSetCount(w); item.reps += getTotalReps(w); item.volumeKg += getWorkoutVolumeKg(w, dashboardBodyWeightKg, customExercises); item.bestKg = Math.max(item.bestKg, w.weight); map[w.exercise] = item; return map; }, {})).sort((a, b) => b.volumeKg - a.volumeKg), [customExercises, dashboardBodyWeightKg, workouts]);
@@ -5115,7 +4959,10 @@ export default function App() {
     async function refreshStorageInfo() {
       try {
         const estimate = await navigator.storage?.estimate?.();
-        const persisted = await navigator.storage?.persisted?.();
+        let persisted = await navigator.storage?.persisted?.();
+        if (!persisted && currentUser && navigator.storage?.persist) {
+          persisted = await navigator.storage.persist();
+        }
         if (!cancelled) {
           setStorageInfo({
             usage: estimate?.usage || 0,
@@ -5620,115 +5467,6 @@ export default function App() {
     setToast(copy.cleared);
   }
 
-  function addDemoData() {
-    if (!currentUser) return;
-    const markers = readDemoDayMarkers(currentUser);
-    const markerRest = new Set(markers.rest);
-    const markerCheat = new Set(markers.cheat);
-    const today = todayKey;
-    const demoWaterToday = Number(localStorage.getItem(getDemoWaterKey(currentUser, today)) || 0);
-    const hasRealData =
-      workouts.some((item) => !item.demo) ||
-      calorieEntries.some((item) => !item.demo) ||
-      bodyWeightEntries.some((item) => !item.demo) ||
-      bodyFatHistory.some((item) => !item.demo) ||
-      calHistory.some((item) => !item.demo) ||
-      restDays.some((date) => !markerRest.has(date)) ||
-      cheatDays.some((date) => !markerCheat.has(date)) ||
-      Math.max(0, waterToday - demoWaterToday) > 0;
-    if (hasRealData && !window.confirm(copy.demoDataConfirm)) return;
-
-    const now = Date.now();
-    const demoWorkouts = [
-      { id: now + 1, date: dateOffsetKey(-12), exercise: 'Bench Press', weight: 62.5, setDetails: [12, 10, 8], demo: true },
-      { id: now + 2, date: dateOffsetKey(-10), exercise: 'Lat Pulldown', weight: 55, setDetails: [12, 12, 10], demo: true },
-      { id: now + 3, date: dateOffsetKey(-8), exercise: 'Squat', weight: 82.5, setDetails: [10, 8, 8], demo: true },
-      { id: now + 4, date: dateOffsetKey(-5), exercise: 'Overhead Press', weight: 35, setDetails: [10, 9, 8], demo: true },
-      { id: now + 5, date: dateOffsetKey(-3), exercise: 'Barbell Curl', weight: 27.5, setDetails: [12, 10, 10], demo: true },
-      { id: now + 6, date: dateOffsetKey(-1), exercise: 'Romanian Deadlift', weight: 90, setDetails: [10, 8, 8], demo: true },
-    ].map(normalizeWorkout);
-    const demoMeals = [
-      { id: now + 101, date: today, mealType: 'breakfast', name: 'Greek yogurt, oats, berries', calories: 510, protein: 36, carbs: 62, fat: 11, demo: true },
-      { id: now + 102, date: today, mealType: 'lunch', name: 'Chicken rice bowl', calories: 720, protein: 52, carbs: 86, fat: 14, demo: true },
-      { id: now + 103, date: today, mealType: 'snack', name: 'Protein shake and banana', calories: 310, protein: 31, carbs: 39, fat: 4, demo: true },
-      { id: now + 104, date: dateOffsetKey(-1), mealType: 'dinner', name: 'Salmon, potatoes, salad', calories: 680, protein: 44, carbs: 58, fat: 28, demo: true },
-      { id: now + 105, date: dateOffsetKey(-1), mealType: 'breakfast', name: 'Eggs and toast', calories: 460, protein: 28, carbs: 38, fat: 22, demo: true },
-    ];
-    const demoWeights = [
-      { id: now + 201, date: dateOffsetKey(-14), weight: 82.4, demo: true },
-      { id: now + 202, date: dateOffsetKey(-10), weight: 82.0, demo: true },
-      { id: now + 203, date: dateOffsetKey(-6), weight: 81.5, demo: true },
-      { id: now + 204, date: dateOffsetKey(-2), weight: 81.1, demo: true },
-    ];
-    const demoRest = [dateOffsetKey(-7)];
-    const demoCheat = [dateOffsetKey(-6)];
-    const demoCalHistory = [
-      { id: now + 301, date: today, name: 'Chicken rice bowl', grams: 420, kcalPer100: 171, total: 720, protein: 52, carbs: 86, fat: 14, demo: true },
-    ];
-    const demoBodyFat = [{
-      id: now + 401,
-      date: today,
-      demo: true,
-      photoCount: 0,
-      metrics: { gender: settings.gender || 'male', weight: demoWeights.at(-1).weight, height: settings.height || '' },
-      result: {
-        bodyFatPercent: settings.gender === 'female' ? 24.8 : 16.4,
-        category: settings.gender === 'female' ? 'Fitness' : 'Athletic',
-        confidence: 'sample',
-        fatMassKg: settings.gender === 'female' ? 20.1 : 13.3,
-        leanMassKg: settings.gender === 'female' ? 61 : 67.8,
-        description: 'Sample estimate for testing the dashboard.',
-      },
-    }];
-
-    setWorkouts((current) => [...current.filter((item) => !item.demo), ...demoWorkouts]);
-    setCalorieEntries((current) => [...current.filter((item) => !item.demo), ...demoMeals]);
-    setBodyWeightEntries((current) => [...current.filter((item) => !item.demo), ...demoWeights]);
-    setCalHistory((current) => [...current.filter((item) => !item.demo), ...demoCalHistory]);
-    setBodyFatHistory((current) => [...current.filter((item) => !item.demo), ...demoBodyFat]);
-    setRestDays((current) => [...new Set([...current.filter((date) => !markerRest.has(date)), ...demoRest])]);
-    setCheatDays((current) => [...new Set([...current.filter((date) => !markerCheat.has(date)), ...demoCheat])]);
-    localStorage.setItem(getDemoDaysKey(currentUser), JSON.stringify({ rest: demoRest, cheat: demoCheat }));
-
-    const demoWaterMl = 1250;
-    const previousDemoWater = Number(localStorage.getItem(getDemoWaterKey(currentUser, today)) || 0);
-    setWaterToday((current) => {
-      const next = Math.max(0, current - previousDemoWater) + demoWaterMl;
-      saveWaterMl(currentUser, next);
-      return next;
-    });
-    localStorage.setItem(getDemoWaterKey(currentUser, today), String(demoWaterMl));
-    setSelectedExercise('Bench Press');
-    setToast(copy.demoDataAdded);
-  }
-
-  function clearDemoData() {
-    if (!currentUser) return;
-    const markers = readDemoDayMarkers(currentUser);
-    const markerRest = new Set(markers.rest);
-    const markerCheat = new Set(markers.cheat);
-    const today = todayKey;
-    const demoWaterToday = Number(localStorage.getItem(getDemoWaterKey(currentUser, today)) || 0);
-
-    setWorkouts((current) => current.filter((item) => !item.demo));
-    setCalorieEntries((current) => current.filter((item) => !item.demo));
-    setBodyWeightEntries((current) => current.filter((item) => !item.demo));
-    setCalHistory((current) => current.filter((item) => !item.demo));
-    setBodyFatHistory((current) => current.filter((item) => !item.demo));
-    setRestDays((current) => current.filter((date) => !markerRest.has(date)));
-    setCheatDays((current) => current.filter((date) => !markerCheat.has(date)));
-    localStorage.removeItem(getDemoDaysKey(currentUser));
-    localStorage.removeItem(getDemoWaterKey(currentUser, today));
-    if (demoWaterToday > 0) {
-      setWaterToday((current) => {
-        const next = Math.max(0, current - demoWaterToday);
-        saveWaterMl(currentUser, next);
-        return next;
-      });
-    }
-    setToast(copy.demoDataCleared);
-  }
-
   function deleteWorkout(id) {
     if (!window.confirm(copy.deleteConfirmWorkout)) return;
     setWorkouts((current) => current.filter((item) => item.id !== id));
@@ -5901,7 +5639,7 @@ export default function App() {
       getCheatKey(email),
       getCustomExKey(email),
       getAdminBonusKey(email),
-      `${JWT_KEY_PREFIX}${email}`,
+      getJwtStorageKey(email),
       getRecapKey(email),
     ].forEach((key) => localStorage.removeItem(key));
     Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
@@ -7159,10 +6897,9 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             <StatCard icon={<Scale size={22} strokeWidth={2.2} />} title={copy.dashboardBodyWeight} value={latestBodyWeightEntry ? formatWeight(latestBodyWeightEntry.weight, settings.units) : '-'} glow="purple" />
             <StatCard icon={<Trophy size={22} strokeWidth={2.2} />} title={copy.dashboardWeeklyVolume} value={formatVolume(weeklyVolumeKg, settings.units)} glow="orange" />
             <section className="glass-panel daily-control-panel fade-in-up" {...tourAttrs('dashboard-overview')}>
-              <div className="panel-header">
-                <h3>{settings.language === 'sl' ? 'Dnevni center' : 'Daily Control'}</h3>
+              <SectionHeader title={settings.language === 'sl' ? 'Dnevni nadzorni center' : 'Today Control Center'}>
                 <div className="settings-button-row panel-help-row">{helpButton('dashboardOverview')}<span className="history-count">{dailyControl.score}%</span></div>
-              </div>
+              </SectionHeader>
               <div className="daily-control-grid">
                 <article>
                   <span>{settings.language === 'sl' ? 'Status' : 'Status'}</span>
@@ -7184,6 +6921,30 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                   <strong>{dailyControl.hydrationPct}%</strong>
                   <small>{(waterToday / 1000).toFixed(1)} / {(dailyControl.waterGoalMl / 1000).toFixed(1)} L</small>
                 </article>
+              </div>
+              <div className="daily-control-coach">
+                <strong>{settings.language === 'sl' ? 'Naslednji najboljši korak' : 'Next best move'}</strong>
+                <span>{dailyControl.coachingMessage}</span>
+              </div>
+              <div className="daily-control-bars">
+                <ProgressBar
+                  label={settings.language === 'sl' ? 'Kalorije' : 'Calories'}
+                  value={dailyControl.caloriePct}
+                  detail={`${Math.round(todayTotals.calories)} / ${dailyControl.macroTargets.calories} kcal`}
+                  tone={dailyControl.calorieDelta < -150 ? 'danger' : 'primary'}
+                />
+                <ProgressBar
+                  label={settings.language === 'sl' ? 'Beljakovine' : 'Protein'}
+                  value={dailyControl.proteinPct}
+                  detail={`${Math.round(todayTotals.protein)} / ${dailyControl.macroTargets.protein} g`}
+                  tone="blue"
+                />
+                <ProgressBar
+                  label={settings.language === 'sl' ? 'Voda' : 'Water'}
+                  value={dailyControl.hydrationPct}
+                  detail={`${(waterToday / 1000).toFixed(1)} / ${(dailyControl.waterGoalMl / 1000).toFixed(1)} L`}
+                  tone="green"
+                />
               </div>
             </section>
             <section className="glass-panel chart-panel fade-in-up" {...tourAttrs('chart-progress')}>

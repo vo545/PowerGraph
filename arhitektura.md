@@ -24,6 +24,9 @@ graph TD
 
 - `src/App.jsx` vsebuje trenutno glavno aplikacijsko logiko.
 - `src/styles.css` vsebuje responsive layout, PWA/mobile prilagoditve in komponente.
+- `src/utils/migrations.js` vsebuje varno branje/parsing, `DATA_SCHEMA_VERSION` in migracije za starejse lokalne podatke.
+- `src/utils/nutrition.js` in `src/utils/fitness.js` vsebujeta izracune za dashboard, makrote, tedenske treninge in trend telesne teze.
+- `src/services/api.js`, `src/services/sync.js` in `src/services/storage.js` locujejo backend klice, sync snapshot in skupne storage helperje.
 - `public/sw.js` skrbi za cache aplikacije in obvestilo o novi verziji.
 - `public/manifest.json` definira PWA instalacijo.
 
@@ -65,11 +68,14 @@ Funkcije:
 - Skrivnosti so v `backend/.env`, ki ne sme biti commitan.
 - SQLite datoteke so runtime podatki in niso del izvorne kode.
 - Lokalna prijava v browser-only nacinu ni prava kriptografsko varna avtentikacija med napravami; namenjena je locevanju lokalnih profilov.
+- Import JSON backupa mora najprej prikazati preview in sele nato zamenjati lokalne podatke.
+- Brisanje lokalnih podatkov zahteva dodatni vpis `DELETE`.
+- Ce brskalnik blokira `localStorage`, aplikacija prikaze opozorilo, ker lokalni podatki morda ne bodo shranjeni.
 
 ## Roadmap
 
-1. Razbiti `src/App.jsx` na module: auth, storage, sync, workouts, calories, admin, AI.
-2. Dodati testni smoke flow za build, backup/import in osnovni sync.
+1. Nadaljevati postopno razbijanje `src/App.jsx` na feature module: auth, workouts, calories, progress, admin, AI.
+2. Uporabljati `SMOKE_TEST.md` za build, backup/import, mobile in osnovni sync flow.
 3. Razmisliti o IndexedDB, ce lokalni podatki prerastejo `localStorage`.
 4. Dodati server endpoint za custom vaje, ce sync custom vaj postane zahteva.
 5. Urediti migracijo git zgodovine, ce so bile skrivnosti ali baze ze commitane.

@@ -1,3 +1,5 @@
+import { safeLocalStorageGet, safeLocalStorageRemove, safeLocalStorageSet } from '../utils/migrations.js';
+
 const API_URL = import.meta.env.VITE_API_URL || '';
 const JWT_KEY_PREFIX = 'powergraph_jwt_';
 
@@ -14,23 +16,23 @@ function decodeJwtPayload(token) {
 
 export function getJwt(email) {
   const key = `${JWT_KEY_PREFIX}${email}`;
-  const token = localStorage.getItem(key) || '';
+  const token = safeLocalStorageGet(key, '');
   if (!token) return '';
   const payload = decodeJwtPayload(token);
   if (!payload) {
-    localStorage.removeItem(key);
+    safeLocalStorageRemove(key);
     return '';
   }
   if (payload?.exp && payload.exp * 1000 <= Date.now()) {
-    localStorage.removeItem(key);
+    safeLocalStorageRemove(key);
     return '';
   }
   return token;
 }
 
 export function setJwt(email, token) {
-  if (token) localStorage.setItem(`${JWT_KEY_PREFIX}${email}`, token);
-  else localStorage.removeItem(`${JWT_KEY_PREFIX}${email}`);
+  if (token) safeLocalStorageSet(`${JWT_KEY_PREFIX}${email}`, token);
+  else safeLocalStorageRemove(`${JWT_KEY_PREFIX}${email}`);
 }
 
 export function getJwtStorageKey(email) {

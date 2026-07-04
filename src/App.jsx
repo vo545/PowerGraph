@@ -13,6 +13,7 @@ import { pushSyncSnapshot } from './services/sync.js';
 import { getContrastHex, getHexLuminance, hexToRgb, hexToRgba, mixHex, normalizeHexColor, shiftHexTone } from './utils/colors.js';
 import { dateOffsetKey, todayKey } from './utils/dates.js';
 import { calculateBodyWeightTrend, calculateWeeklyWorkoutCount } from './utils/fitness.js';
+import { isLocalStorageAvailable, safeLocalStorageGet, safeLocalStorageRemove, safeLocalStorageSet } from './utils/migrations.js';
 import { createDailyControlSummary, sumNutritionTotals } from './utils/nutrition.js';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler, BarElement);
@@ -47,6 +48,21 @@ const BACKUP_SCHEMA_VERSION = 4;
 const RECOVERY_KEY_PREFIX = 'powergraph_recovery_';
 const AUTO_SNAPSHOT_KEY_PREFIX = 'powergraph_auto_snapshot_';
 const MAX_RECOVERY_SNAPSHOTS = 3;
+
+const safeStorage = {
+  getItem: (key) => safeLocalStorageGet(key, null),
+  setItem: (key, value) => safeLocalStorageSet(key, String(value)),
+  removeItem: (key) => safeLocalStorageRemove(key),
+  key: (index) => {
+    try { return window.localStorage.key(index); } catch { return null; }
+  },
+  get length() {
+    try { return window.localStorage.length; } catch { return 0; }
+  },
+};
+
+// Keep existing call sites compatible while preventing private-mode storage crashes.
+const localStorage = safeStorage;
 
 function getLastSectionKey(email) { return `${LAST_SECTION_KEY_PREFIX}${email}`; }
 function getDraftKey(email, name) { return `${DRAFT_KEY_PREFIX}${email}_${name}`; }
@@ -1441,6 +1457,8 @@ const ui = {
     dataHealthEncryptionMissing: 'Encrypted export ni na voljo',
     dataHealthLastBackup: 'Zadnji backup',
     dataHealthAutoSnapshot: 'Auto snapshot',
+    storageUnavailableTitle: 'Shramba ni na voljo',
+    storageUnavailableDesc: 'Brskalnik blokira localStorage. PowerGraph lahko deluje, vendar se podatki morda ne bodo shranili. Izklopi zasebni nacin ali dovoli podatke strani.',
     exportEncrypted: 'Encrypted export',
     encryptedExportPrompt: 'Vnesi geslo za encrypted backup. Brez tega gesla backupa ne bo mogoce obnoviti.',
     encryptedExportConfirm: 'Ponovi geslo za encrypted backup.',
@@ -1963,6 +1981,8 @@ const ui = {
     dataHealthEncryptionMissing: 'Encrypted export unavailable',
     dataHealthLastBackup: 'Last backup',
     dataHealthAutoSnapshot: 'Auto snapshot',
+    storageUnavailableTitle: 'Storage is unavailable',
+    storageUnavailableDesc: 'The browser is blocking localStorage. PowerGraph can open, but data may not save. Disable private mode or allow site data.',
     exportEncrypted: 'Encrypted export',
     encryptedExportPrompt: 'Enter a password for the encrypted backup. Without it, this backup cannot be restored.',
     encryptedExportConfirm: 'Repeat the encrypted backup password.',
@@ -4238,7 +4258,8 @@ function AnatomyRankModel({ selected, onSelect, gender = 'male', language = 'en'
 }
 
 export default function App() {
-  const initialSessionEmail = localStorage.getItem(SESSION_KEY) || '';
+  const storageAvailable = isLocalStorageAvailable();
+  const initialSessionEmail = safeLocalStorageGet(SESSION_KEY, '');
   const fileInputRef = useRef(null);
   const calImageRef = useRef(null);
   const previousCountRef = useRef(0);
@@ -4920,7 +4941,7 @@ export default function App() {
   }, [bodyWeightEntries, settings.age, settings.gender, settings.height]);
   useEffect(() => {
     if (!currentUser) return;
-    localStorage.setItem(SESSION_KEY, currentUser);
+    safeLocalStorageSet(SESSION_KEY, currentUser);
     requestPersistentStorage();
     const nextSettings = loadSettings(currentUser);
     const nextWorkoutDraft = loadDraft(currentUser, 'workoutForm', getDefaultWorkoutForm());
@@ -5273,7 +5294,7 @@ export default function App() {
   }
 
   function logout() {
-    localStorage.removeItem(SESSION_KEY);
+    safeLocalStorageRemove(SESSION_KEY);
     setCurrentUser('');
     setWorkouts([]);
     setCalorieEntries([]);
@@ -7015,6 +7036,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           {helpButton('sectionIntro')}
         </section>
         {adminConfig.announcementEnabled && adminConfig.announcementText && <section className="glass-panel admin-announcement-banner fade-in-up"><strong>{settings.language === 'sl' ? 'Admin obvestilo' : 'Admin notice'}</strong><span>{adminConfig.announcementText}</span></section>}
+        {!storageAvailable && <section className="glass-panel storage-warning-banner fade-in-up" role="alert"><div><h3>{copy.storageUnavailableTitle}</h3><p>{copy.storageUnavailableDesc}</p></div></section>}
         {backupDue && adminConfig.backupBannerEnabled && <section className="glass-panel backup-banner fade-in-up"><div><h3>{copy.backupTitle}</h3><p>{copy.backupText}</p></div><button className="action-btn-primary" type="button" onClick={exportData}>{copy.export}</button></section>}
 
         {activeSection === 'dashboard' && <>

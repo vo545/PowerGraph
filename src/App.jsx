@@ -9,9 +9,11 @@ import SectionHeader from './components/SectionHeader.jsx';
 import StatCard from './components/StatCard.jsx';
 import UpdateBanner from './components/UpdateBanner.jsx';
 import { API_URL, apiCall, backendLogin, getJwt, getJwtStorageKey, pullFromBackend, setJwt } from './services/api.js';
+import { pushSyncSnapshot } from './services/sync.js';
 import { getContrastHex, getHexLuminance, hexToRgb, hexToRgba, mixHex, normalizeHexColor, shiftHexTone } from './utils/colors.js';
 import { dateOffsetKey, todayKey } from './utils/dates.js';
-import { createDailyControlSummary, sumNutritionTotals } from './utils/metrics.js';
+import { calculateBodyWeightTrend, calculateWeeklyWorkoutCount } from './utils/fitness.js';
+import { createDailyControlSummary, sumNutritionTotals } from './utils/nutrition.js';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler, BarElement);
 
@@ -944,6 +946,7 @@ const ui = {
     sets: 'Serije',
     repsPerSet: 'Ponovitve po serijah',
     addSet: 'Dodaj serijo',
+    copyPreviousSet: 'Kopiraj prej\u0161njo serijo',
     save: 'Shrani trening',
     saveChanges: 'Shrani spremembe',
     cancel: 'Prekli\u010di',
@@ -996,6 +999,9 @@ const ui = {
     import: 'Uvozi podatke',
     clear: 'Izbri\u0161i vse podatke',
     clearConfirm: 'Ali res \u017eeli\u0161 izbrisati vse lokalne podatke? Tega ni mogo\u010de razveljaviti.',
+    clearTypeConfirm: 'Za izbris vseh lokalnih podatkov vpi\u0161i DELETE.',
+    importPreviewTitle: 'Uvozim backup?',
+    importPreviewConfirm: 'To bo zamenjalo trenutne lokalne podatke. Nadaljujem?',
     backupTitle: 'Opomnik za backup',
     backupText: 'Naredi nov izvoz, da ne izgubi\u0161 lokalnih podatkov.',
     showFeedbackBtn: 'Gumb za komentar',
@@ -1462,6 +1468,7 @@ const ui = {
     sets: 'Sets',
     repsPerSet: 'Reps per set',
     addSet: 'Add set',
+    copyPreviousSet: 'Copy previous set',
     save: 'Save workout',
     saveChanges: 'Save changes',
     cancel: 'Cancel',
@@ -1514,6 +1521,9 @@ const ui = {
     import: 'Import data',
     clear: 'Delete all data',
     clearConfirm: 'Do you really want to delete all local data? This cannot be undone.',
+    clearTypeConfirm: 'Type DELETE to clear all local data.',
+    importPreviewTitle: 'Import this backup?',
+    importPreviewConfirm: 'This will replace your current local data. Continue?',
     backupTitle: 'Backup reminder',
     backupText: 'Create a fresh export so you do not lose local data.',
     showFeedbackBtn: 'Comment button',
@@ -4646,6 +4656,14 @@ export default function App() {
       .filter((workout) => new Date(workout.date) >= cutoff)
       .reduce((total, workout) => total + getWorkoutVolumeKg(workout, dashboardBodyWeightKg, customExercises), 0);
   }, [customExercises, dashboardBodyWeightKg, workouts]);
+  const weeklyWorkoutCount = useMemo(() => calculateWeeklyWorkoutCount(workouts), [workouts]);
+  const bodyWeightTrend = useMemo(() => calculateBodyWeightTrend(bodyWeightEntries), [bodyWeightEntries]);
+  const bodyWeightTrendLabel = useMemo(() => {
+    if (bodyWeightTrend.label === '-') return '-';
+    const sign = bodyWeightTrend.delta > 0 ? '+' : bodyWeightTrend.delta < 0 ? '-' : '';
+    return `${sign}${formatWeight(Math.abs(bodyWeightTrend.delta), settings.units)}`;
+  }, [bodyWeightTrend, settings.units]);
+  const isRestToday = restDays.includes(todayKey);
   const hasProgressData = workouts.length || calorieEntries.length || bodyWeightEntries.length || waterToday > 0;
   const waterGoalMl = Math.max(1000, Number(tdeeResult?.waterMl || settings.waterGoalMl || defaultSettings.waterGoalMl));
   const latestRecoverySnapshot = recoverySnapshots[0] || null;
@@ -5149,7 +5167,7 @@ export default function App() {
     setSyncing(true);
     const id = setTimeout(async () => {
       try {
-        await apiCall(currentUser, '/api/sync', 'POST', { workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory, waterEntries: loadWaterEntries(currentUser), waterToday, waterDate: todayKey });
+        await pushSyncSnapshot(currentUser, { workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory, waterEntries: loadWaterEntries(currentUser), waterToday, waterDate: todayKey });
       } finally { setSyncing(false); }
     }, 1500);
     return () => { clearTimeout(id); setSyncing(false); };
@@ -5281,6 +5299,15 @@ export default function App() {
   function changeSet(index, value) { setFormData((c) => ({ ...c, setDetails: c.setDetails.map((item, i) => (i === index ? value : item)) })); }
   function changeSetWeight(index, value) { setFormData((c) => ({ ...c, setWeights: (c.setWeights || []).map((item, i) => (i === index ? value : item)) })); }
   function addSet() { setFormData((c) => ({ ...c, setDetails: [...c.setDetails, ''], setWeights: [...(c.setWeights || []), ''] })); }
+  function copyPreviousSet() {
+    setFormData((current) => {
+      const setDetails = current.setDetails.length ? current.setDetails : [''];
+      const setWeights = current.setWeights || [];
+      const lastReps = setDetails.at(-1) || '';
+      const lastWeight = setWeights.at(-1) || current.weight || '';
+      return { ...current, setDetails: [...setDetails, lastReps], setWeights: [...setWeights, lastWeight] };
+    });
+  }
   function removeSet(index) { setFormData((c) => ({ ...c, setDetails: c.setDetails.length === 1 ? c.setDetails : c.setDetails.filter((_, i) => i !== index), setWeights: (c.setWeights || []).length <= 1 ? (c.setWeights || []) : (c.setWeights || []).filter((_, i) => i !== index) })); }
   function saveWorkout(event) {
     event.preventDefault();
@@ -5507,6 +5534,17 @@ export default function App() {
         const payload = await readBackupPayload(parsed);
         const cleanBackup = sanitizeBackupPayload(payload);
         if (!cleanBackup) throw new Error('invalid');
+        const currentCounts = getBackupCounts(buildBackupData());
+        const incomingCounts = getBackupCounts(cleanBackup);
+        const previewLines = [
+          copy.importPreviewTitle,
+          '',
+          `Current: ${currentCounts.workouts} workouts, ${currentCounts.meals} meals, ${currentCounts.weights} weight entries, ${currentCounts.waterDays} water days`,
+          `Import: ${incomingCounts.workouts} workouts, ${incomingCounts.meals} meals, ${incomingCounts.weights} weight entries, ${incomingCounts.waterDays} water days`,
+          '',
+          copy.importPreviewConfirm,
+        ];
+        if (!window.confirm(previewLines.join('\n'))) throw new Error('cancelled');
         createRecoverySnapshot('before-import');
         applyCleanBackup(cleanBackup);
         setToast(copy.importDone);
@@ -5520,6 +5558,7 @@ export default function App() {
   }
   function clearData() {
     if (!window.confirm(copy.clearConfirm)) return;
+    if (window.prompt(copy.clearTypeConfirm) !== 'DELETE') return;
     createRecoverySnapshot('before-clear');
     setWorkouts([]);
     setCalorieEntries([]);
@@ -5544,6 +5583,7 @@ export default function App() {
     localStorage.removeItem(getCheatKey(currentUser));
     localStorage.removeItem(getCustomExKey(currentUser));
     localStorage.removeItem(getBodyFatKey(currentUser));
+    localStorage.removeItem(getAutoSnapshotKey(currentUser));
     clearWaterEntries(currentUser);
     setWaterToday(0);
     setToast(copy.cleared);
@@ -6742,6 +6782,10 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
   const mealActionTypes = ['breakfast', 'snack', 'lunch', 'dinner'];
   const mealActionLabels = { breakfast: copy.breakfast, snack: copy.snack, lunch: copy.lunch, dinner: copy.dinner };
   const quickActions = [
+    { id: 'action-add-workout', label: copy.addWorkout, description: slUi ? 'Skoci na vnos treninga.' : 'Jump to workout entry.', icon: NAV_ICONS.dashboard, run: () => goToFeature('dashboard', 'add-workout') },
+    { id: 'action-add-meal', label: copy.addMeal, description: slUi ? 'Skoci na vnos obroka.' : 'Jump to meal entry.', icon: NAV_ICONS.calories, run: () => goToFeature('calories', 'add-meal') },
+    { id: 'action-add-weight', label: copy.addWeight, description: slUi ? 'Skoci na meritev telesne teze.' : 'Jump to body-weight entry.', icon: NAV_ICONS.bodyweight, run: () => goToFeature('bodyweight', 'bodyweight-tracker') },
+    { id: 'action-export-backup', label: copy.export, description: slUi ? 'Prenesi varnostno kopijo.' : 'Download a backup.', icon: 'JSON', run: () => { exportData(); setQuickActionsOpen(false); setCommandOpen(false); } },
     ...mealActionTypes.map((type) => ({
       id: `copy-yesterday-${type}`,
       label: slUi ? `Dodaj včerajšnji ${mealActionLabels[type].toLowerCase()}` : `Add yesterday ${mealActionLabels[type].toLowerCase()}`,
@@ -6979,6 +7023,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             <StatCard icon={<Flame size={22} strokeWidth={2.2} />} title={copy.streak} value={workoutStreak} glow="green" />
             <StatCard icon={<Scale size={22} strokeWidth={2.2} />} title={copy.dashboardBodyWeight} value={latestBodyWeightEntry ? formatWeight(latestBodyWeightEntry.weight, settings.units) : '-'} glow="purple" />
             <StatCard icon={<Trophy size={22} strokeWidth={2.2} />} title={copy.dashboardWeeklyVolume} value={formatVolume(weeklyVolumeKg, settings.units)} glow="orange" />
+            <StatCard icon={<Dumbbell size={22} strokeWidth={2.2} />} title={settings.language === 'sl' ? 'Treningi ta teden' : 'Weekly workouts'} value={weeklyWorkoutCount} glow="blue" />
+            <StatCard icon={<Target size={22} strokeWidth={2.2} />} title={settings.language === 'sl' ? 'Trend teze' : 'Weight trend'} value={bodyWeightTrendLabel} glow={bodyWeightTrend.direction === 'down' ? 'green' : bodyWeightTrend.direction === 'up' ? 'orange' : 'purple'} />
             <section className="glass-panel daily-control-panel fade-in-up" {...tourAttrs('dashboard-overview')}>
               <SectionHeader title={settings.language === 'sl' ? 'Dnevni nadzorni center' : 'Today Control Center'}>
                 <div className="settings-button-row panel-help-row">{helpButton('dashboardOverview')}<span className="history-count">{dailyControl.score}%</span></div>
@@ -7004,6 +7050,16 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                   <strong>{dailyControl.hydrationPct}%</strong>
                   <small>{(waterToday / 1000).toFixed(1)} / {(dailyControl.waterGoalMl / 1000).toFixed(1)} L</small>
                 </article>
+                <article>
+                  <span>{settings.language === 'sl' ? 'Teden' : 'Week'}</span>
+                  <strong>{weeklyWorkoutCount}</strong>
+                  <small>{settings.language === 'sl' ? 'Treningi v zadnjih 7 dneh' : 'Workouts in the last 7 days'}</small>
+                </article>
+                <article>
+                  <span>{settings.language === 'sl' ? 'Pocitek' : 'Rest day'}</span>
+                  <strong>{isRestToday ? (settings.language === 'sl' ? 'oznacen' : 'marked') : (settings.language === 'sl' ? 'ni oznacen' : 'not marked')}</strong>
+                  <small>{settings.language === 'sl' ? 'Oznaci ga, ce danes regeneriras' : 'Mark it if today is recovery'}</small>
+                </article>
               </div>
               <div className="daily-control-coach">
                 <strong>{settings.language === 'sl' ? 'Naslednji najboljši korak' : 'Next best move'}</strong>
@@ -7021,6 +7077,18 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                   value={dailyControl.proteinPct}
                   detail={`${Math.round(todayTotals.protein)} / ${dailyControl.macroTargets.protein} g`}
                   tone="blue"
+                />
+                <ProgressBar
+                  label={settings.language === 'sl' ? 'Ogljikovi hidrati' : 'Carbs'}
+                  value={dailyControl.carbsPct}
+                  detail={`${Math.round(todayTotals.carbs)} / ${dailyControl.macroTargets.carbs} g`}
+                  tone="orange"
+                />
+                <ProgressBar
+                  label={settings.language === 'sl' ? 'Mascobe' : 'Fat'}
+                  value={dailyControl.fatPct}
+                  detail={`${Math.round(todayTotals.fat)} / ${dailyControl.macroTargets.fat} g`}
+                  tone="green"
                 />
                 <ProgressBar
                   label={settings.language === 'sl' ? 'Voda' : 'Water'}
@@ -7061,7 +7129,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                   <p>{localize(selectedFormExerciseInfo.targets, settings.language)}</p>
                 </div>
                 {!settings.weightDrop && <div className="input-group"><label htmlFor="weight">{copy.weight}</label><input id="weight" type="number" step="0.5" min="0" value={formData.weight} onChange={(e) => setFormData((c) => ({ ...c, weight: e.target.value }))} placeholder={`0 ${settings.units}`} />{lastUsedWeight !== null && !editingWorkoutId && <span className="weight-hint" onClick={() => setFormData(c => ({...c, weight: String(lastUsedWeight)}))}>{settings.language === 'sl' ? 'Zadnjič' : 'Last'}: {formatWeight(lastUsedWeight, settings.units)} ↑</span>}</div>}
-                <div className="input-group set-builder"><label>{settings.weightDrop ? (settings.language === 'sl' ? 'Seti — kg · ponov.' : 'Sets — kg · reps') : copy.repsPerSet}</label>{settings.weightDrop && <div className="wd-col-header"><span>{copy.sets}</span><span>{settings.units}</span><span>{settings.language === 'sl' ? 'Ponov.' : 'Reps'}</span><span/></div>}<div className="set-list">{formData.setDetails.map((value, index) => <div className={`set-row${settings.weightDrop ? ' weight-drop' : ''}`} key={`set-${index + 1}`}><span className="set-label"><button className="mini-btn mini-btn-inline" type="button" onClick={() => removeSet(index)}>−</button>{copy.sets} {index + 1}</span>{settings.weightDrop && <input type="number" step="0.5" min="0" value={(formData.setWeights || [])[index] || ''} onChange={(e) => changeSetWeight(index, e.target.value)} placeholder="0" className="wd-input" />}<input type="number" min="1" step="1" value={value} onChange={(e) => changeSet(index, e.target.value)} /><button className="mini-btn mini-btn-standalone" type="button" onClick={() => removeSet(index)}>−</button></div>)}</div><button className="action-btn-outline add-set-btn" type="button" onClick={addSet}>{copy.addSet}</button></div>
+                <div className="input-group set-builder"><label>{settings.weightDrop ? (settings.language === 'sl' ? 'Seti — kg · ponov.' : 'Sets — kg · reps') : copy.repsPerSet}</label>{settings.weightDrop && <div className="wd-col-header"><span>{copy.sets}</span><span>{settings.units}</span><span>{settings.language === 'sl' ? 'Ponov.' : 'Reps'}</span><span/></div>}<div className="set-list">{formData.setDetails.map((value, index) => <div className={`set-row${settings.weightDrop ? ' weight-drop' : ''}`} key={`set-${index + 1}`}><span className="set-label"><button className="mini-btn mini-btn-inline" type="button" onClick={() => removeSet(index)}>−</button>{copy.sets} {index + 1}</span>{settings.weightDrop && <input type="number" step="0.5" min="0" value={(formData.setWeights || [])[index] || ''} onChange={(e) => changeSetWeight(index, e.target.value)} placeholder="0" className="wd-input" />}<input type="number" min="1" step="1" value={value} onChange={(e) => changeSet(index, e.target.value)} /><button className="mini-btn mini-btn-standalone" type="button" onClick={() => removeSet(index)}>−</button></div>)}</div><div className="set-action-row"><button className="action-btn-outline add-set-btn" type="button" onClick={addSet}>{copy.addSet}</button><button className="action-btn-outline add-set-btn" type="button" onClick={copyPreviousSet}>{copy.copyPreviousSet}</button></div></div>
                 <div className="settings-button-row">
                   <button className="action-btn-primary full-width" type="submit">{editingWorkoutId ? copy.saveChanges : copy.save}</button>
                   {editingWorkoutId ? <button className="action-btn-outline full-width" type="button" onClick={cancelWorkoutEdit}>{copy.cancel}</button> : null}

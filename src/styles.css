@@ -911,7 +911,7 @@ p {
 .daily-control-bars {
   margin-top: 14px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 12px;
 }
 
@@ -965,6 +965,10 @@ p {
 
 .progress-line-green .progress-line-fill {
   background: linear-gradient(90deg, #34d399, #86efac);
+}
+
+.progress-line-orange .progress-line-fill {
+  background: linear-gradient(90deg, #fb923c, #fbbf24);
 }
 
 .progress-line-danger .progress-line-fill {
@@ -1321,6 +1325,16 @@ p {
 }
 
 .add-set-btn {
+  margin-top: 4px;
+}
+
+.set-action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.set-action-row .add-set-btn {
   margin-top: 4px;
 }
 
@@ -6653,6 +6667,10 @@ body {
     font-size: 20px;
   }
 
+  .set-action-row {
+    grid-template-columns: 1fr;
+  }
+
   .daily-control-grid,
   .muscle-stat-grid,
   .muscle-overview-grid,
@@ -6994,7 +7012,7 @@ body {
   }
 
   .daily-control-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 7px;
   }
 
@@ -7224,7 +7242,7 @@ body {
 
   .daily-control-grid,
   .muscle-overview-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .nav-menu {

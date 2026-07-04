@@ -43,10 +43,12 @@ const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 const MAX_IMPORT_FILE_BYTES = 20 * 1024 * 1024;
 const BACKUP_SCHEMA_VERSION = 4;
 const RECOVERY_KEY_PREFIX = 'powergraph_recovery_';
+const AUTO_SNAPSHOT_KEY_PREFIX = 'powergraph_auto_snapshot_';
 const MAX_RECOVERY_SNAPSHOTS = 3;
 
 function getLastSectionKey(email) { return `${LAST_SECTION_KEY_PREFIX}${email}`; }
 function getDraftKey(email, name) { return `${DRAFT_KEY_PREFIX}${email}_${name}`; }
+function getAutoSnapshotKey(email) { return `${AUTO_SNAPSHOT_KEY_PREFIX}${email || ''}`; }
 function getInitialSection(email) {
   if (!email) return 'dashboard';
   try {
@@ -1416,6 +1418,23 @@ const ui = {
     storageProtected: 'Zasciteno',
     storageBestEffort: 'Best effort',
     waterDays: 'Dnevi vode',
+    dataHealthTitle: 'Data health',
+    dataHealthDesc: 'Hiter pregled zaščite lokalnih podatkov, backupov in obnovitve.',
+    dataHealthStrong: 'Zaščita je dobra',
+    dataHealthMedium: 'Potreben je majhen popravek',
+    dataHealthWeak: 'Naredi backup zdaj',
+    dataHealthRecords: 'Lokalni zapisi',
+    dataHealthBackupFresh: 'Backup je svež',
+    dataHealthBackupDue: 'Backup je potreben',
+    dataHealthRecoveryReady: 'Recovery snapshot pripravljen',
+    dataHealthRecoveryMissing: 'Ni recovery snapshota',
+    dataHealthPersistentReady: 'Browser ščiti lokalni prostor',
+    dataHealthPersistentPending: 'Čakam na storage status',
+    dataHealthPersistentBestEffort: 'Browser lahko počisti prostor',
+    dataHealthEncryptionReady: 'Encrypted export je podprt',
+    dataHealthEncryptionMissing: 'Encrypted export ni na voljo',
+    dataHealthLastBackup: 'Zadnji backup',
+    dataHealthAutoSnapshot: 'Auto snapshot',
     exportEncrypted: 'Encrypted export',
     encryptedExportPrompt: 'Vnesi geslo za encrypted backup. Brez tega gesla backupa ne bo mogoce obnoviti.',
     encryptedExportConfirm: 'Ponovi geslo za encrypted backup.',
@@ -1917,6 +1936,23 @@ const ui = {
     storageProtected: 'Protected',
     storageBestEffort: 'Best effort',
     waterDays: 'Water days',
+    dataHealthTitle: 'Data health',
+    dataHealthDesc: 'A quick check of local data protection, backups, and restore readiness.',
+    dataHealthStrong: 'Protection looks good',
+    dataHealthMedium: 'One small fix recommended',
+    dataHealthWeak: 'Back up now',
+    dataHealthRecords: 'Local records',
+    dataHealthBackupFresh: 'Backup is fresh',
+    dataHealthBackupDue: 'Backup is due',
+    dataHealthRecoveryReady: 'Recovery snapshot ready',
+    dataHealthRecoveryMissing: 'No recovery snapshot',
+    dataHealthPersistentReady: 'Browser protects local storage',
+    dataHealthPersistentPending: 'Waiting for storage status',
+    dataHealthPersistentBestEffort: 'Browser may clear storage',
+    dataHealthEncryptionReady: 'Encrypted export supported',
+    dataHealthEncryptionMissing: 'Encrypted export unavailable',
+    dataHealthLastBackup: 'Last backup',
+    dataHealthAutoSnapshot: 'Auto snapshot',
     exportEncrypted: 'Encrypted export',
     encryptedExportPrompt: 'Enter a password for the encrypted backup. Without it, this backup cannot be restored.',
     encryptedExportConfirm: 'Repeat the encrypted backup password.',
@@ -4620,6 +4656,37 @@ export default function App() {
   const storageUsageLabel = storageInfo
     ? `${formatBytes(storageInfo.usage)} / ${storageInfo.quota ? formatBytes(storageInfo.quota) : '-'}`
     : '-';
+  const dataHealth = useMemo(() => {
+    const backupTime = settings.lastBackupAt ? new Date(settings.lastBackupAt).getTime() : 0;
+    const backupAgeDays = backupTime && Number.isFinite(backupTime) ? Math.max(0, Math.floor((Date.now() - backupTime) / 86400000)) : null;
+    const backupFresh = backupAgeDays !== null && backupAgeDays <= Number(settings.backupReminderDays || defaultSettings.backupReminderDays);
+    const storagePending = !storageInfo;
+    const encryptedExportReady = typeof window !== 'undefined' && Boolean(window.crypto?.subtle);
+    const counts = getBackupCounts({
+      workouts,
+      calorieEntries,
+      calHistory,
+      bodyWeightEntries,
+      waterEntries: loadWaterEntries(currentUser),
+    });
+    const records = counts.workouts + counts.meals + counts.weights + counts.estimates + counts.waterDays;
+    const autoSnapshotDate = currentUser ? localStorage.getItem(getAutoSnapshotKey(currentUser)) || '' : '';
+    const checks = [
+      { id: 'backup', ok: backupFresh, label: backupFresh ? copy.dataHealthBackupFresh : copy.dataHealthBackupDue },
+      { id: 'recovery', ok: recoverySnapshots.length > 0, label: recoverySnapshots.length > 0 ? copy.dataHealthRecoveryReady : copy.dataHealthRecoveryMissing },
+      {
+        id: 'storage',
+        ok: Boolean(storageInfo?.persisted),
+        pending: storagePending,
+        label: storagePending ? copy.dataHealthPersistentPending : storageInfo.persisted ? copy.dataHealthPersistentReady : copy.dataHealthPersistentBestEffort,
+      },
+      { id: 'encryption', ok: encryptedExportReady, label: encryptedExportReady ? copy.dataHealthEncryptionReady : copy.dataHealthEncryptionMissing },
+    ];
+    const score = Math.round((checks.reduce((sum, check) => sum + (check.pending ? 0.5 : check.ok ? 1 : 0), 0) / checks.length) * 100);
+    const label = score >= 80 ? copy.dataHealthStrong : score >= 55 ? copy.dataHealthMedium : copy.dataHealthWeak;
+    const backupLabel = backupAgeDays === null ? copy.never : backupAgeDays === 0 ? (settings.language === 'sl' ? 'Danes' : 'Today') : `${backupAgeDays} ${copy.days}`;
+    return { score, label, checks, records, backupLabel, autoSnapshotDate };
+  }, [calHistory, calorieEntries, copy, currentUser, recoverySnapshots.length, settings.backupReminderDays, settings.language, settings.lastBackupAt, storageInfo, waterToday, workouts, bodyWeightEntries]);
   const dailyControl = useMemo(() => {
     return createDailyControlSummary({
       sortedWorkouts,
@@ -4977,6 +5044,21 @@ export default function App() {
     refreshStorageInfo();
     return () => { cancelled = true; };
   }, [activeSection, bodyWeightEntries.length, calorieEntries.length, calHistory.length, currentUser, recoverySnapshots.length, waterToday, workouts.length]);
+  useEffect(() => {
+    if (!currentUser || dataHealth.records <= 0) return undefined;
+    let savedToday = false;
+    try {
+      savedToday = localStorage.getItem(getAutoSnapshotKey(currentUser)) === todayKey;
+    } catch {}
+    if (savedToday) return undefined;
+    const id = window.setTimeout(() => {
+      const snapshot = createRecoverySnapshot('auto-daily');
+      if (snapshot) {
+        try { localStorage.setItem(getAutoSnapshotKey(currentUser), todayKey); } catch {}
+      }
+    }, 1600);
+    return () => window.clearTimeout(id);
+  }, [currentUser, dataHealth.records, todayKey]);
   useEffect(() => {
     timerAlarmFnRef.current = () => {
       playTimerAlarm();
@@ -5641,6 +5723,7 @@ export default function App() {
       getAdminBonusKey(email),
       getJwtStorageKey(email),
       getRecapKey(email),
+      getAutoSnapshotKey(email),
     ].forEach((key) => localStorage.removeItem(key));
     Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
       .filter((key) => key && key.startsWith(`${WATER_KEY_PREFIX}${email}_`))
@@ -8225,6 +8308,31 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
           <section className="glass-panel settings-section fade-in-up data-privacy-panel">
             <div className="panel-header"><h3>{copy.dataPrivacy}</h3>{helpButton('data')}</div>
             <p className="settings-copy">{copy.dataPrivacyDesc}</p>
+            <div className="settings-card data-health-card">
+              <div className="data-health-top">
+                <div>
+                  <span className="settings-title">{copy.dataHealthTitle}</span>
+                  <p className="settings-copy">{copy.dataHealthDesc}</p>
+                </div>
+                <div className="data-health-score">
+                  <strong>{dataHealth.score}%</strong>
+                  <small>{dataHealth.label}</small>
+                </div>
+              </div>
+              <div className="data-health-stats">
+                <div><span>{copy.dataHealthRecords}</span><strong>{dataHealth.records}</strong></div>
+                <div><span>{copy.dataHealthLastBackup}</span><strong>{dataHealth.backupLabel}</strong></div>
+                <div><span>{copy.dataHealthAutoSnapshot}</span><strong>{dataHealth.autoSnapshotDate || copy.never}</strong></div>
+              </div>
+              <div className="data-health-checks">
+                {dataHealth.checks.map((check) => (
+                  <span key={check.id} className={`data-health-check ${check.pending ? 'pending' : check.ok ? 'ok' : 'needs-action'}`}>
+                    <i aria-hidden="true">{check.pending ? '…' : check.ok ? '✓' : '!'}</i>
+                    {check.label}
+                  </span>
+                ))}
+              </div>
+            </div>
             <div className="settings-card data-recovery-card">
               <span className="settings-title">{copy.recoveryTitle}</span>
               <p className="settings-copy">{copy.recoveryDesc}</p>

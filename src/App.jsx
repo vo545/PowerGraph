@@ -108,7 +108,7 @@ function dateOffsetKey(offsetDays) {
   return date.toISOString().slice(0, 10);
 }
 
-function normalizeHexColor(value, fallback = '#7aa2f7') {
+function normalizeHexColor(value, fallback = '#0b1f4d') {
   if (typeof value !== 'string') return fallback;
   const clean = value.trim();
   return /^#[0-9a-fA-F]{6}$/.test(clean) ? clean.toLowerCase() : fallback;
@@ -1033,7 +1033,7 @@ const APPEARANCE_PATTERNS = [
   { id: 'none', label: { en: 'Clean', sl: 'Cisto' } },
 ];
 const SUPPORTED_PATTERNS = APPEARANCE_PATTERNS.map((item) => item.id);
-const defaultSettings = { units: 'kg', language: 'en', backgroundAccent: 'blue', primaryColor: '#080d12', secondaryColor: '#7aa2f7', secondaryColor2: '#c9a66b', secondaryColorCount: 2, backgroundPattern: 'grid', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, waterGoalMl: 2500, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
+const defaultSettings = { units: 'kg', language: 'en', backgroundAccent: 'blue', appearanceVersion: 2, primaryColor: '#000000', secondaryColor: '#0b1f4d', secondaryColor2: '#123a7a', secondaryColorCount: 1, backgroundPattern: 'grid', dateFormat: 'DD.MM.YYYY', backupReminderDays: 7, lastBackupAt: '', calorieGoal: 2200, waterGoalMl: 2500, calorieTrackerMode: 'simple', weightDrop: false, gender: 'male', age: '', height: '', showFeedbackBtn: true };
 const defaultAdminConfig = {
   appName: 'PowerGraph',
   announcementEnabled: false,
@@ -1109,10 +1109,7 @@ const ui = {
     primaryColor: 'Primarna',
     secondaryColor: 'Sekundarna',
     colorTab: 'Barva',
-    shadeTab: 'Temneje / svetleje',
     patternTab: 'Vzorec',
-    darker: 'Temneje',
-    lighter: 'Svetleje',
     selectedColor: 'Izbrana barva',
     secondaryColorCount: 'Stevilo sekundarnih barv',
     oneColor: '1 barva',
@@ -1443,7 +1440,7 @@ const ui = {
     tutorialStep7Title: 'Lestvica rangov 🏆',
     tutorialStep7: 'Rangi temeljijo na tehtanem volumnu po misicah. Skupni rang je povprecje vseh devetih misicnih skupin.',
     tutorialStep8Title: 'Nastavitve ⚙️',
-    tutorialStep8: 'V nastavitvah izberi jezik, enote in varnostno kopiranje. Vodič (ta zaslon) je vedno dostopen tukaj.',
+    tutorialStep8: 'V nastavitvah izberi jezik, enote, backup in izgled. Primary spreminja osnovno barvo appa, Secondary pa gumbe in poudarke.',
     myEquipmentTitle: 'Moja oprema',
     addCustomExercise: 'Dodaj vajo',
     customExName: 'Ime vaje (npr. Lat Pulldown)',
@@ -1620,10 +1617,7 @@ const ui = {
     primaryColor: 'Primary',
     secondaryColor: 'Secondary',
     colorTab: 'Color',
-    shadeTab: 'Darker / lighter',
     patternTab: 'Pattern',
-    darker: 'Darker',
-    lighter: 'Lighter',
     selectedColor: 'Selected color',
     secondaryColorCount: 'Secondary colors',
     oneColor: '1 color',
@@ -1954,7 +1948,7 @@ const ui = {
     tutorialStep7Title: 'Rankings 🏆',
     tutorialStep7: 'Ranks are based on weighted volume per muscle. Your overall rank is the average of all nine muscle groups.',
     tutorialStep8Title: 'Settings ⚙️',
-    tutorialStep8: 'In Settings you can change the language, units, and backup options. The tutorial button is also here if you want to see this guide again.',
+    tutorialStep8: 'In Settings you can change language, units, backup, and appearance. Primary changes the app base color, while Secondary controls buttons and highlights.',
     myEquipmentTitle: 'My Equipment',
     addCustomExercise: 'Add exercise',
     customExName: 'Exercise name (e.g. Lat Pulldown)',
@@ -3124,13 +3118,17 @@ function getUserBadge(email) {
 function sanitizeSettings(input) {
   const safe = { ...defaultSettings };
   if (input && typeof input === 'object') {
+    const usesPreviousDefaultAppearance = !input.appearanceVersion
+      && normalizeHexColor(input.primaryColor, '') === '#080d12'
+      && normalizeHexColor(input.secondaryColor, '') === '#7aa2f7';
     if (input.units === 'kg' || input.units === 'lbs') safe.units = input.units;
     if (SUPPORTED_LANGUAGES.includes(input.language)) safe.language = input.language;
     if (SUPPORTED_BACKGROUNDS.includes(input.backgroundAccent)) safe.backgroundAccent = input.backgroundAccent;
-    if (typeof input.primaryColor === 'string') safe.primaryColor = normalizeHexColor(input.primaryColor, safe.primaryColor);
-    if (typeof input.secondaryColor === 'string') safe.secondaryColor = normalizeHexColor(input.secondaryColor, safe.secondaryColor);
-    if (typeof input.secondaryColor2 === 'string') safe.secondaryColor2 = normalizeHexColor(input.secondaryColor2, safe.secondaryColor2);
-    if (Number(input.secondaryColorCount) === 1 || Number(input.secondaryColorCount) === 2) safe.secondaryColorCount = Number(input.secondaryColorCount);
+    if (!usesPreviousDefaultAppearance && typeof input.primaryColor === 'string') safe.primaryColor = normalizeHexColor(input.primaryColor, safe.primaryColor);
+    if (!usesPreviousDefaultAppearance && typeof input.secondaryColor === 'string') safe.secondaryColor = normalizeHexColor(input.secondaryColor, safe.secondaryColor);
+    if (!usesPreviousDefaultAppearance && typeof input.secondaryColor2 === 'string') safe.secondaryColor2 = normalizeHexColor(input.secondaryColor2, safe.secondaryColor2);
+    if (!usesPreviousDefaultAppearance && (Number(input.secondaryColorCount) === 1 || Number(input.secondaryColorCount) === 2)) safe.secondaryColorCount = Number(input.secondaryColorCount);
+    if (Number(input.appearanceVersion) >= 2) safe.appearanceVersion = Number(input.appearanceVersion);
     if (SUPPORTED_PATTERNS.includes(input.backgroundPattern)) safe.backgroundPattern = input.backgroundPattern;
     if (['DD.MM.YYYY', 'YYYY-MM-DD', 'MM/DD/YYYY'].includes(input.dateFormat)) safe.dateFormat = input.dateFormat;
     if ([3, 7, 14, 30].includes(Number(input.backupReminderDays))) safe.backupReminderDays = Number(input.backupReminderDays);
@@ -4618,13 +4616,14 @@ export default function App() {
         section: 'settings',
         target: 'settings-main',
         title: t('Settings', 'Settings'),
-        body: t('Settings je kontrolna soba: enote, jezik, barva ozadja, backup, calorie goal, tracker mode in install app.', 'Settings is the control room: units, language, background color, backup, calorie goal, tracker mode, and install app.'),
+        body: t('Settings je kontrolna soba: enote, jezik, izgled, backup, calorie goal, tracker mode in install app.', 'Settings is the control room: units, language, appearance, backup, calorie goal, tracker mode, and install app.'),
       },
       {
         section: 'settings',
         target: 'settings-appearance',
         title: t('Izgled in jezik', 'Appearance and language'),
-        body: t('Tu izberes accent ozadja, jezik, format datuma in enote. Te nastavitve so shranjene na uporabnika.', 'Here you choose background accent, language, date format, and units. These settings are saved per user.'),
+        body: t('Izgled ima Primary in Secondary. Primary spreminja osnovno barvo appa kot dark/light obcutek, Secondary pa gumbe, active state in poudarke. Pri Secondary lahko izberes eno ali dve accent barvi.', 'Appearance has Primary and Secondary. Primary changes the app base color like the old dark/light feel, while Secondary controls buttons, active states, and highlights. Secondary can use one or two accent colors.'),
+        bullets: [t('Default je zdaj crn primary in temno moder secondary.', 'Default is now black primary and dark-blue secondary.'), t('Pattern tab samo doda subtilen vzorec ozadja.', 'The Pattern tab only adds a subtle background texture.')],
       },
       {
         section: 'settings',
@@ -4678,8 +4677,8 @@ export default function App() {
       bodyweight: { title: t('Telesna teza', 'Body weight'), body: t('Shranjuje trend teze in pomaga pri kalkulatorjih. Vnosi so lokalno shranjeni na tvoj profil.', 'Stores weight trend and helps calculators. Entries are saved locally to your profile.') },
       water: { title: t('Voda', 'Water'), body: t('Hitri gumbi pospesijo vnos. Cilj vode lahko nastavis rocno ali iz TDEE rezultata.', 'Quick buttons speed up logging. Water target can be set manually or from the TDEE result.') },
       tdee: { title: t('Calorie calculator', 'Calorie calculator'), body: t('Izracuna BMR, TDEE, cilj, makrote, vodo in realen cas do cilja. Varnostne omejitve preprecujejo ekstremne cilje.', 'Calculates BMR, TDEE, target, macros, water, and realistic time to goal. Safety caps prevent extreme targets.') },
-      settings: { title: t('Settings', 'Settings'), body: t('Tu spreminjas jezik, enote, ozadje, backup, tracker mode, feedback gumb, tutorial in osebne cilje.', 'Here you change language, units, background, backup, tracker mode, feedback button, tutorial, and personal goals.') },
-      appearance: { title: t('Izgled', 'Appearance'), body: t('Accent barva spremeni vizualni obcutek appa brez spreminjanja funkcij.', 'Accent color changes the feel of the app without changing features.') },
+      settings: { title: t('Settings', 'Settings'), body: t('Tu spreminjas jezik, enote, izgled, backup, tracker mode, feedback gumb, tutorial in osebne cilje.', 'Here you change language, units, appearance, backup, tracker mode, feedback button, tutorial, and personal goals.') },
+      appearance: { title: t('Izgled', 'Appearance'), body: t('Primary spreminja osnovno barvo appa, Secondary pa gumbe, active state in poudarke. Secondary lahko uporablja eno ali dve accent barvi.', 'Primary changes the app base color. Secondary controls buttons, active states, and highlights. Secondary can use one or two accent colors.') },
       data: { title: t('Backup', 'Backup'), body: t('Export je tvoja varnostna kopija. Import jo vrne. Clear uporabljaj samo, ko res zelis zaceti znova.', 'Export is your backup. Import restores it. Use Clear only when you really want to start over.') },
       tutorial: { title: t('Tutorial in pomoc', 'Tutorial and help'), body: t('Odpre celoten vodeni tutorial. Vsak ? gumb odpre samo hitro razlago trenutne funkcije.', 'Opens the full guided tutorial. Each ? button opens a quick explanation for that feature.') },
       admin: { title: t('Admin center', 'Admin center'), body: t('Vidno samo adminu. Omogoca upravljanje aplikacije, uporabnikov, feedbacka, maintenance in exportov.', 'Visible only to admin. Allows management of the app, users, feedback, maintenance, and exports.') },

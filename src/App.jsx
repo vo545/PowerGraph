@@ -5224,6 +5224,10 @@ export default function App() {
   useEffect(() => {
     mainContentRef.current?.scrollTo({ top: 0, behavior: 'auto' });
     window.scrollTo({ top: 0, behavior: 'auto' });
+    window.requestAnimationFrame(() => {
+      if (!window.matchMedia('(max-width: 768px)').matches) return;
+      document.querySelector('.nav-btn.active')?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    });
   }, [activeSection]);
   useEffect(() => {
     if (!currentUser) {

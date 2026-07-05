@@ -7162,7 +7162,22 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
     <div className="app-container">
       <aside className="glass-panel sidebar" {...tourAttrs('navigation')}>
         <div className="brand"><div className="logo-icon">P</div><h2>{adminConfig.appName || copy.app}</h2></div>
-        <nav className="nav-menu">{nav.map(([id, label]) => <button key={id} className={`nav-btn ${activeSection === id ? 'active' : ''}`} type="button" onClick={() => setActiveSection(id)}><span className="nav-icon">{NAV_ICONS[id]}</span><span className="nav-label-full">{label}</span><span className="nav-label-short">{NAV_SHORT[id]}</span></button>)}</nav>
+        <nav className="nav-menu" aria-label={slUi ? 'Glavna navigacija' : 'Main navigation'}>
+          {nav.map(([id, label]) => (
+            <button
+              key={id}
+              className={`nav-btn ${activeSection === id ? 'active' : ''}`}
+              type="button"
+              onClick={() => setActiveSection(id)}
+              aria-current={activeSection === id ? 'page' : undefined}
+              aria-label={label}
+            >
+              <span className="nav-icon" aria-hidden="true">{NAV_ICONS[id]}</span>
+              <span className="nav-label-full">{label}</span>
+              <span className="nav-label-short">{NAV_SHORT[id]}</span>
+            </button>
+          ))}
+        </nav>
       </aside>
 
       <main className="main-content" ref={mainContentRef}>

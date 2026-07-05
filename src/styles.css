@@ -3780,6 +3780,11 @@ p {
   color: rgba(226, 232, 240, 0.76);
 }
 
+.calorie-target-hero p + p,
+.timeframe-check-card p + p {
+  display: none;
+}
+
 .calorie-metric-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3868,6 +3873,43 @@ p {
   margin: 10px 0 0;
   color: var(--text-secondary);
   font-size: 13px;
+  line-height: 1.45;
+}
+
+.recommended-calorie-note {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 11px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.34);
+}
+
+.recommended-calorie-note div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.recommended-calorie-note span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.recommended-calorie-note strong {
+  color: var(--text-primary);
+  font-size: 18px;
+}
+
+.recommended-calorie-note p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
   line-height: 1.45;
 }
 
@@ -5703,6 +5745,17 @@ body {
 
 .admin-panel > .admin-action-row {
   margin-top: 16px;
+}
+
+.admin-command-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.admin-command-grid .action-btn-outline {
+  min-height: 46px;
+  justify-content: center;
 }
 
 .admin-user-grid {

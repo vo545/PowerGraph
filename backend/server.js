@@ -115,6 +115,15 @@ db.exec(`
     timestamp TEXT DEFAULT (datetime('now')),
     ip TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS user_presence (
+    email TEXT PRIMARY KEY COLLATE NOCASE,
+    last_seen TEXT NOT NULL,
+    user_agent TEXT DEFAULT '',
+    timezone TEXT DEFAULT '',
+    ip TEXT,
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // ── Middleware ─────────────────────────────────────────────────────────────
@@ -506,6 +515,24 @@ app.post('/api/ratings', requireAuth, (req, res) => {
   res.status(201).json({ id: result.lastInsertRowid });
 });
 
+app.post('/api/presence', requireAuth, (req, res) => {
+  const email = normalizeEmail(req.user.email);
+  const lastSeen = new Date().toISOString();
+  const userAgent = String(req.body?.ua || req.headers['user-agent'] || '').slice(0, 160);
+  const timezone = String(req.body?.timezone || '').slice(0, 80);
+  db.prepare(`
+    INSERT INTO user_presence (email, last_seen, user_agent, timezone, ip, updated_at)
+    VALUES (?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(email) DO UPDATE SET
+      last_seen=excluded.last_seen,
+      user_agent=excluded.user_agent,
+      timezone=excluded.timezone,
+      ip=excluded.ip,
+      updated_at=datetime('now')
+  `).run(email, lastSeen, userAgent, timezone, req.ip);
+  res.json({ ok: true, lastSeen });
+});
+
 // ── Bulk sync ──────────────────────────────────────────────────────────────
 app.get('/api/sync', requireAuth, (req, res) => {
   const uid = req.user.userId;
@@ -687,6 +714,15 @@ app.get('/api/admin/users', requireAuth, requireAdmin, (req, res) => {
 
 app.get('/api/admin/logs', requireAuth, requireAdmin, (req, res) => {
   res.json(db.prepare('SELECT * FROM login_logs ORDER BY timestamp DESC LIMIT 200').all());
+});
+
+app.delete('/api/admin/logs', requireAuth, requireAdmin, (req, res) => {
+  db.prepare('DELETE FROM login_logs').run();
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/presence', requireAuth, requireAdmin, (req, res) => {
+  res.json(db.prepare('SELECT email, last_seen as ts, user_agent as ua, timezone, ip FROM user_presence ORDER BY last_seen DESC LIMIT 500').all());
 });
 
 // ── Start ──────────────────────────────────────────────────────────────────

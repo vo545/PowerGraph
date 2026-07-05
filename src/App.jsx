@@ -3435,6 +3435,18 @@ function getHydrationPlan({ weightKg, gender = 'male', activityLevel = 'moderate
   };
 }
 
+function getMacroTargetsForCalories({ target, currentWeight, goalType }) {
+  const calories = Math.max(500, Number(target) || 0);
+  const weight = Math.max(30, Number(currentWeight) || 75);
+  const proteinFactor = goalType === 'cut' ? 2.0 : goalType === 'bulk' ? 1.8 : 1.6;
+  const proteinG = Math.round(Math.min(weight * proteinFactor, (calories * 0.35) / 4));
+  const fatFloor = Math.round(Math.min(weight * 0.6, (calories * 0.2) / 9));
+  const fatTarget = Math.round(calories * 0.27 / 9);
+  const fatG = Math.round(clampNumber(fatTarget, fatFloor, (calories * 0.35) / 9));
+  const carbsG = Math.max(0, Math.round((calories - proteinG * 4 - fatG * 9) / 4));
+  return { protein: proteinG, carbs: carbsG, fat: fatG };
+}
+
 function getNutritionPlan({ currentWeight, goalWeight, weeks, age, height, gender = 'male', activityLevel = 'moderate' }) {
   const cw = Number(currentWeight);
   const gw = Number(goalWeight);
@@ -3478,14 +3490,30 @@ function getNutritionPlan({ currentWeight, goalWeight, weeks, age, height, gende
   const safeGainKgPerWeek = isTeen ? Math.min(0.25, Math.max(0.1, cw * 0.0025)) : Math.min(0.5, Math.max(0.15, cw * 0.005));
   const maxDeficit = Math.round(Math.min(isTeen ? tdee * 0.1 : tdee * 0.3, 1000, (safeLossKgPerWeek * KCAL_PER_KG_BODY_MASS) / 7));
   const maxSurplus = Math.round(Math.min(isTeen ? tdee * 0.08 : tdee * 0.15, 500, (safeGainKgPerWeek * KCAL_PER_KG_BODY_MASS) / 7));
-  const target = goalType === 'cut'
+  const recommendedTarget = goalType === 'cut'
     ? Math.round(clampNumber(rawTarget, Math.max(targetFloor, tdee - maxDeficit), tdee))
     : goalType === 'bulk'
       ? Math.round(clampNumber(rawTarget, tdee, Math.min(targetCeiling, tdee + maxSurplus)))
       : tdee;
-  const simulated = simulateWeightFromCalories({
+  const selectedTarget = goalType === 'maintain'
+    ? tdee
+    : Math.round(clampNumber(
+        requestedPlan.feasible && requestedPlan.target !== null ? requestedPlan.target : requestedPlan.simpleTarget,
+        0,
+        10000,
+      ));
+  const selectedSimulated = simulateWeightFromCalories({
     startWeight: cw,
-    dailyCalories: target,
+    dailyCalories: selectedTarget,
+    days: durationDays,
+    age: userAge,
+    height: userHeight,
+    gender,
+    activityLevel,
+  });
+  const recommendedSimulated = simulateWeightFromCalories({
+    startWeight: cw,
+    dailyCalories: recommendedTarget,
     days: durationDays,
     age: userAge,
     height: userHeight,
@@ -3495,36 +3523,39 @@ function getNutritionPlan({ currentWeight, goalWeight, weeks, age, height, gende
   const recommendedWeeks = goalType === 'maintain' ? durationWeeks : estimateWeeksToGoalFromCalories({
     currentWeight: cw,
     goalWeight: gw,
-    dailyCalories: target,
+    dailyCalories: recommendedTarget,
     age: userAge,
     height: userHeight,
     gender,
     activityLevel,
   });
   const rawDailyAdjustment = Math.round(tdee - rawTarget);
-  const dailyAdjustment = Math.round(tdee - target);
-  const proteinFactor = goalType === 'cut' ? 2.0 : goalType === 'bulk' ? 1.8 : 1.6;
-  const proteinG = Math.round(Math.min(cw * proteinFactor, (target * 0.35) / 4));
-  const fatFloor = Math.round(Math.min(cw * 0.6, (target * 0.2) / 9));
-  const fatTarget = Math.round(target * 0.27 / 9);
-  const fatG = Math.round(clampNumber(fatTarget, fatFloor, (target * 0.35) / 9));
-  const carbsG = Math.max(0, Math.round((target - proteinG * 4 - fatG * 9) / 4));
+  const dailyAdjustment = Math.round(tdee - selectedTarget);
+  const recommendedDailyAdjustment = Math.round(tdee - recommendedTarget);
+  const selectedMacros = getMacroTargetsForCalories({ target: selectedTarget, currentWeight: cw, goalType });
+  const recommendedMacros = getMacroTargetsForCalories({ target: recommendedTarget, currentWeight: cw, goalType });
   const hydration = getHydrationPlan({ weightKg: cw, gender, activityLevel });
-  const capped = Math.abs(rawTarget - target) > 25;
+  const capped = Math.abs(selectedTarget - recommendedTarget) > 25;
   const desiredWeeklyChange = (gw - cw) / durationWeeks;
-  const projectedWeeklyChange = (simulated.finalWeight - cw) / durationWeeks;
+  const projectedWeeklyChange = (selectedSimulated.finalWeight - cw) / durationWeeks;
+  const recommendedProjectedWeeklyChange = (recommendedSimulated.finalWeight - cw) / durationWeeks;
 
   return {
     bmr: Math.round(bmr),
     tdee,
     goalMaintenance,
-    averageTdee: Math.round(simulated.averageTdee),
-    target,
+    averageTdee: Math.round(selectedSimulated.averageTdee),
+    target: selectedTarget,
+    recommendedTarget,
     rawDailyAdjustment,
     dailyAdjustment,
-    protein: proteinG,
-    carbs: carbsG,
-    fat: fatG,
+    recommendedDailyAdjustment,
+    protein: selectedMacros.protein,
+    carbs: selectedMacros.carbs,
+    fat: selectedMacros.fat,
+    recommendedProtein: recommendedMacros.protein,
+    recommendedCarbs: recommendedMacros.carbs,
+    recommendedFat: recommendedMacros.fat,
     waterMl: hydration.waterMl,
     waterBaseMl: hydration.baseMl,
     waterActivityMl: hydration.activityMl,
@@ -3539,7 +3570,9 @@ function getNutritionPlan({ currentWeight, goalWeight, weeks, age, height, gende
     requestedBoundaryWeight: requestedPlan.boundaryWeight,
     desiredWeeklyChange,
     projectedWeeklyChange,
-    predictedWeight: Number(simulated.finalWeight.toFixed(1)),
+    recommendedProjectedWeeklyChange,
+    predictedWeight: Number(selectedSimulated.finalWeight.toFixed(1)),
+    recommendedPredictedWeight: Number(recommendedSimulated.finalWeight.toFixed(1)),
     recommendedWeeks,
     safeLossKgPerWeek,
     safeGainKgPerWeek,
@@ -3552,13 +3585,31 @@ async function fetchLoginLogs(email = '') {
     if (Array.isArray(rows)) {
       return rows.map((entry) => ({
         email: entry.email,
-        type: entry.type,
+        type: entry.type === 'register' ? 'signup' : entry.type,
         ts: entry.timestamp || entry.ts || new Date().toISOString(),
         ip: entry.ip,
       }));
     }
   }
   try { return JSON.parse(localStorage.getItem(LOGINS_KEY) || '[]'); } catch { return []; }
+}
+
+async function fetchAdminUsers(email = '') {
+  if (email && API_URL && getJwt(email)) {
+    const rows = await apiCall(email, '/api/admin/users');
+    if (Array.isArray(rows)) {
+      return rows.map((entry) => ({
+        email: String(entry.email || '').toLowerCase(),
+        createdAt: entry.created_at || entry.createdAt || '',
+        workouts: Number(entry.workouts) || 0,
+        meals: Number(entry.meals) || 0,
+        lastWorkout: entry.lastWorkout || null,
+        daysSinceLast: entry.daysSinceLast ?? null,
+        source: 'cloud',
+      })).filter((entry) => entry.email);
+    }
+  }
+  return [];
 }
 
 async function pushLoginLog(email, type) {
@@ -3574,9 +3625,34 @@ async function pushPresence(email) {
   const list = loadPresence().filter(p => p.email !== email);
   list.push(entry);
   savePresence(list.slice(-200));
+  if (API_URL && getJwt(email)) {
+    await apiCall(email, '/api/presence', 'POST', {
+      ua,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+    });
+  }
 }
-async function fetchPresence() {
+async function fetchPresence(email = '') {
+  if (email && API_URL && getJwt(email)) {
+    const rows = await apiCall(email, '/api/admin/presence');
+    if (Array.isArray(rows)) {
+      return rows.map((entry) => ({
+        email: String(entry.email || '').toLowerCase(),
+        ts: entry.ts || entry.last_seen || new Date().toISOString(),
+        ua: entry.ua || '',
+        timezone: entry.timezone || '',
+        ip: entry.ip || '',
+        source: 'cloud',
+      })).filter((entry) => entry.email);
+    }
+  }
   return loadPresence();
+}
+
+async function clearLoginLogs(email = '') {
+  if (email && API_URL && getJwt(email)) await apiCall(email, '/api/admin/logs', 'DELETE');
+  localStorage.setItem(LOGINS_KEY, JSON.stringify([]));
+  return [];
 }
 
 function mergeById(local, remote) {
@@ -4320,6 +4396,7 @@ export default function App() {
   const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
   const [adminLogs, setAdminLogs] = useState(null);
   const [adminPresence, setAdminPresence] = useState([]);
+  const [adminCloudUsers, setAdminCloudUsers] = useState([]);
   const [adminBonus, setAdminBonus] = useState(() => loadAdminBonus(initialSessionEmail));
   const [adminConfig, setAdminConfig] = useState(() => loadAdminConfig());
   const [adminConfigDraft, setAdminConfigDraft] = useState(() => loadAdminConfig());
@@ -5169,11 +5246,22 @@ export default function App() {
   useEffect(() => { if (!toast) return undefined; const id = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(id); }, [toast]);
   useEffect(() => {
     if (activeSection !== 'admin' || currentUser !== ADMIN_EMAIL) return;
+    let cancelled = false;
+    const refreshAdmin = async () => {
+      const [logs, presence, users] = await Promise.all([
+        fetchLoginLogs(currentUser),
+        fetchPresence(currentUser),
+        fetchAdminUsers(currentUser),
+      ]);
+      if (cancelled) return;
+      setAdminLogs(logs);
+      setAdminPresence(presence);
+      setAdminCloudUsers(users);
+    };
     setAdminLogs(null);
-    fetchLoginLogs(currentUser).then(setAdminLogs);
-    fetchPresence().then(setAdminPresence);
-    const id = setInterval(() => fetchPresence().then(setAdminPresence), 30000);
-    return () => clearInterval(id);
+    refreshAdmin();
+    const id = setInterval(refreshAdmin, 30000);
+    return () => { cancelled = true; clearInterval(id); };
   }, [activeSection, currentUser]);
 
   useEffect(() => {
@@ -5882,6 +5970,77 @@ export default function App() {
     setRatings([]);
     writeAdminAudit('Cleared feedback', '');
     setToast(settings.language === 'sl' ? 'Feedback izbrisan' : 'Feedback cleared');
+  }
+  async function refreshAdminActivity() {
+    const [logs, presence, users] = await Promise.all([
+      fetchLoginLogs(currentUser),
+      fetchPresence(currentUser),
+      fetchAdminUsers(currentUser),
+    ]);
+    setAdminLogs(logs);
+    setAdminPresence(presence);
+    setAdminCloudUsers(users);
+    setToast(settings.language === 'sl' ? 'Admin aktivnost osvezena' : 'Admin activity refreshed');
+  }
+  function updateAdminConfigNow(patch, label) {
+    const next = sanitizeAdminConfig({ ...adminConfig, ...patch });
+    saveAdminConfig(next);
+    setAdminConfig(next);
+    setAdminConfigDraft(next);
+    writeAdminAudit(label, JSON.stringify(patch));
+    setToast(settings.language === 'sl' ? 'Admin ukaz izveden' : 'Admin command applied');
+  }
+  function saveSettingsForUser(email, updater) {
+    const current = loadSettings(email);
+    const next = sanitizeSettings(typeof updater === 'function' ? updater(current) : updater);
+    localStorage.setItem(getSettingsStorageKey(email), JSON.stringify(next));
+    if (email === currentUser) setSettings(next);
+    return next;
+  }
+  function applyAdminDefaultsToUser(email) {
+    const next = sanitizeAdminConfig(adminConfigDraft);
+    saveSettingsForUser(email, (current) => ({
+      ...current,
+      language: next.defaultLanguage,
+      units: next.defaultUnits,
+      backgroundAccent: next.defaultAccent,
+      calorieGoal: next.defaultCalorieGoal,
+      waterGoalMl: next.defaultWaterGoalMl,
+      showFeedbackBtn: next.feedbackEnabled,
+    }));
+    writeAdminAudit('Applied defaults to selected user', email);
+    setToast(`${settings.language === 'sl' ? 'Defaults uporabljeni' : 'Defaults applied'}: ${email}`);
+  }
+  function forceBackupReminderForUser(email) {
+    saveSettingsForUser(email, (current) => ({ ...current, lastBackupAt: '' }));
+    writeAdminAudit('Forced backup reminder for user', email);
+    setToast(`${settings.language === 'sl' ? 'Backup opomnik nastavljen' : 'Backup reminder set'}: ${email}`);
+  }
+  function forceBackupReminderForAllUsers() {
+    const users = loadUsers();
+    users.forEach((user) => saveSettingsForUser(user.email, (current) => ({ ...current, lastBackupAt: '' })));
+    writeAdminAudit('Forced backup reminder for local users', `${users.length} profiles`);
+    setToast(settings.language === 'sl' ? 'Backup opomnik nastavljen lokalnim profilom' : 'Backup reminder set for local profiles');
+  }
+  function resetUserAuthLock(email) {
+    clearAuthThrottle(email);
+    writeAdminAudit('Reset auth lock', email);
+    setToast(`${settings.language === 'sl' ? 'Login lock resetiran' : 'Login lock reset'}: ${email}`);
+  }
+  function markUserSeenNow(email) {
+    const entry = { email, ts: new Date().toISOString(), ua: 'admin-marked', source: 'local-admin' };
+    const next = [entry, ...adminPresence.filter((item) => item.email !== email)].slice(0, 500);
+    savePresence(next);
+    setAdminPresence(next);
+    writeAdminAudit('Marked user seen now', email);
+    setToast(`${settings.language === 'sl' ? 'Oznacen kot viden' : 'Marked seen'}: ${email}`);
+  }
+  async function clearAdminLoginHistory() {
+    if (!window.confirm(settings.language === 'sl' ? 'Pocistim zgodovino prijav?' : 'Clear login history?')) return;
+    await clearLoginLogs(currentUser);
+    setAdminLogs([]);
+    writeAdminAudit('Cleared login history', API_URL ? 'backend + local' : 'local');
+    setToast(settings.language === 'sl' ? 'Login log izbrisan' : 'Login log cleared');
   }
   function startEditWorkout(workout) { setEditingWorkoutId(workout.id); setFormData({ date: workout.date, exercise: workout.exercise, weight: String(workout.weight), setDetails: workout.setDetails.map(String), setWeights: workout.setWeights ? workout.setWeights.map(String) : workout.setDetails.map(() => String(workout.weight)) }); setActiveSection('dashboard'); }
   function saveWorkoutEdit() {
@@ -8034,8 +8193,9 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               {tdeeResult && (
                 <div className="calorie-result-card">
                   <div className="calorie-target-hero">
-                    <span>{tdeeResult.capped ? (settings.language === 'sl' ? 'Varen dnevni cilj' : 'Safe daily target') : copy.tdeeTarget}</span>
+                    <span>{settings.language === 'sl' ? 'Tvoj izbran dnevni cilj' : 'Your selected daily target'}</span>
                     <strong>{tdeeResult.target.toLocaleString()} kcal</strong>
+                    <p>{settings.language === 'sl' ? 'Izbran rok' : 'Selected timeframe'}: {tdeeResult.requestedWeeks} {copy.reverseCalWeeks} - {settings.language === 'sl' ? 'Napoved po tem roku' : 'Projected after that time'}: {tdeeResult.predictedWeight.toFixed(1)} kg</p>
                     <p>{settings.language === 'sl' ? 'Izbran rok' : 'Selected timeframe'}: {tdeeResult.requestedWeeks} {copy.reverseCalWeeks} · {settings.language === 'sl' ? 'Vzdrzevanje danes' : 'Current maintenance'}: {tdeeResult.tdee.toLocaleString()} kcal</p>
                   </div>
                   <div className="calorie-metric-grid">
@@ -8048,32 +8208,46 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                   </div>
                   <div className={`timeframe-check-card ${tdeeResult.capped || !tdeeResult.requestedFeasible ? 'warning' : 'ok'}`}>
                     <div className="timeframe-check-head">
-                      <span>{settings.language === 'sl' ? 'Tvoj izbran rok' : 'Your selected timeframe'}</span>
+                      <span>{settings.language === 'sl' ? 'Izbran plan' : 'Selected plan'}</span>
                       <strong>{tdeeResult.requestedWeeks} {copy.reverseCalWeeks}</strong>
                     </div>
                     <div className="timeframe-check-grid">
                       <div>
-                        <span>{settings.language === 'sl' ? 'Za ta rok bi bilo treba' : 'Needed for that date'}</span>
-                        <strong>{tdeeResult.requestedFeasible && tdeeResult.requestedTarget !== null ? `${tdeeResult.requestedTarget.toLocaleString()} kcal` : (settings.language === 'sl' ? 'Ni izvedljivo' : 'Not feasible')}</strong>
-                        <small>{tdeeResult.requestedDailyAdjustment > 0 ? '-' : tdeeResult.requestedDailyAdjustment < 0 ? '+' : ''}{Math.abs(tdeeResult.requestedDailyAdjustment).toLocaleString()} kcal/day</small>
-                      </div>
-                      <div>
-                        <span>{settings.language === 'sl' ? 'App priporoca' : 'App recommends'}</span>
+                        <span>{settings.language === 'sl' ? 'Kalorije za tvoj rok' : 'Calories for your date'}</span>
                         <strong>{tdeeResult.target.toLocaleString()} kcal</strong>
-                        <small>{tdeeResult.capped ? (settings.language === 'sl' ? 'varnostna omejitev' : 'safety cap applied') : (settings.language === 'sl' ? 'rok je upostevan' : 'timeframe matched')}</small>
+                        <small>{tdeeResult.dailyAdjustment > 0 ? '-' : tdeeResult.dailyAdjustment < 0 ? '+' : ''}{Math.abs(tdeeResult.dailyAdjustment).toLocaleString()} kcal/day</small>
                       </div>
                       <div>
-                        <span>{settings.language === 'sl' ? 'Varen cas' : 'Safe time'}</span>
-                        <strong>{tdeeResult.recommendedWeeks ? `${tdeeResult.recommendedWeeks} ${copy.reverseCalWeeks}` : '-'}</strong>
-                        <small>{settings.language === 'sl' ? 'pri tem cilju' : 'at this target'}</small>
+                        <span>{settings.language === 'sl' ? 'Ciljna sprememba' : 'Goal change'}</span>
+                        <strong>{Math.abs(tdeeResult.desiredWeeklyChange).toFixed(2)}</strong>
+                        <small>kg/week</small>
+                      </div>
+                      <div>
+                        <span>{settings.language === 'sl' ? 'Napoved' : 'Projection'}</span>
+                        <strong>{tdeeResult.predictedWeight.toFixed(1)} kg</strong>
+                        <small>{settings.language === 'sl' ? 'po izbranem roku' : 'after selected time'}</small>
                       </div>
                     </div>
+                    <p>{tdeeResult.requestedFeasible
+                      ? (tdeeResult.capped
+                        ? (settings.language === 'sl' ? 'To je izracun za tvoj izbran rok. Ker je bolj agresiven od priporocenega razpona, je spodaj samo mini opomnik z varnejso opcijo.' : 'This is calculated from your selected timeframe. Because it is more aggressive than the recommended range, a safer option is shown only as a small reminder below.')
+                        : (settings.language === 'sl' ? 'Ta vnos uporablja tvoj izbran rok in naj bi dosegel cilj v tem casu.' : 'This intake uses your selected timeframe and is projected to hit the goal in that time.'))
+                      : (settings.language === 'sl' ? `Tega cilja ni mogoce realno doseci v izbranem roku; tudi ekstremna meja napove priblizno ${tdeeResult.requestedBoundaryWeight} kg. Spodaj je prikazan bolj smiseln opomnik.` : `This goal cannot realistically be reached in the selected timeframe; even the extreme boundary projects about ${tdeeResult.requestedBoundaryWeight} kg. A more sensible reminder is shown below.`)}</p>
                     <p>{tdeeResult.requestedFeasible
                       ? (tdeeResult.capped
                         ? (settings.language === 'sl' ? 'Rok je bil upostevan pri izracunu, ampak zahteva bolj agresiven vnos od varnega razpona, zato je prikazan varen cilj.' : 'The timeframe was calculated, but it requires a more aggressive intake than the safe range, so the safe target is shown.')
                         : (settings.language === 'sl' ? 'Ta vnos uporablja tvoj izbran rok in naj bi dosegel cilj v tem casu.' : 'This intake uses your selected timeframe and is projected to hit the goal in that time.'))
                       : (settings.language === 'sl' ? `Tega cilja ni mogoce doseci v izbranem roku brez ekstremnega vnosa. Prikazan je varen cilj; tudi pri 0 kcal bi bila napoved približno ${tdeeResult.requestedBoundaryWeight} kg.` : `This goal cannot be reached in the selected timeframe without an extreme intake. The safe target is shown; even at 0 kcal, the projection is about ${tdeeResult.requestedBoundaryWeight} kg.`)}</p>
                   </div>
+                  {tdeeResult.capped && (
+                    <div className="recommended-calorie-note">
+                      <div>
+                        <span>{settings.language === 'sl' ? 'Mini priporocilo' : 'Mini recommendation'}</span>
+                        <strong>{tdeeResult.recommendedTarget.toLocaleString()} kcal</strong>
+                      </div>
+                      <p>{settings.language === 'sl' ? 'Varnejsi tempo' : 'Safer pace'}: {Math.abs(tdeeResult.recommendedProjectedWeeklyChange).toFixed(2)} kg/week - {settings.language === 'sl' ? 'varen cas' : 'safe time'}: {tdeeResult.recommendedWeeks ? `${tdeeResult.recommendedWeeks} ${copy.reverseCalWeeks}` : '-'}</p>
+                    </div>
+                  )}
                   <div className="macro-result-grid">
                     {[
                       [copy.macrosProtein, tdeeResult.protein, '#60a5fa', tdeeResult.protein * 4],
@@ -8090,10 +8264,10 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                   <div className="calorie-support-grid">
                     <div><span>{copy.macrosWater}</span><strong>{(tdeeResult.waterMl/1000).toFixed(1)} L</strong></div>
                     <div><span>{settings.language === 'sl' ? 'Izbran rok' : 'Selected time'}</span><strong>{tdeeResult.requestedWeeks} {copy.reverseCalWeeks}</strong></div>
-                    <div><span>{settings.language === 'sl' ? 'Varen cas' : 'Safe time'}</span><strong>{tdeeResult.recommendedWeeks ? `${tdeeResult.recommendedWeeks} ${copy.reverseCalWeeks}` : '-'}</strong></div>
+                    <div><span>{settings.language === 'sl' ? 'Priporoceno' : 'Recommended'}</span><strong>{tdeeResult.recommendedTarget.toLocaleString()} kcal</strong></div>
                   </div>
                   {tdeeResult.isTeen && <p className="settings-copy calorie-warning">{settings.language === 'sl' ? 'Ker je starost pod 18, je kalkulator omejil agresivne spremembe. Za hujsanje ali vecji surplus pri mladoletnih osebah naj cilj potrdi zdravnik ali dietetik.' : 'Because age is under 18, aggressive changes are capped. For weight loss or a large surplus in minors, confirm the target with a clinician or registered dietitian.'}</p>}
-                  {tdeeResult.capped && <p className="settings-copy calorie-warning">{settings.language === 'sl' ? 'Izbran rok je bil bolj agresiven od varnega razpona, zato je cilj omejen in napovedana teza lahko ne doseze cilja v tem roku.' : 'The selected timeframe was more aggressive than the safe range, so the target was capped and the predicted weight may not fully reach the goal by then.'}</p>}
+                  {tdeeResult.capped && <p className="settings-copy calorie-warning">{settings.language === 'sl' ? 'Opomnik: tvoj izbran rok je bolj agresiven od priporocenega razpona. App ga prikaze, vendar ga oznaci kot bolj tvegan plan.' : 'Reminder: your selected timeframe is more aggressive than the recommended range. The app shows it, but marks it as a higher-risk plan.'}</p>}
                   <button className="action-btn-outline full-width set-goal-btn" type="button" onClick={() => { setSettings(c => ({...c, calorieGoal: tdeeResult.target})); alert(copy.goalSet); }}>
                     {copy.setAsGoal}
                   </button>
@@ -8162,32 +8336,76 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             clearFeedback: isSl ? 'Clear feedback' : 'Clear feedback',
             clearAudit: isSl ? 'Clear audit' : 'Clear audit',
             online: isSl ? 'Online' : 'Online',
+            recent: isSl ? 'Nedavno' : 'Recent',
             offline: isSl ? 'Offline' : 'Offline',
+            refreshActivity: isSl ? 'Osvezi aktivnost' : 'Refresh activity',
+            clearLogins: isSl ? 'Pocisti login log' : 'Clear login log',
+            forceBackupAll: isSl ? 'Backup opomnik vsem' : 'Force backup reminder',
+            quickCommands: isSl ? 'Hitri admin ukazi' : 'Quick admin commands',
+            applySelected: isSl ? 'Defaults na izbranega' : 'Defaults to selected',
+            forceBackupUser: isSl ? 'Backup opomnik' : 'Backup reminder',
+            resetAuthLock: isSl ? 'Reset login lock' : 'Reset login lock',
+            markSeenNow: isSl ? 'Oznaci kot viden' : 'Mark seen now',
           };
-          const allUsers = loadUsers();
+          const localUsers = loadUsers().map((user) => ({ ...user, source: 'local' }));
+          const localEmails = new Set(localUsers.map((user) => user.email));
+          const cloudByEmail = new Map(adminCloudUsers.map((user) => [user.email, user]));
+          const allUsers = [
+            ...localUsers,
+            ...adminCloudUsers.filter((user) => user.email && !localEmails.has(user.email)).map((user) => ({ email: user.email, createdAt: user.createdAt, source: 'cloud' })),
+          ];
           const now = Date.now();
-          const presenceByEmail = adminPresence.reduce((map, item) => ({ ...map, [item.email]: item }), {});
+          const presenceByEmail = adminPresence.reduce((map, item) => {
+            if (!item.email) return map;
+            const previous = map[item.email];
+            if (!previous || new Date(item.ts).getTime() > new Date(previous.ts).getTime()) map[item.email] = item;
+            return map;
+          }, {});
+          const formatLastSeen = (presence) => presence?.ts ? new Date(presence.ts).toLocaleString() : copy.adminNever;
           const userStats = allUsers.map((u) => {
-            const wList = loadWorkouts(u.email);
-            const cList = loadCalories(u.email);
-            const bwList = loadBodyWeight(u.email);
-            const rDays = loadRestDays(u.email);
-            const cDays = loadCheatDays(u.email);
+            const isLocal = u.source !== 'cloud';
+            const cloud = cloudByEmail.get(u.email);
+            const wList = isLocal ? loadWorkouts(u.email) : [];
+            const cList = isLocal ? loadCalories(u.email) : [];
+            const bwList = isLocal ? loadBodyWeight(u.email) : [];
+            const rDays = isLocal ? loadRestDays(u.email) : [];
+            const cDays = isLocal ? loadCheatDays(u.email) : [];
             const sett = loadSettings(u.email);
-            const custom = loadCustomExercises(u.email);
+            const custom = isLocal ? loadCustomExercises(u.email) : [];
             const bonus = loadAdminBonus(u.email);
             const basePts = calculatePoints(wList, cList, bwList, rDays, cDays, sett.calorieGoal);
             const totalPts = basePts + bonus;
             const userRank = getRank(totalPts, settings.language);
-            const lastW = wList.length ? [...wList].sort((a, b) => new Date(b.date) - new Date(a.date))[0].date : null;
+            const lastW = isLocal && wList.length ? [...wList].sort((a, b) => new Date(b.date) - new Date(a.date))[0].date : (cloud?.lastWorkout || null);
             const presence = presenceByEmail[u.email];
-            const isOnline = presence && now - new Date(presence.ts).getTime() < 3 * 60000;
+            const lastSeenMs = presence ? new Date(presence.ts).getTime() : 0;
+            const isOnline = presence && now - lastSeenMs < 3 * 60000;
+            const isRecent = presence && !isOnline && now - lastSeenMs < 24 * 60 * 60000;
             const isBanned = bannedUsers.includes(u.email);
             const isMod = modUsers.includes(u.email);
-            return { email: u.email, createdAt: u.createdAt, workouts: wList.length, meals: cList.length, bw: bwList.length, custom: custom.length, lastWorkout: lastW, rank: userRank, pts: totalPts, bonus, settings: sett, isOnline, isBanned, isMod, presence };
+            return {
+              email: u.email,
+              createdAt: u.createdAt || cloud?.createdAt,
+              source: u.source,
+              workouts: isLocal ? wList.length : (cloud?.workouts || 0),
+              meals: isLocal ? cList.length : (cloud?.meals || 0),
+              bw: bwList.length,
+              custom: custom.length,
+              lastWorkout: lastW,
+              rank: userRank,
+              pts: totalPts,
+              bonus,
+              settings: sett,
+              isOnline,
+              isRecent,
+              isBanned,
+              isMod,
+              presence,
+              lastSeenLabel: formatLastSeen(presence),
+            };
           }).sort((a, b) => b.pts - a.pts);
           const query = adminSearch.trim().toLowerCase();
-          const filteredUsers = userStats.filter((u) => !query || [u.email, u.rank.displayName, u.isOnline ? 'online' : 'offline', u.isBanned ? 'banned' : '', u.isMod ? 'moderator' : ''].join(' ').toLowerCase().includes(query));
+          const filteredUsers = userStats.filter((u) => !query || [u.email, u.rank.displayName, u.source, u.isOnline ? 'online' : u.isRecent ? 'recent' : 'offline', u.isBanned ? 'banned' : '', u.isMod ? 'moderator' : ''].join(' ').toLowerCase().includes(query));
           const selectedUser = userStats.find((u) => u.email === adminSelectedEmail) || filteredUsers[0] || userStats[0] || null;
           const totalWorkouts = userStats.reduce((s, u) => s + u.workouts, 0);
           const totalMeals = userStats.reduce((s, u) => s + u.meals, 0);
@@ -8216,6 +8434,18 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                 <article className="glass-panel stat-card fade-in-up"><div className="stat-icon purple-glow">M</div><div><p className="stat-title">{copy.adminMeals}</p><h3 className="stat-value">{totalMeals}</h3></div></article>
                 <article className="glass-panel stat-card fade-in-up"><div className="stat-icon orange-glow">ON</div><div><p className="stat-title">{copy.adminActiveUsers}</p><h3 className="stat-value">{activeNow.length}</h3></div></article>
               </div>
+
+              <section className="glass-panel admin-panel fade-in-up">
+                <div className="panel-header"><h3>{t.quickCommands}</h3><span className="history-count">{API_URL ? 'cloud + local' : 'local only'}</span></div>
+                <div className="admin-command-grid">
+                  <button className="action-btn-outline" type="button" onClick={refreshAdminActivity}>{t.refreshActivity}</button>
+                  <button className="action-btn-outline" type="button" onClick={() => updateAdminConfigNow({ maintenanceMode: !adminConfig.maintenanceMode }, 'Toggled maintenance mode')}>{adminConfig.maintenanceMode ? 'Maintenance OFF' : 'Maintenance ON'}</button>
+                  <button className="action-btn-outline" type="button" onClick={() => updateAdminConfigNow({ signupEnabled: !adminConfig.signupEnabled }, 'Toggled signups')}>{adminConfig.signupEnabled ? 'Disable signups' : 'Enable signups'}</button>
+                  <button className="action-btn-outline" type="button" onClick={() => updateAdminConfigNow({ feedbackEnabled: !adminConfig.feedbackEnabled }, 'Toggled feedback')}>{adminConfig.feedbackEnabled ? 'Hide feedback' : 'Show feedback'}</button>
+                  <button className="action-btn-outline" type="button" onClick={forceBackupReminderForAllUsers}>{t.forceBackupAll}</button>
+                  <button className="action-btn-outline danger-button" type="button" onClick={clearAdminLoginHistory}>{t.clearLogins}</button>
+                </div>
+              </section>
 
               <section className="glass-panel admin-panel fade-in-up">
                 <div className="panel-header"><h3>{t.appControls}</h3><span className="history-count">{adminConfig.maintenanceMode ? 'maintenance on' : 'live'}</span></div>
@@ -8280,7 +8510,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                       <span className={`admin-status-dot ${u.isOnline ? 'online' : ''}`} />
                       <strong>{u.email}</strong>
                       <small>{u.rank.displayName} · {u.pts} pts · {u.workouts} workouts</small>
-                      <span>{u.isBanned ? copy.adminBanned : u.isMod ? copy.adminMod : u.isOnline ? t.online : t.offline}</span>
+                      <span>{u.isBanned ? copy.adminBanned : u.isMod ? copy.adminMod : u.isOnline ? t.online : u.isRecent ? t.recent : t.offline} - {copy.adminLastSeen}: {u.lastSeenLabel}</span>
                     </button>
                   ))}
                 </div>
@@ -8305,11 +8535,18 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                     <div><span>Bonus</span><strong>{selectedUser.bonus}</strong></div>
                     <div><span>Language</span><strong>{selectedUser.settings.language}</strong></div>
                     <div><span>Accent</span><strong>{selectedUser.settings.backgroundAccent}</strong></div>
+                    <div><span>{copy.adminLastSeen}</span><strong>{selectedUser.lastSeenLabel}</strong></div>
+                    <div><span>Source</span><strong>{selectedUser.source}</strong></div>
+                    <div><span>{copy.adminLastWorkout}</span><strong>{selectedUser.lastWorkout || copy.adminNever}</strong></div>
                   </div>
                   <div className="admin-action-row">
                     <button className="action-btn-outline" type="button" onClick={() => adminChangeRank(selectedUser.email, 'up')}>{copy.adminRankUp}</button>
                     <button className="action-btn-outline" type="button" onClick={() => adminChangeRank(selectedUser.email, 'down')}>{copy.adminDemote}</button>
                     <button className="action-btn-outline" type="button" onClick={() => adminExportUser(selectedUser.email)}>{t.exportUser}</button>
+                    <button className="action-btn-outline" type="button" onClick={() => applyAdminDefaultsToUser(selectedUser.email)}>{t.applySelected}</button>
+                    <button className="action-btn-outline" type="button" onClick={() => forceBackupReminderForUser(selectedUser.email)}>{t.forceBackupUser}</button>
+                    <button className="action-btn-outline" type="button" onClick={() => resetUserAuthLock(selectedUser.email)}>{t.resetAuthLock}</button>
+                    <button className="action-btn-outline" type="button" onClick={() => markUserSeenNow(selectedUser.email)}>{t.markSeenNow}</button>
                     {selectedUser.email !== ADMIN_EMAIL && (selectedUser.isBanned ? <button className="action-btn-outline" type="button" onClick={() => unbanUser(selectedUser.email)}>{copy.adminUnban}</button> : <button className="action-btn-outline danger-button" type="button" onClick={() => banUser(selectedUser.email)}>{copy.adminBan}</button>)}
                     {selectedUser.email !== ADMIN_EMAIL && (selectedUser.isMod ? <button className="action-btn-outline" type="button" onClick={() => toggleMod(selectedUser.email)}>{copy.adminRemoveMod}</button> : <button className="action-btn-primary" type="button" onClick={() => toggleMod(selectedUser.email)}>{copy.adminSetMod}</button>)}
                     <button className="action-btn-outline danger-button" type="button" onClick={() => adminResetUserData(selectedUser.email)}>{t.resetUser}</button>

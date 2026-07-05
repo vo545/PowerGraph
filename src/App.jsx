@@ -4817,6 +4817,17 @@ export default function App() {
       bodyWeightKg: dashboardBodyWeightKg,
     });
   }, [dashboardBodyWeightKg, restDays, settings.calorieGoal, settings.language, sortedWorkouts, todayKey, todayTotals, todayWorkouts, waterGoalMl, waterToday]);
+  const dashboardDateLabel = useMemo(() => {
+    const date = new Date(`${todayKey}T12:00:00`);
+    return new Intl.DateTimeFormat(settings.language === 'sl' ? 'sl-SI' : 'en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    }).format(date);
+  }, [settings.language, todayKey]);
+  const dashboardStatusLabel = settings.language === 'sl'
+    ? (dailyControl.label === 'locked in' ? 'Odlicen dan' : dailyControl.label === 'on track' ? 'V ritmu' : dailyControl.label === 'needs attention' ? 'Potrebuje fokus' : 'Reset dan')
+    : (dailyControl.label === 'locked in' ? 'Locked in' : dailyControl.label === 'on track' ? 'On track' : dailyControl.label === 'needs attention' ? 'Needs focus' : 'Reset day');
   const overall = useMemo(() => workouts.reduce((a, w) => ({ workouts: a.workouts + 1, sets: a.sets + getSetCount(w), reps: a.reps + getTotalReps(w), volumeKg: a.volumeKg + getWorkoutVolumeKg(w, dashboardBodyWeightKg, customExercises), bestKg: Math.max(a.bestKg, w.weight) }), { workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }), [customExercises, dashboardBodyWeightKg, workouts]);
   const selectedStats = useMemo(() => selectedWorkouts.reduce((a, w) => ({ workouts: a.workouts + 1, sets: a.sets + getSetCount(w), reps: a.reps + getTotalReps(w), volumeKg: a.volumeKg + getWorkoutVolumeKg(w, dashboardBodyWeightKg, customExercises), bestKg: Math.max(a.bestKg, w.weight) }), { workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }), [customExercises, dashboardBodyWeightKg, selectedWorkouts]);
   const perExercise = useMemo(() => Object.values(workouts.reduce((map, w) => { const item = map[w.exercise] ?? { name: w.exercise, workouts: 0, sets: 0, reps: 0, volumeKg: 0, bestKg: 0 }; item.workouts += 1; item.sets += getSetCount(w); item.reps += getTotalReps(w); item.volumeKg += getWorkoutVolumeKg(w, dashboardBodyWeightKg, customExercises); item.bestKg = Math.max(item.bestKg, w.weight); map[w.exercise] = item; return map; }, {})).sort((a, b) => b.volumeKg - a.volumeKg), [customExercises, dashboardBodyWeightKg, workouts]);
@@ -7218,6 +7229,45 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
         {backupDue && adminConfig.backupBannerEnabled && <section className="glass-panel backup-banner fade-in-up"><div><h3>{copy.backupTitle}</h3><p>{copy.backupText}</p></div><button className="action-btn-primary" type="button" onClick={exportData}>{copy.export}</button></section>}
 
         {activeSection === 'dashboard' && <>
+          <section className="glass-panel dashboard-hero-card fade-in-up">
+            <div className="dashboard-hero-main">
+              <p className="dashboard-hero-kicker">{settings.language === 'sl' ? 'Danes' : 'Today'}</p>
+              <h1>{dashboardDateLabel}</h1>
+              <p>{dailyControl.coachingMessage}</p>
+              <div className="dashboard-hero-badges">
+                <span>{dashboardStatusLabel}</span>
+                <span>{settings.language === 'sl' ? 'Niz' : 'Streak'}: {workoutStreak}</span>
+                <span>{settings.language === 'sl' ? 'Teden' : 'Week'}: {weeklyWorkoutCount}</span>
+              </div>
+            </div>
+            <div className="dashboard-hero-side">
+              <div className="dashboard-score-ring" style={{ '--score': `${dailyControl.score}%` }}>
+                <strong>{dailyControl.score}%</strong>
+                <span>{settings.language === 'sl' ? 'danes score' : 'today score'}</span>
+              </div>
+              <div className="dashboard-hero-mini">
+                <article>
+                  <span>{copy.dashboardTodayCalories}</span>
+                  <strong>{Math.round(todayTotals.calories)} / {Math.round(settings.calorieGoal)}</strong>
+                </article>
+                <article>
+                  <span>{settings.language === 'sl' ? 'Beljakovine' : 'Protein'}</span>
+                  <strong>{Math.round(todayTotals.protein)} / {dailyControl.macroTargets.protein} g</strong>
+                </article>
+                <article>
+                  <span>{settings.language === 'sl' ? 'Voda' : 'Water'}</span>
+                  <strong>{(waterToday / 1000).toFixed(1)} / {(dailyControl.waterGoalMl / 1000).toFixed(1)} L</strong>
+                </article>
+              </div>
+            </div>
+            <div className="dashboard-hero-actions" aria-label={settings.language === 'sl' ? 'Hitre akcije' : 'Quick actions'}>
+              <button className="action-btn-primary" type="button" onClick={() => goToFeature('dashboard', 'add-workout')}>{copy.addWorkout}</button>
+              <button className="action-btn-outline" type="button" onClick={() => goToFeature('calories', 'add-meal')}>{copy.addMeal}</button>
+              <button className="action-btn-outline" type="button" onClick={() => addWater(250)}>+250 ml</button>
+              <button className="action-btn-outline" type="button" onClick={() => goToFeature('bodyweight', 'bodyweight-tracker')}>{copy.addWeight}</button>
+              <button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button>
+            </div>
+          </section>
           <div className="dashboard-grid dashboard-home-grid">
             <StatCard icon={<Utensils size={22} strokeWidth={2.2} />} title={copy.dashboardTodayCalories} value={Math.round(todayTotals.calories)} unit={copy.kcalShort} glow="blue" />
             <StatCard icon={<Flame size={22} strokeWidth={2.2} />} title={copy.streak} value={workoutStreak} glow="green" />
@@ -7662,7 +7712,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             </section>
           </div>
 
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem',alignItems:'start'}}>
+          <div className="nutrition-split-grid">
             <section className="glass-panel history-section fade-in-up">
               <div className="panel-header"><h3>{copy.mealsHistory}</h3><div className="settings-button-row"><button className={`action-btn-outline ${analyticsRange === 'week' ? 'active-filter' : ''}`} type="button" onClick={() => setAnalyticsRange('week')}>{copy.weekly}</button><button className={`action-btn-outline ${analyticsRange === 'month' ? 'active-filter' : ''}`} type="button" onClick={() => setAnalyticsRange('month')}>{copy.monthly}</button><span className="history-count">{selectedDayEntries.length}</span></div></div>
               <div className="stats-split">

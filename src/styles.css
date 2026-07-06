@@ -9433,3 +9433,85 @@ textarea:focus {
     font-size: clamp(2rem, 10vw, 2.75rem);
   }
 }
+
+/* Compact dashboard reminder cards. */
+@media (min-width: 1200px) {
+  .dashboard-home-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .dashboard-home-grid > .stat-card {
+    grid-column: span 1;
+    align-self: start;
+    min-height: 86px;
+    padding: 12px 14px;
+    gap: 10px;
+    border-left-width: 2px;
+    border-radius: var(--radius-md);
+    box-shadow:
+      0 10px 26px rgba(0, 0, 0, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  }
+
+  .dashboard-home-grid > .stat-card .stat-icon {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    border-radius: 10px;
+  }
+
+  .dashboard-home-grid > .stat-card .stat-icon svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .dashboard-home-grid > .stat-card .stat-title {
+    margin-bottom: 2px;
+    font-size: 0.64rem;
+    line-height: 1.1;
+    letter-spacing: 0.06em;
+  }
+
+  .dashboard-home-grid > .stat-card .stat-value {
+    font-size: clamp(1.15rem, 1.35vw, 1.55rem);
+    line-height: 1;
+  }
+
+  .dashboard-home-grid > .stat-card .unit {
+    font-size: 0.72rem;
+  }
+
+  .dashboard-home-grid > .daily-control-panel,
+  .dashboard-home-grid > .chart-panel,
+  .dashboard-home-grid > .action-panel {
+    grid-column: span 3;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1199px) {
+  .dashboard-home-grid {
+    align-items: start;
+  }
+
+  .dashboard-home-grid > .stat-card {
+    align-self: start;
+    min-height: 88px;
+    padding: 13px 14px;
+  }
+
+  .dashboard-home-grid > .stat-card .stat-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .dashboard-home-grid > .stat-card .stat-value {
+    font-size: 1.45rem;
+  }
+
+  .dashboard-home-grid > .daily-control-panel,
+  .dashboard-home-grid > .chart-panel,
+  .dashboard-home-grid > .action-panel {
+    grid-column: 1 / -1;
+  }
+}

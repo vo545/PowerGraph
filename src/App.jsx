@@ -5122,6 +5122,10 @@ export default function App() {
     root.style.setProperty('--secondary-glow', shiftHexTone(accentSecondColor, lightBase ? -10 : 20));
     root.style.setProperty('--page-bg-1', pageOne);
     root.style.setProperty('--page-bg-2', pageTwo);
+    const chromeColor = lightBase ? mixHex(appBaseColor, '#f8fafc', 0.28) : mixHex(appBaseColor, '#000000', 0.82);
+    document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+      meta.setAttribute('content', chromeColor);
+    });
   }, [accentColor, accentSecondColor, appBaseColor, settings.backgroundPattern]);
   useEffect(() => {
     document.title = adminConfig.appName || copy.app;

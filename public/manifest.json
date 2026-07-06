@@ -4,10 +4,10 @@
   "description": "Fitness tracker for workouts, calories, body weight, hydration, rankings, and progress.",
   "start_url": ".",
   "scope": ".",
-  "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
   "background_color": "#020617",
-  "theme_color": "#0b1f4d",
+  "theme_color": "#020617",
   "orientation": "portrait",
   "icons": [
     {

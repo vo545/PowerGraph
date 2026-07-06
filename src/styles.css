@@ -10136,3 +10136,281 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+/* Normal mode: professional, quiet UI without neon/glow styling. */
+:root {
+  --app-chrome: #05070b;
+  --app-ink: #f8fafc;
+  --app-muted: #9aa4b2;
+  --app-panel: #0d121a;
+  --app-panel-2: #111823;
+  --app-panel-3: #151d2a;
+  --app-border: #263241;
+  --app-border-soft: rgba(148, 163, 184, 0.14);
+  --app-primary: #475569;
+  --app-primary-hover: #526174;
+  --app-primary-muted: rgba(71, 85, 105, 0.2);
+  --primary: var(--app-primary);
+  --primary-glow: #94a3b8;
+  --secondary: #334155;
+  --secondary-glow: #94a3b8;
+  --accent: var(--app-primary);
+  --accent-soft: rgba(71, 85, 105, 0.14);
+  --accent-border: rgba(148, 163, 184, 0.24);
+  --accent-shadow: transparent;
+  --accent-contrast: #ffffff;
+  --accent-gradient: linear-gradient(180deg, var(--app-primary), var(--app-primary));
+  --shadow-glass: 0 12px 30px rgba(0, 0, 0, 0.22);
+}
+
+html,
+body,
+#root {
+  background: var(--app-chrome) !important;
+}
+
+body {
+  background-color: var(--app-chrome) !important;
+  background-image: none !important;
+}
+
+.app-container {
+  background: var(--app-chrome) !important;
+}
+
+.glass-panel,
+.topbar,
+.sidebar,
+.dashboard-hero-card,
+.section-intro,
+.stat-card,
+.daily-control-grid article,
+.dashboard-hero-mini article,
+.settings-card,
+.admin-panel,
+.admin-hero-panel,
+.history-item,
+.exercise-card,
+.rank-card,
+.command-panel,
+.feedback-popup,
+.guided-tutorial-card,
+.help-popover-card,
+.recap-modal {
+  background: var(--app-panel) !important;
+  background-image: none !important;
+  border-color: var(--app-border-soft) !important;
+  box-shadow: var(--shadow-glass) !important;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+@media (hover: hover) {
+  .glass-panel:hover,
+  .stat-card:hover,
+  .history-item:hover,
+  .exercise-card:hover,
+  .rank-card:hover {
+    background: var(--app-panel-2) !important;
+    border-color: rgba(148, 163, 184, 0.22) !important;
+    box-shadow: var(--shadow-glass) !important;
+    transform: none !important;
+  }
+}
+
+.topbar,
+.sidebar {
+  background: #070b12 !important;
+  border-color: var(--app-border) !important;
+}
+
+.brand {
+  border-bottom-color: rgba(148, 163, 184, 0.12);
+}
+
+.logo-icon,
+.stat-icon,
+.command-icon,
+.quick-action-icon,
+.admin-command-icon {
+  background: var(--app-panel-3) !important;
+  color: #cbd5e1 !important;
+  border: 1px solid var(--app-border-soft);
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.blue-glow,
+.green-glow,
+.purple-glow,
+.orange-glow {
+  background: var(--app-panel-3) !important;
+  color: #cbd5e1 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.nav-btn {
+  color: #9aa4b2 !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.nav-btn:hover {
+  background: rgba(148, 163, 184, 0.08) !important;
+  color: #f1f5f9 !important;
+  box-shadow: none !important;
+}
+
+.nav-btn.active,
+.nav-btn[aria-current='page'] {
+  background: rgba(148, 163, 184, 0.12) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  color: #ffffff !important;
+  box-shadow: inset 3px 0 0 var(--app-primary) !important;
+}
+
+.nav-btn.active .nav-icon,
+.nav-btn[aria-current='page'] .nav-icon {
+  filter: none !important;
+}
+
+.action-btn-primary,
+.quick-open-btn,
+.sw-update-banner .action-btn-primary,
+.backup-banner .action-btn-primary {
+  background: var(--app-primary) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.action-btn-primary:hover,
+.quick-open-btn:hover,
+.sw-update-banner .action-btn-primary:hover,
+.backup-banner .action-btn-primary:hover {
+  background: var(--app-primary-hover) !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+.action-btn-outline,
+.premium-select,
+.input-group input,
+.history-search-input,
+.panel-header input,
+.premium-input,
+textarea,
+.auth-input-wrap,
+.command-input-wrap {
+  background: #080d14 !important;
+  background-image: none !important;
+  border-color: var(--app-border) !important;
+  box-shadow: none !important;
+}
+
+.action-btn-outline:hover,
+.active-filter,
+.chart-ex-btn-active.active-filter,
+.auth-mode-btn.active,
+.auth-gender-toggle button.active {
+  background: rgba(148, 163, 184, 0.12) !important;
+  border-color: rgba(148, 163, 184, 0.24) !important;
+  color: #f8fafc !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.dashboard-hero-card::after,
+.progress-fill,
+.password-meter span,
+.macro-bar-fill,
+.nutrition-bar-fill,
+.water-fill,
+.rank-progress-fill {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.dashboard-hero-card::after {
+  display: none !important;
+}
+
+.dashboard-score-ring {
+  box-shadow: none !important;
+}
+
+.dashboard-hero-kicker,
+.exercise-category,
+.stat-title,
+.daily-control-grid article span,
+.settings-label,
+.history-count,
+.calc-method-pill {
+  color: var(--app-muted) !important;
+}
+
+.sync-status-pill,
+.dashboard-hero-badges span,
+.tutorial-section-pill,
+.history-count,
+.calc-method-pill {
+  background: rgba(148, 163, 184, 0.1) !important;
+  background-image: none !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+  color: #dbe4ef !important;
+  box-shadow: none !important;
+}
+
+.offline-sync-banner,
+.backup-banner,
+.storage-warning-banner,
+.admin-announcement-banner,
+.sw-update-banner {
+  background: var(--app-panel-2) !important;
+  background-image: none !important;
+  border-color: var(--app-border) !important;
+  box-shadow: var(--shadow-glass) !important;
+}
+
+.launch-screen {
+  background: #05070b !important;
+  background-image: none !important;
+}
+
+.launch-mark {
+  filter: none !important;
+}
+
+.launch-graph,
+.launch-arrow {
+  stroke: #8aa2c0 !important;
+}
+
+[data-tour-active='true'] {
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.16), 0 0 0 2px rgba(203, 213, 225, 0.72) !important;
+  outline-color: rgba(203, 213, 225, 0.72) !important;
+}
+
+@media (max-width: 900px) {
+  body {
+    background-image: none !important;
+  }
+
+  .topbar,
+  .sidebar {
+    background: #05070b !important;
+    background-image: none !important;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.24) !important;
+  }
+
+  .nav-btn.active,
+  .nav-btn[aria-current='page'] {
+    background: rgba(148, 163, 184, 0.12) !important;
+    box-shadow: inset 0 -2px 0 var(--app-primary) !important;
+  }
+}

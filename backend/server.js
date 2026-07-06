@@ -6,12 +6,13 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').toLowerCase();
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '14d';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30d';
 const AUTH_WINDOW_MS = 15 * 60 * 1000;
 const AUTH_MAX_ATTEMPTS = Number(process.env.AUTH_MAX_ATTEMPTS || 8);
 const authAttempts = new Map();
@@ -25,6 +26,14 @@ if (!process.env.JWT_SECRET) {
 const JWT_SECRET = process.env.JWT_SECRET;
 const GEMINI_KEY = process.env.GEMINI_KEY || '';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const RESET_CODE_TTL_MS = 90 * 1000;
+const SMTP_CONFIGURED = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+const mailTransport = SMTP_CONFIGURED ? nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT || 587),
+  secure: process.env.SMTP_SECURE === 'true',
+  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+}) : null;
 
 // ── Baza podatkov ──────────────────────────────────────────────────────────
 const db = new DatabaseSync(process.env.DB_PATH || 'powergraph.db');
@@ -35,6 +44,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL COLLATE NOCASE,
+    username TEXT DEFAULT '',
     password_hash TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now'))
   );
@@ -124,7 +134,21 @@ db.exec(`
     ip TEXT,
     updated_at TEXT DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS password_reset_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    code_hash TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_at TEXT,
+    attempts INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    ip TEXT,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
+
+try { db.exec("ALTER TABLE users ADD COLUMN username TEXT DEFAULT ''"); } catch {}
 
 // ── Middleware ─────────────────────────────────────────────────────────────
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
@@ -141,6 +165,30 @@ app.use((req, res, next) => {
 
 function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase().slice(0, 254) : '';
+}
+
+function normalizeUsername(value, fallbackEmail = '') {
+  const fallback = fallbackEmail.split('@')[0] || 'PowerGraph user';
+  const clean = typeof value === 'string'
+    ? value.trim().replace(/\s+/g, ' ').replace(/[^\p{L}\p{N} ._-]/gu, '').slice(0, 28)
+    : '';
+  return clean.length >= 2 ? clean : fallback.slice(0, 28);
+}
+
+function createResetCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function sendResetEmail(email, code) {
+  if (!mailTransport) return false;
+  const appName = process.env.APP_NAME || 'PowerGraph';
+  await mailTransport.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to: email,
+    subject: `${appName} password reset code`,
+    text: `Your ${appName} password reset code is ${code}. It expires in 90 seconds. If you did not request this, ignore this email.`,
+  });
+  return true;
 }
 
 function rateLimitAuth(req, res, next) {
@@ -283,6 +331,7 @@ function normalizeGenerationConfig(body) {
 app.post('/api/auth/register', rateLimitAuth, async (req, res) => {
   const email = normalizeEmail(req.body?.email);
   const { password } = req.body ?? {};
+  const username = normalizeUsername(req.body?.username, email);
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
   if (password.length < 10 || password.length > 256) return res.status(400).json({ error: 'Password does not meet policy' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email' });
@@ -290,11 +339,11 @@ app.post('/api/auth/register', rateLimitAuth, async (req, res) => {
   try {
     // bcrypt s 12 rundami — zaščita pred brute-force
     const hash = await bcrypt.hash(password, 12);
-    const result = db.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)').run(email, hash);
+    const result = db.prepare('INSERT INTO users (email, username, password_hash) VALUES (?, ?, ?)').run(email, username, hash);
     db.prepare('INSERT INTO login_logs (email, type, ip) VALUES (?, ?, ?)').run(email, 'register', req.ip);
     clearAuthLimit(req);
-    const token = jwt.sign({ userId: result.lastInsertRowid, email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-    res.status(201).json({ token, email });
+    const token = jwt.sign({ userId: result.lastInsertRowid, email, username }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    res.status(201).json({ token, email, username });
   } catch (err) {
     if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') return res.status(409).json({ error: 'Unable to create account' });
     console.error(err);
@@ -315,8 +364,54 @@ app.post('/api/auth/login', rateLimitAuth, async (req, res) => {
 
   db.prepare('INSERT INTO login_logs (email, type, ip) VALUES (?, ?, ?)').run(email, 'login', req.ip);
   clearAuthLimit(req);
-  const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-  res.json({ token, email: user.email });
+  const username = normalizeUsername(user.username, user.email);
+  const token = jwt.sign({ userId: user.id, email: user.email, username }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  res.json({ token, email: user.email, username });
+});
+
+app.post('/api/auth/password-reset/request', rateLimitAuth, async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email' });
+  if (!SMTP_CONFIGURED) return res.status(503).json({ error: 'Email reset is not configured' });
+
+  const user = db.prepare('SELECT id, email FROM users WHERE email = ?').get(email);
+  if (!user) return res.json({ ok: true });
+
+  const code = createResetCode();
+  const codeHash = await bcrypt.hash(code, 10);
+  db.prepare('DELETE FROM password_reset_codes WHERE user_id = ? AND (used_at IS NOT NULL OR expires_at < ?)').run(user.id, Date.now());
+  db.prepare('INSERT INTO password_reset_codes (user_id, code_hash, expires_at, ip) VALUES (?, ?, ?, ?)').run(user.id, codeHash, Date.now() + RESET_CODE_TTL_MS, req.ip);
+  await sendResetEmail(user.email, code);
+  db.prepare('INSERT INTO login_logs (email, type, ip) VALUES (?, ?, ?)').run(email, 'password_reset_requested', req.ip);
+  res.json({ ok: true, expiresInSeconds: 90 });
+});
+
+app.post('/api/auth/password-reset/confirm', rateLimitAuth, async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  const code = String(req.body?.code || '').trim();
+  const password = String(req.body?.password || '');
+  if (!email || !/^\d{6}$/.test(code)) return res.status(400).json({ error: 'Invalid reset code' });
+  if (password.length < 10 || password.length > 256) return res.status(400).json({ error: 'Password does not meet policy' });
+
+  const user = db.prepare('SELECT id, email FROM users WHERE email = ?').get(email);
+  if (!user) return res.status(400).json({ error: 'Invalid reset code' });
+  const reset = db.prepare('SELECT * FROM password_reset_codes WHERE user_id = ? AND used_at IS NULL ORDER BY id DESC LIMIT 1').get(user.id);
+  if (!reset || Number(reset.expires_at) < Date.now() || Number(reset.attempts || 0) >= 5) {
+    return res.status(400).json({ error: 'Invalid or expired reset code' });
+  }
+
+  const valid = await bcrypt.compare(code, reset.code_hash);
+  if (!valid) {
+    db.prepare('UPDATE password_reset_codes SET attempts = attempts + 1 WHERE id = ?').run(reset.id);
+    return res.status(400).json({ error: 'Invalid or expired reset code' });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
+  db.prepare("UPDATE password_reset_codes SET used_at = datetime('now') WHERE id = ?").run(reset.id);
+  db.prepare('INSERT INTO login_logs (email, type, ip) VALUES (?, ?, ?)').run(email, 'password_reset', req.ip);
+  clearAuthLimit(req);
+  res.json({ ok: true });
 });
 
 // ── Treningi ───────────────────────────────────────────────────────────────
@@ -700,7 +795,7 @@ app.post('/api/sync', requireAuth, (req, res) => {
 
 // Admin endpoints
 app.get('/api/admin/users', requireAuth, requireAdmin, (req, res) => {
-  const users = db.prepare('SELECT id, email, created_at FROM users ORDER BY created_at DESC').all();
+  const users = db.prepare('SELECT id, email, username, created_at FROM users ORDER BY created_at DESC').all();
   const enriched = users.map(u => {
     const workouts = db.prepare('SELECT COUNT(*) as c FROM workouts WHERE user_id=?').get(u.id).c;
     const meals = db.prepare('SELECT COUNT(*) as c FROM calorie_entries WHERE user_id=?').get(u.id).c;

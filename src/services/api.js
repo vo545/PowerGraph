@@ -55,10 +55,10 @@ export async function apiCall(email, path, method = 'GET', body) {
   return null;
 }
 
-export async function backendLogin(email, password, mode = 'login') {
+export async function backendLogin(email, password, mode = 'login', username = '') {
   if (!API_URL) return null;
   try {
-    let res = await fetch(`${API_URL}/api/auth/${mode === 'signup' ? 'register' : 'login'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+    let res = await fetch(`${API_URL}/api/auth/${mode === 'signup' ? 'register' : 'login'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password, username }) });
     if (res.ok) {
       const { token } = await res.json();
       setJwt(email, token);
@@ -78,6 +78,34 @@ export async function backendLogin(email, password, mode = 'login') {
 
 export async function pullFromBackend(email) {
   return apiCall(email, '/api/sync');
+}
+
+export async function requestPasswordReset(email) {
+  if (!API_URL) return { ok: false, backendMissing: true };
+  try {
+    const res = await fetch(`${API_URL}/api/auth/password-reset/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    return { ok: res.ok, status: res.status };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export async function confirmPasswordReset(email, code, password) {
+  if (!API_URL) return { ok: false, backendMissing: true };
+  try {
+    const res = await fetch(`${API_URL}/api/auth/password-reset/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code, password }),
+    });
+    return { ok: res.ok, status: res.status };
+  } catch {
+    return { ok: false };
+  }
 }
 
 export { API_URL };

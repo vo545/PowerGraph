@@ -8,8 +8,8 @@ import QuickActions from './components/QuickActions.jsx';
 import SectionHeader from './components/SectionHeader.jsx';
 import StatCard from './components/StatCard.jsx';
 import UpdateBanner from './components/UpdateBanner.jsx';
-import { API_URL, apiCall, backendLogin, getJwt, getJwtStorageKey, pullFromBackend, setJwt } from './services/api.js';
-import { pushSyncSnapshot } from './services/sync.js';
+import { API_URL, apiCall, backendLogin, confirmPasswordReset, getJwt, getJwtStorageKey, pullFromBackend, requestPasswordReset, setJwt } from './services/api.js';
+import { clearPendingSync, flushPendingSync, loadPendingSync, pushSyncSnapshot, queueSyncSnapshot } from './services/sync.js';
 import { getContrastHex, getHexLuminance, hexToRgb, hexToRgba, mixHex, normalizeHexColor, shiftHexTone } from './utils/colors.js';
 import { dateOffsetKey, todayKey } from './utils/dates.js';
 import { calculateBodyWeightTrend, calculateWeeklyWorkoutCount } from './utils/fitness.js';
@@ -1057,6 +1057,8 @@ const ui = {
     signup: 'Registracija',
     logout: 'Odjava',
     email: 'Email',
+    username: 'Uporabnisko ime',
+    usernamePlaceholder: 'npr. Videm',
     password: 'Geslo',
     confirmPassword: 'Potrdi geslo',
     authTitle: 'Vstopi v PowerGraph',
@@ -1068,6 +1070,7 @@ const ui = {
     authPasswordsNoMatch: 'Gesli se ne ujemata.',
     authInvalidEmail: 'Vpi\u0161i veljaven email.',
     authPasswordRequired: 'Vpiši geslo.',
+    authUsernameRequired: 'Vnesi uporabnisko ime z vsaj 2 znaki.',
     authShortPassword: 'Geslo naj ima vsaj 10 znakov.',
     authExists: 'Računa s temi podatki ni bilo mogoče ustvariti.',
     authNotFound: 'Email ali geslo ni pravilno.',
@@ -1098,6 +1101,25 @@ const ui = {
     authSecurityLocal: 'Lokalni vault',
     authSecurityHash: 'PBKDF2 zaščita gesel',
     authSecuritySync: 'Backend sync pripravljen',
+    forgotPassword: 'Pozabljeno geslo?',
+    resetPasswordTitle: 'Ponastavi geslo',
+    resetPasswordDesc: 'Vnesi email. Ce backend email deluje, prejmes 6-mestno kodo, ki velja 1 min 30 s.',
+    resetSendCode: 'Poslji kodo',
+    resetCode: '6-mestna koda',
+    resetNewPassword: 'Novo geslo',
+    resetConfirmNewPassword: 'Potrdi novo geslo',
+    resetApply: 'Spremeni geslo',
+    resetBackToLogin: 'Nazaj na prijavo',
+    resetCodeSent: 'Koda je poslana. Imas 1 min 30 s.',
+    resetBackendMissing: 'Email reset se ni konfiguriran na backendu.',
+    resetFailed: 'Kode ali gesla ni bilo mogoce potrditi.',
+    resetSuccess: 'Geslo spremenjeno. Zdaj se prijavi z novim geslom.',
+    cloudSyncTitle: 'Samodejni sync',
+    cloudSyncDesc: 'Podatki se shranjujejo lokalno in se sinhronizirajo z backendom, ko je povezava na voljo.',
+    offlineSyncTitle: 'Offline nacin',
+    offlineSyncDesc: 'Ni povezave. Vnosi ostanejo na napravi in cakajo na sync do 7 dni.',
+    offlinePendingTitle: 'Sync caka',
+    offlinePendingDesc: 'Imas lokalne spremembe, ki bodo poslane, ko bo backend spet dosegljiv.',
     caloriesTitle: 'Dnevni vnos kalorij',
     caloriesSubtitle: 'Bele\u017ei obroke, dnevni cilj in osnovne makre.',
     addMeal: 'Dodaj obrok',
@@ -1422,10 +1444,10 @@ const ui = {
     deleteConfirmWater: 'Ponastavim današnji vnos vode?',
     deleteConfirmEstimate: 'Izbrišem ta zapis?',
     dataPrivacy: 'Podatki in zasebnost',
-    dataPrivacyDesc: 'Podatki so shranjeni lokalno v tem brskalniku, razen če je omogočen backend sync. Export je tvoja varnostna kopija, import jo naloži nazaj.',
+    dataPrivacyDesc: 'Podatki se najprej shranijo lokalno na napravi. Ce je backend sync nastavljen, se spremembe posljejo, ko je povezava na voljo.',
     privacyPolicy: 'Politika zasebnosti',
     recoveryTitle: 'Safety snapshot',
-    recoveryDesc: 'PowerGraph shrani lokalno obnovitveno kopijo pred importom, restore ali brisanjem podatkov.',
+    recoveryDesc: 'PowerGraph shrani lokalno obnovitveno kopijo pred restore ali brisanjem podatkov.',
     recoveryCreate: 'Shrani snapshot',
     recoveryRestore: 'Obnovi zadnji snapshot',
     recoveryClear: 'Izbrisi snapshot',
@@ -1441,7 +1463,7 @@ const ui = {
     storageBestEffort: 'Best effort',
     waterDays: 'Dnevi vode',
     dataHealthTitle: 'Data health',
-    dataHealthDesc: 'Hiter pregled zaščite lokalnih podatkov, backupov in obnovitve.',
+    dataHealthDesc: 'Hiter pregled lokalne hrambe, sync stanja in obnovitve.',
     dataHealthStrong: 'Zaščita je dobra',
     dataHealthMedium: 'Potreben je majhen popravek',
     dataHealthWeak: 'Naredi backup zdaj',
@@ -1581,6 +1603,8 @@ const ui = {
     signup: 'Sign up',
     logout: 'Log out',
     email: 'Email',
+    username: 'Username',
+    usernamePlaceholder: 'e.g. Videm',
     password: 'Password',
     confirmPassword: 'Confirm password',
     authTitle: 'Enter PowerGraph',
@@ -1592,6 +1616,7 @@ const ui = {
     authPasswordsNoMatch: 'Passwords do not match.',
     authInvalidEmail: 'Enter a valid email address.',
     authPasswordRequired: 'Enter your password.',
+    authUsernameRequired: 'Enter a username with at least 2 characters.',
     authShortPassword: 'Password must be at least 10 characters.',
     authExists: 'An account could not be created with these details.',
     authNotFound: 'Email or password is incorrect.',
@@ -1622,6 +1647,25 @@ const ui = {
     authSecurityLocal: 'Local vault',
     authSecurityHash: 'PBKDF2 password protection',
     authSecuritySync: 'Backend sync ready',
+    forgotPassword: 'Forgot password?',
+    resetPasswordTitle: 'Reset password',
+    resetPasswordDesc: 'Enter your email. If backend email is configured, you will get a 6-digit code that expires in 1 min 30 s.',
+    resetSendCode: 'Send code',
+    resetCode: '6-digit code',
+    resetNewPassword: 'New password',
+    resetConfirmNewPassword: 'Confirm new password',
+    resetApply: 'Change password',
+    resetBackToLogin: 'Back to log in',
+    resetCodeSent: 'Code sent. You have 1 min 30 s.',
+    resetBackendMissing: 'Email reset is not configured on the backend yet.',
+    resetFailed: 'The code or password could not be confirmed.',
+    resetSuccess: 'Password changed. Log in with the new password.',
+    cloudSyncTitle: 'Automatic sync',
+    cloudSyncDesc: 'Data is stored locally and syncs to the backend when connection is available.',
+    offlineSyncTitle: 'Offline mode',
+    offlineSyncDesc: 'No connection. Entries stay on this device and wait for sync for up to 7 days.',
+    offlinePendingTitle: 'Sync pending',
+    offlinePendingDesc: 'You have local changes that will be sent when the backend is reachable again.',
     caloriesTitle: 'Daily calorie intake',
     caloriesSubtitle: 'Track meals, your daily target, and basic macros.',
     addMeal: 'Add meal',
@@ -1946,10 +1990,10 @@ const ui = {
     deleteConfirmWater: 'Reset today’s water intake?',
     deleteConfirmEstimate: 'Delete this entry?',
     dataPrivacy: 'Data & Privacy',
-    dataPrivacyDesc: 'Your data is saved locally in this browser unless backend sync is enabled. Export is your backup, import restores it.',
+    dataPrivacyDesc: 'Your data is saved locally on this device first. If backend sync is configured, changes are sent when connection is available.',
     privacyPolicy: 'Privacy policy',
     recoveryTitle: 'Safety snapshot',
-    recoveryDesc: 'PowerGraph keeps a local recovery copy before import, restore, or data deletion.',
+    recoveryDesc: 'PowerGraph keeps a local recovery copy before restore or data deletion.',
     recoveryCreate: 'Save snapshot',
     recoveryRestore: 'Restore latest snapshot',
     recoveryClear: 'Delete snapshots',
@@ -1965,7 +2009,7 @@ const ui = {
     storageBestEffort: 'Best effort',
     waterDays: 'Water days',
     dataHealthTitle: 'Data health',
-    dataHealthDesc: 'A quick check of local data protection, backups, and restore readiness.',
+    dataHealthDesc: 'A quick check of local storage, sync status, and restore readiness.',
     dataHealthStrong: 'Protection looks good',
     dataHealthMedium: 'One small fix recommended',
     dataHealthWeak: 'Back up now',
@@ -3035,6 +3079,28 @@ function getUserBadge(email) {
   return local.slice(0, Math.min(2, local.length)).toUpperCase();
 }
 
+function getUsernameFromEmail(email) {
+  return (email || '').split('@')[0].replace(/[._-]+/g, ' ').trim();
+}
+
+function cleanUsername(value, email = '') {
+  const fallback = getUsernameFromEmail(email) || 'PowerGraph user';
+  const clean = typeof value === 'string'
+    ? value.trim().replace(/\s+/g, ' ').replace(/[^\p{L}\p{N} ._-]/gu, '').slice(0, 28)
+    : '';
+  return clean.length >= 2 ? clean : fallback.slice(0, 28);
+}
+
+function getStoredUser(email) {
+  const target = (email || '').trim().toLowerCase();
+  return loadUsers().find((user) => user.email === target) || null;
+}
+
+function getUserDisplayName(email) {
+  const user = getStoredUser(email);
+  return cleanUsername(user?.username, email);
+}
+
 function sanitizeSettings(input) {
   const safe = { ...defaultSettings };
   if (input && typeof input === 'object') {
@@ -3068,7 +3134,13 @@ function sanitizeSettings(input) {
 function sanitizeUser(input) {
   if (!input || typeof input !== 'object') return null;
   if (typeof input.email !== 'string' || typeof input.passwordHash !== 'string') return null;
-  return { email: input.email.trim().toLowerCase(), passwordHash: input.passwordHash, createdAt: typeof input.createdAt === 'string' ? input.createdAt : new Date().toISOString() };
+  const email = input.email.trim().toLowerCase();
+  return {
+    email,
+    username: cleanUsername(input.username, email),
+    passwordHash: input.passwordHash,
+    createdAt: typeof input.createdAt === 'string' ? input.createdAt : new Date().toISOString(),
+  };
 }
 
 function loadUsers() {
@@ -3084,6 +3156,14 @@ function updateStoredUserPassword(email, passwordHash) {
   const users = loadUsers();
   const nextUsers = users.map((user) => (
     user.email === email ? { ...user, passwordHash } : user
+  ));
+  localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
+}
+
+function updateStoredUsername(email, username) {
+  const users = loadUsers();
+  const nextUsers = users.map((user) => (
+    user.email === email ? { ...user, username: cleanUsername(username, email) } : user
   ));
   localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
 }
@@ -4333,6 +4413,23 @@ function AnatomyRankModel({ selected, onSelect, gender = 'male', language = 'en'
   );
 }
 
+function LaunchScreen({ appName = 'PowerGraph' }) {
+  return (
+    <div className="launch-screen" aria-hidden="true">
+      <div className="launch-mark">
+        <svg viewBox="0 0 96 96" role="img" aria-label="">
+          <rect x="10" y="10" width="76" height="76" rx="22" />
+          <path className="launch-graph" d="M24 64 L39 51 L51 56 L72 31" />
+          <path className="launch-arrow" d="M61 31 H72 V42" />
+          <circle cx="38" cy="35" r="8" />
+          <path className="launch-body" d="M24 75 C29 58 47 58 52 75" />
+        </svg>
+      </div>
+      <strong>{appName}</strong>
+    </div>
+  );
+}
+
 export default function App() {
   const storageAvailable = isLocalStorageAvailable();
   const initialSessionEmail = safeLocalStorageGet(SESSION_KEY, '');
@@ -4362,13 +4459,16 @@ export default function App() {
   const [authMode, setAuthMode] = useState('login');
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [resetStep, setResetStep] = useState('email');
+  const [resetForm, setResetForm] = useState({ email: '', code: '', password: '', confirmPassword: '' });
+  const [resetSentAt, setResetSentAt] = useState(0);
   const [analyticsRange, setAnalyticsRange] = useState('week');
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
   const [editingMealId, setEditingMealId] = useState(null);
-  const [authForm, setAuthForm] = useState({ email: '', password: '', confirmPassword: '', gender: 'male' });
+  const [authForm, setAuthForm] = useState({ username: '', email: '', password: '', confirmPassword: '', gender: 'male' });
   const [showAuthPassword, setShowAuthPassword] = useState(false);
   const [showAuthConfirm, setShowAuthConfirm] = useState(false);
-  const [authTouched, setAuthTouched] = useState({ email: false, password: false, confirmPassword: false });
+  const [authTouched, setAuthTouched] = useState({ username: false, email: false, password: false, confirmPassword: false });
   const [formData, setFormData] = useState(() => loadDraft(initialSessionEmail, 'workoutForm', getDefaultWorkoutForm()));
   const [calorieForm, setCalorieForm] = useState(() => loadDraft(initialSessionEmail, 'mealForm', getDefaultMealForm()));
   const [calQuery, setCalQuery] = useState('');
@@ -4425,6 +4525,12 @@ export default function App() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [networkOnline, setNetworkOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine !== false);
+  const [pendingSync, setPendingSync] = useState(() => loadPendingSync(initialSessionEmail));
+  const [showLaunchAnimation, setShowLaunchAnimation] = useState(() => {
+    try { return !sessionStorage.getItem('powergraph_launch_seen'); }
+    catch { return true; }
+  });
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const [helpTopic, setHelpTopic] = useState(null);
@@ -4495,7 +4601,7 @@ export default function App() {
     ocenjevalec: settings.language === 'sl' ? 'Vpiši jed in grame ter izvedi iskanje kalorij.' : 'Enter a food and grams to look up its calorie count.',
     rankings: settings.language === 'sl' ? 'Preglej povprecni misicni rang, volumen in napredek skozi vse stopnje.' : 'View your average muscle rank, volume, and progression through all tiers.',
     bodyweight: settings.language === 'sl' ? 'Sledi telesni teži in izračunaj dnevne kalorijske potrebe.' : 'Track your body weight and calculate your daily calorie needs.',
-    settings: settings.language === 'sl' ? 'Uredi lokalne nastavitve, backup in prikaz podatkov.' : 'Adjust local preferences, backups, and data display.',
+    settings: settings.language === 'sl' ? 'Uredi lokalne nastavitve, sync, offline nacin in prikaz podatkov.' : 'Adjust local preferences, sync, offline mode, and data display.',
     ratings: settings.language === 'sl' ? 'Oceni aplikacijo z zvezdami in napiši predlog za izboljšavo.' : 'Rate the app with stars and write a suggestion for improvement.',
     admin: settings.language === 'sl' ? 'Nadzorni center za app kontrole, uporabnike, feedback, varnost in podatke.' : 'Control center for app settings, users, feedback, security and data.',
   };
@@ -4614,7 +4720,7 @@ export default function App() {
         section: 'settings',
         target: 'settings-main',
         title: t('Settings', 'Settings'),
-        body: t('Settings je kontrolna soba: enote, jezik, izgled, backup, calorie goal, tracker mode in install app.', 'Settings is the control room: units, language, appearance, backup, calorie goal, tracker mode, and install app.'),
+        body: t('Settings je kontrolna soba: enote, jezik, izgled, sync status, calorie goal, tracker mode in install app.', 'Settings is the control room: units, language, appearance, sync status, calorie goal, tracker mode, and install app.'),
       },
       {
         section: 'settings',
@@ -4626,8 +4732,8 @@ export default function App() {
       {
         section: 'settings',
         target: 'settings-data',
-        title: t('Backup in podatki', 'Backup and data'),
-        body: t('Export shrani kopijo podatkov, import jo nalozi nazaj, clear pa brise lokalne podatke. To so pomembne kontrole.', 'Export saves a copy of your data, import loads it back, and clear deletes local data. These are important controls.'),
+        title: t('Sync in podatki', 'Sync and data'),
+        body: t('App najprej shrani lokalno. Ko je backend dosegljiv, poslje spremembe v sync. Clear brise lokalne podatke.', 'The app saves locally first. When the backend is reachable, it syncs changes. Clear deletes local data.'),
       },
       {
         section: 'settings',
@@ -4675,9 +4781,9 @@ export default function App() {
       bodyweight: { title: t('Telesna teza', 'Body weight'), body: t('Shranjuje trend teze in pomaga pri kalkulatorjih. Vnosi so lokalno shranjeni na tvoj profil.', 'Stores weight trend and helps calculators. Entries are saved locally to your profile.') },
       water: { title: t('Voda', 'Water'), body: t('Hitri gumbi pospesijo vnos. Cilj vode lahko nastavis rocno ali iz TDEE rezultata.', 'Quick buttons speed up logging. Water target can be set manually or from the TDEE result.') },
       tdee: { title: t('Calorie calculator', 'Calorie calculator'), body: t('Izracuna BMR, TDEE, cilj, makrote, vodo in realen cas do cilja. Varnostne omejitve preprecujejo ekstremne cilje.', 'Calculates BMR, TDEE, target, macros, water, and realistic time to goal. Safety caps prevent extreme targets.') },
-      settings: { title: t('Settings', 'Settings'), body: t('Tu spreminjas jezik, enote, izgled, backup, tracker mode, feedback gumb, tutorial in osebne cilje.', 'Here you change language, units, appearance, backup, tracker mode, feedback button, tutorial, and personal goals.') },
+      settings: { title: t('Settings', 'Settings'), body: t('Tu spreminjas jezik, enote, izgled, sync, tracker mode, feedback gumb, tutorial in osebne cilje.', 'Here you change language, units, appearance, sync, tracker mode, feedback button, tutorial, and personal goals.') },
       appearance: { title: t('Izgled', 'Appearance'), body: t('Primary spreminja osnovno barvo appa, Secondary pa gumbe, active state in poudarke. Secondary lahko uporablja eno ali dve accent barvi.', 'Primary changes the app base color. Secondary controls buttons, active states, and highlights. Secondary can use one or two accent colors.') },
-      data: { title: t('Backup', 'Backup'), body: t('Export je tvoja varnostna kopija. Import jo vrne. Clear uporabljaj samo, ko res zelis zaceti znova.', 'Export is your backup. Import restores it. Use Clear only when you really want to start over.') },
+      data: { title: t('Sync in offline podatki', 'Sync and offline data'), body: t('Vnosi delujejo offline. Lokalni sync paket caka do 7 dni in se poslje, ko se povezava vrne.', 'Entries work offline. A local sync package waits up to 7 days and sends when connection returns.') },
       tutorial: { title: t('Tutorial in pomoc', 'Tutorial and help'), body: t('Odpre celoten vodeni tutorial. Vsak ? gumb odpre samo hitro razlago trenutne funkcije.', 'Opens the full guided tutorial. Each ? button opens a quick explanation for that feature.') },
       admin: { title: t('Admin center', 'Admin center'), body: t('Vidno samo adminu. Omogoca upravljanje aplikacije, uporabnikov, feedbacka, maintenance in exportov.', 'Visible only to admin. Allows management of the app, users, feedback, maintenance, and exports.') },
       personalTargets: { title: t('Osebni cilji', 'Personal targets'), body: t('Kalorije in voda iz nastavitev poganjajo dashboard, water tracker in meal tracker.', 'Calories and water from settings power the dashboard, water tracker, and meal tracker.') },
@@ -4764,6 +4870,17 @@ export default function App() {
   const isRestToday = restDays.includes(todayKey);
   const hasProgressData = workouts.length || calorieEntries.length || bodyWeightEntries.length || waterToday > 0;
   const waterGoalMl = Math.max(1000, Number(tdeeResult?.waterMl || settings.waterGoalMl || defaultSettings.waterGoalMl));
+  const syncPayload = useMemo(() => ({
+    workouts,
+    calorieEntries,
+    bodyWeightEntries,
+    restDays,
+    cheatDays,
+    calHistory,
+    waterEntries: currentUser ? loadWaterEntries(currentUser) : [],
+    waterToday,
+    waterDate: todayKey,
+  }), [bodyWeightEntries, calHistory, calorieEntries, cheatDays, currentUser, restDays, todayKey, waterToday, workouts]);
   const latestRecoverySnapshot = recoverySnapshots[0] || null;
   const latestRecoveryCounts = latestRecoverySnapshot?.counts || (latestRecoverySnapshot ? getBackupCounts(latestRecoverySnapshot.data) : null);
   const latestRecoveryLabel = latestRecoverySnapshot
@@ -5046,6 +5163,7 @@ export default function App() {
     setCustomExercises(loadCustomExercises(currentUser));
     setWaterToday(loadWaterMl(currentUser));
     setRecoverySnapshots(loadRecoverySnapshots(currentUser));
+    setPendingSync(loadPendingSync(currentUser));
     setFormData(nextWorkoutDraft);
     setCalorieForm(loadDraft(currentUser, 'mealForm', getDefaultMealForm()));
     setBwForm(loadDraft(currentUser, 'bodyWeightForm', getDefaultBodyWeightForm()));
@@ -5260,6 +5378,24 @@ export default function App() {
   }, [currentUser, activeSection]);
   useEffect(() => { if (!toast) return undefined; const id = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(id); }, [toast]);
   useEffect(() => {
+    if (!showLaunchAnimation) return undefined;
+    const id = window.setTimeout(() => {
+      try { sessionStorage.setItem('powergraph_launch_seen', '1'); } catch {}
+      setShowLaunchAnimation(false);
+    }, 1300);
+    return () => window.clearTimeout(id);
+  }, [showLaunchAnimation]);
+  useEffect(() => {
+    const updateOnline = () => setNetworkOnline(navigator.onLine !== false);
+    updateOnline();
+    window.addEventListener('online', updateOnline);
+    window.addEventListener('offline', updateOnline);
+    return () => {
+      window.removeEventListener('online', updateOnline);
+      window.removeEventListener('offline', updateOnline);
+    };
+  }, []);
+  useEffect(() => {
     if (activeSection !== 'admin' || currentUser !== ADMIN_EMAIL) return;
     let cancelled = false;
     const refreshAdmin = async () => {
@@ -5288,31 +5424,119 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser || !API_URL || !getJwt(currentUser)) return undefined;
+    if (!networkOnline) {
+      setPendingSync(queueSyncSnapshot(currentUser, syncPayload, 'offline'));
+      return undefined;
+    }
     setSyncing(true);
     const id = setTimeout(async () => {
       try {
-        await pushSyncSnapshot(currentUser, { workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory, waterEntries: loadWaterEntries(currentUser), waterToday, waterDate: todayKey });
+        const result = await pushSyncSnapshot(currentUser, syncPayload);
+        if (result) {
+          clearPendingSync(currentUser);
+          setPendingSync(null);
+        } else {
+          setPendingSync(queueSyncSnapshot(currentUser, syncPayload, 'sync-failed'));
+        }
       } finally { setSyncing(false); }
     }, 1500);
     return () => { clearTimeout(id); setSyncing(false); };
-  }, [currentUser, workouts, calorieEntries, bodyWeightEntries, restDays, cheatDays, calHistory, waterToday, todayKey]);
+  }, [currentUser, networkOnline, syncPayload]);
 
-  async function hydrateFromBackend(email, password, mode = 'login') {
-    const token = await backendLogin(email, password, mode);
+  useEffect(() => {
+    if (!currentUser || !API_URL || !getJwt(currentUser) || !networkOnline) return undefined;
+    let cancelled = false;
+    (async () => {
+      const result = await flushPendingSync(currentUser);
+      if (cancelled) return;
+      setPendingSync(result.ok ? loadPendingSync(currentUser) : loadPendingSync(currentUser));
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser, networkOnline]);
+
+  async function hydrateFromBackend(email, password, mode = 'login', username = '') {
+    const token = await backendLogin(email, password, mode, username);
     if (!token) return;
     const data = await pullFromBackend(email);
     await applyRemoteData(email, data);
   }
 
+  async function handlePasswordResetRequest(event) {
+    event.preventDefault();
+    const email = resetForm.email.trim().toLowerCase();
+    setAuthError('');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setAuthError(copy.authInvalidEmail);
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      const result = await requestPasswordReset(email);
+      if (!result.ok) {
+        setAuthError(result.backendMissing || result.status === 503 ? copy.resetBackendMissing : copy.resetFailed);
+        return;
+      }
+      setResetForm((current) => ({ ...current, email }));
+      setResetSentAt(Date.now());
+      setResetStep('code');
+      setToast(copy.resetCodeSent);
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function handlePasswordResetConfirm(event) {
+    event.preventDefault();
+    const email = resetForm.email.trim().toLowerCase();
+    const password = resetForm.password;
+    setAuthError('');
+    if (Date.now() - resetSentAt > 90 * 1000) {
+      setAuthError(copy.resetFailed);
+      setResetStep('email');
+      return;
+    }
+    if (password !== resetForm.confirmPassword) {
+      setAuthError(copy.authPasswordsNoMatch);
+      return;
+    }
+    const score = getPasswordScore(password, email);
+    if (!score.ok) {
+      setAuthError(password.length < 10 ? copy.authShortPassword : copy.authWeakPassword);
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      const result = await confirmPasswordReset(email, resetForm.code.trim(), password);
+      if (!result.ok) {
+        setAuthError(result.backendMissing || result.status === 503 ? copy.resetBackendMissing : copy.resetFailed);
+        return;
+      }
+      const localUser = getStoredUser(email);
+      if (localUser) updateStoredUserPassword(email, await hashPassword(password));
+      setToast(copy.resetSuccess);
+      setAuthMode('login');
+      setResetStep('email');
+      setResetForm({ email, code: '', password: '', confirmPassword: '' });
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
   async function handleAuthSubmit(event) {
     event.preventDefault();
     const email = authForm.email.trim().toLowerCase();
+    const rawUsername = authForm.username.trim();
+    const username = cleanUsername(rawUsername, email);
     const password = authForm.password;
     const passwordScore = getPasswordScore(password, email);
     setAuthError('');
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setAuthError(copy.authInvalidEmail);
+      return;
+    }
+    if (authMode === 'signup' && rawUsername.length < 2) {
+      setAuthError(copy.authUsernameRequired);
       return;
     }
     if (!password) {
@@ -5354,7 +5578,7 @@ export default function App() {
           return;
         }
         const passwordHash = await hashPassword(password);
-        const nextUsers = [...users, { email, passwordHash, createdAt: new Date().toISOString() }];
+        const nextUsers = [...users, { email, username, passwordHash, createdAt: new Date().toISOString() }];
         localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
         localStorage.setItem(getWorkoutStorageKey(email), JSON.stringify([]));
         localStorage.setItem(getSettingsStorageKey(email), JSON.stringify({
@@ -5369,28 +5593,44 @@ export default function App() {
         }));
         clearAuthThrottle(email);
         await pushLoginLog(email, 'signup');
-        await hydrateFromBackend(email, password, 'signup');
+        await hydrateFromBackend(email, password, 'signup', username);
         setCurrentUser(email);
         setTutorialStep(0);
         setShowTutorial(true);
       } else {
         const banned = loadBanned();
         const isValidPassword = existing ? await verifyPassword(password, existing.passwordHash) : false;
-        if (!existing || banned.includes(email) || !isValidPassword) {
+        let backendAuthenticated = false;
+        if (!banned.includes(email) && (!existing || !isValidPassword) && API_URL) {
+          const token = await backendLogin(email, password, 'login');
+          backendAuthenticated = Boolean(token);
+          if (backendAuthenticated) {
+            const passwordHash = await hashPassword(password);
+            const cachedUser = { email, username: existing?.username || getUsernameFromEmail(email), passwordHash, createdAt: existing?.createdAt || new Date().toISOString() };
+            const nextUsers = existing
+              ? users.map((user) => (user.email === email ? { ...user, ...cachedUser } : user))
+              : [...users, cachedUser];
+            localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
+            const data = await pullFromBackend(email);
+            await applyRemoteData(email, data);
+          }
+        }
+        if (banned.includes(email) || (!isValidPassword && !backendAuthenticated)) {
           recordAuthFailure(email);
           setAuthError(copy.authLoginFailed);
           return;
         }
         clearAuthThrottle(email);
-        if (shouldUpgradePasswordHash(existing.passwordHash)) {
+        if (existing && isValidPassword && shouldUpgradePasswordHash(existing.passwordHash)) {
           updateStoredUserPassword(email, await hashPassword(password));
         }
+        updateStoredUsername(email, existing?.username || getUsernameFromEmail(email));
         await pushLoginLog(email, 'login');
-        await hydrateFromBackend(email, password, 'login');
+        if (!backendAuthenticated) await hydrateFromBackend(email, password, 'login');
         setCurrentUser(email);
       }
-      setAuthForm({ email: '', password: '', confirmPassword: '', gender: 'male' });
-      setAuthTouched({ email: false, password: false, confirmPassword: false });
+      setAuthForm({ username: '', email: '', password: '', confirmPassword: '', gender: 'male' });
+      setAuthTouched({ username: false, email: false, password: false, confirmPassword: false });
     } finally {
       setAuthLoading(false);
     }
@@ -5406,10 +5646,10 @@ export default function App() {
     setBodyWeightEntries([]);
     setSettings(defaultSettings);
     setAuthError('');
-    setAuthForm({ email: '', password: '', confirmPassword: '', gender: 'male' });
+    setAuthForm({ username: '', email: '', password: '', confirmPassword: '', gender: 'male' });
     setShowAuthPassword(false);
     setShowAuthConfirm(false);
-    setAuthTouched({ email: false, password: false, confirmPassword: false });
+    setAuthTouched({ username: false, email: false, password: false, confirmPassword: false });
     setShowRecap(false);
     setRecapData(null);
     setRestDays([]);
@@ -6970,7 +7210,6 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
     { id: 'muscle-ranks', label: slUi ? 'Misicni rangi' : 'Muscle ranks', description: slUi ? 'Skoci na interaktivni ranking misic.' : 'Jump to interactive muscle ranking.', icon: NAV_ICONS.rankings, keywords: 'rank ranking muscle misice', quick: true, run: () => goToFeature('rankings', 'muscle-rankings') },
     { id: 'advisor-open', label: slUi ? 'Kaj trenirati danes' : 'What to train today', description: slUi ? 'Odpri advisor predlog za trening.' : 'Open the workout advisor suggestion.', icon: NAV_ICONS.advisor, keywords: 'advisor suggestion workout today nasvet', quick: true, run: () => goToFeature('advisor', 'advisor-panel') },
     { id: 'tutorial-open', label: copy.tutorialOpen, description: slUi ? 'Zazeni celoten vodeni tutorial.' : 'Start the full guided tutorial.', icon: '?', keywords: 'tutorial guide help pomoc vodič vodic', quick: false, run: () => { setCommandOpen(false); setQuickActionsOpen(false); setCommandQuery(''); setTutorialStep(0); setShowTutorial(true); } },
-    { id: 'export-data', label: copy.export, description: slUi ? 'Prenesi varnostno kopijo podatkov.' : 'Download a backup of your data.', icon: 'JSON', keywords: 'export backup json data podatki', quick: false, run: () => { setCommandOpen(false); setQuickActionsOpen(false); setCommandQuery(''); exportData(); } },
   ];
   const commandSearch = commandQuery.trim().toLowerCase();
   const commandMatches = commandActions.filter((action) => !commandSearch || `${action.label} ${action.description} ${action.keywords}`.toLowerCase().includes(commandSearch)).slice(0, 12);
@@ -6980,7 +7219,6 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
     { id: 'action-add-workout', label: copy.addWorkout, description: slUi ? 'Skoci na vnos treninga.' : 'Jump to workout entry.', icon: NAV_ICONS.dashboard, run: () => goToFeature('dashboard', 'add-workout') },
     { id: 'action-add-meal', label: copy.addMeal, description: slUi ? 'Skoci na vnos obroka.' : 'Jump to meal entry.', icon: NAV_ICONS.calories, run: () => goToFeature('calories', 'add-meal') },
     { id: 'action-add-weight', label: copy.addWeight, description: slUi ? 'Skoci na meritev telesne teze.' : 'Jump to body-weight entry.', icon: NAV_ICONS.bodyweight, run: () => goToFeature('bodyweight', 'bodyweight-tracker') },
-    { id: 'action-export-backup', label: copy.export, description: slUi ? 'Prenesi varnostno kopijo.' : 'Download a backup.', icon: 'JSON', run: () => { exportData(); setQuickActionsOpen(false); setCommandOpen(false); } },
     ...mealActionTypes.map((type) => ({
       id: `copy-yesterday-${type}`,
       label: slUi ? `Dodaj včerajšnji ${mealActionLabels[type].toLowerCase()}` : `Add yesterday ${mealActionLabels[type].toLowerCase()}`,
@@ -7042,6 +7280,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
   if (!currentUser) {
     return (
       <div className="auth-shell auth-shell-premium">
+        {showLaunchAnimation && <LaunchScreen appName={adminConfig.appName || copy.app} />}
         <section className="auth-stage">
           <div className="auth-hero-panel">
             <div className="auth-brand-lockup">
@@ -7083,28 +7322,49 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
             </div>
 
             <div className="auth-copy">
-              <p className="auth-eyebrow">{authMode === 'signup' ? copy.signup : copy.login}</p>
-              <h2 id="auth-heading">{authMode === 'signup' ? copy.authSignupTitle : copy.authLoginTitle}</h2>
-              <p>{authMode === 'signup' ? copy.authSignupSubtitle : copy.authLoginSubtitle}</p>
+              <p className="auth-eyebrow">{authMode === 'reset' ? copy.resetPasswordTitle : authMode === 'signup' ? copy.signup : copy.login}</p>
+              <h2 id="auth-heading">{authMode === 'reset' ? copy.resetPasswordTitle : authMode === 'signup' ? copy.authSignupTitle : copy.authLoginTitle}</h2>
+              <p>{authMode === 'reset' ? copy.resetPasswordDesc : authMode === 'signup' ? copy.authSignupSubtitle : copy.authLoginSubtitle}</p>
             </div>
 
-            <form className="premium-form auth-form" onSubmit={handleAuthSubmit}>
+            <form className="premium-form auth-form" onSubmit={authMode === 'reset' ? (resetStep === 'email' ? handlePasswordResetRequest : handlePasswordResetConfirm) : handleAuthSubmit}>
+              {authMode === 'signup' && (
+                <div className={`auth-field ${authTouched.username && authForm.username.trim().length < 2 ? 'invalid' : ''}`}>
+                  <label htmlFor="auth-username">{copy.username}</label>
+                  <div className="auth-input-wrap">
+                    <span className="auth-input-icon" aria-hidden="true">ID</span>
+                    <input id="auth-username" type="text" autoComplete="username" placeholder={copy.usernamePlaceholder} value={authForm.username} onBlur={() => setAuthTouched((c) => ({ ...c, username: true }))} onChange={(e) => setAuthForm((c) => ({ ...c, username: e.target.value }))} />
+                  </div>
+                </div>
+              )}
               <div className={`auth-field ${authTouched.email && authForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(authForm.email.trim()) ? 'invalid' : ''}`}>
                 <label htmlFor="auth-email">{copy.email}</label>
                 <div className="auth-input-wrap">
                   <span className="auth-input-icon" aria-hidden="true">@</span>
-                  <input id="auth-email" type="email" inputMode="email" autoComplete="email" placeholder="you@example.com" value={authForm.email} onBlur={() => setAuthTouched((c) => ({ ...c, email: true }))} onChange={(e) => setAuthForm((c) => ({ ...c, email: e.target.value }))} />
+                  <input id="auth-email" type="email" inputMode="email" autoComplete="email" placeholder="you@example.com" value={authMode === 'reset' ? resetForm.email : authForm.email} onBlur={() => setAuthTouched((c) => ({ ...c, email: true }))} onChange={(e) => authMode === 'reset' ? setResetForm((c) => ({ ...c, email: e.target.value })) : setAuthForm((c) => ({ ...c, email: e.target.value }))} />
                 </div>
               </div>
 
-              <div className="auth-field">
-                <label htmlFor="auth-password">{copy.password}</label>
-                <div className="auth-input-wrap">
-                  <span className="auth-input-icon" aria-hidden="true">#</span>
-                  <input id="auth-password" type={showAuthPassword ? 'text' : 'password'} autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} value={authForm.password} onBlur={() => setAuthTouched((c) => ({ ...c, password: true }))} onChange={(e) => setAuthForm((c) => ({ ...c, password: e.target.value }))} />
-                  <button className="auth-field-action" type="button" onClick={() => setShowAuthPassword((v) => !v)} aria-label={showAuthPassword ? copy.authHidePassword : copy.authShowPassword}>{showAuthPassword ? copy.authHideShort : copy.authShowShort}</button>
+              {authMode === 'reset' && resetStep === 'code' && (
+                <div className="auth-field">
+                  <label htmlFor="auth-reset-code">{copy.resetCode}</label>
+                  <div className="auth-input-wrap">
+                    <span className="auth-input-icon" aria-hidden="true">6</span>
+                    <input id="auth-reset-code" type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={resetForm.code} onChange={(e) => setResetForm((c) => ({ ...c, code: e.target.value.replace(/\D/g, '').slice(0, 6) }))} />
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {(authMode !== 'reset' || resetStep === 'code') && (
+                <div className="auth-field">
+                  <label htmlFor="auth-password">{authMode === 'reset' ? copy.resetNewPassword : copy.password}</label>
+                  <div className="auth-input-wrap">
+                    <span className="auth-input-icon" aria-hidden="true">#</span>
+                    <input id="auth-password" type={showAuthPassword ? 'text' : 'password'} autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} value={authMode === 'reset' ? resetForm.password : authForm.password} onBlur={() => setAuthTouched((c) => ({ ...c, password: true }))} onChange={(e) => authMode === 'reset' ? setResetForm((c) => ({ ...c, password: e.target.value })) : setAuthForm((c) => ({ ...c, password: e.target.value }))} />
+                    <button className="auth-field-action" type="button" onClick={() => setShowAuthPassword((v) => !v)} aria-label={showAuthPassword ? copy.authHidePassword : copy.authShowPassword}>{showAuthPassword ? copy.authHideShort : copy.authShowShort}</button>
+                  </div>
+                </div>
+              )}
 
               {authMode === 'signup' && (
                 <div className="password-quality" aria-live="polite">
@@ -7117,12 +7377,12 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                 </div>
               )}
 
-              {authMode === 'signup' ? (
+              {(authMode === 'signup' || (authMode === 'reset' && resetStep === 'code')) ? (
                 <div className="auth-field">
-                  <label htmlFor="auth-confirm">{copy.confirmPassword}</label>
+                  <label htmlFor="auth-confirm">{authMode === 'reset' ? copy.resetConfirmNewPassword : copy.confirmPassword}</label>
                   <div className="auth-input-wrap">
                     <span className="auth-input-icon" aria-hidden="true">#</span>
-                    <input id="auth-confirm" type={showAuthConfirm ? 'text' : 'password'} autoComplete="new-password" value={authForm.confirmPassword} onBlur={() => setAuthTouched((c) => ({ ...c, confirmPassword: true }))} onChange={(e) => setAuthForm((c) => ({ ...c, confirmPassword: e.target.value }))} />
+                    <input id="auth-confirm" type={showAuthConfirm ? 'text' : 'password'} autoComplete="new-password" value={authMode === 'reset' ? resetForm.confirmPassword : authForm.confirmPassword} onBlur={() => setAuthTouched((c) => ({ ...c, confirmPassword: true }))} onChange={(e) => authMode === 'reset' ? setResetForm((c) => ({ ...c, confirmPassword: e.target.value })) : setAuthForm((c) => ({ ...c, confirmPassword: e.target.value }))} />
                     <button className="auth-field-action" type="button" onClick={() => setShowAuthConfirm((v) => !v)} aria-label={showAuthConfirm ? copy.authHidePassword : copy.authShowPassword}>{showAuthConfirm ? copy.authHideShort : copy.authShowShort}</button>
                   </div>
                 </div>
@@ -7139,12 +7399,14 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               ) : null}
 
               {authError ? <p className="auth-error auth-error-premium" role="alert">{authError}</p> : null}
-              <button className="action-btn-primary full-width auth-submit" type="submit" disabled={authLoading}>{authLoading ? '...' : authMode === 'signup' ? copy.authCreate : copy.authEnter}</button>
+              <button className="action-btn-primary full-width auth-submit" type="submit" disabled={authLoading}>{authLoading ? '...' : authMode === 'reset' ? (resetStep === 'email' ? copy.resetSendCode : copy.resetApply) : authMode === 'signup' ? copy.authCreate : copy.authEnter}</button>
+              {authMode === 'login' && <button className="auth-link-button" type="button" onClick={() => { setAuthMode('reset'); setAuthError(''); setResetForm((c) => ({ ...c, email: authForm.email })); }}>{copy.forgotPassword}</button>}
+              {authMode === 'reset' && <button className="auth-link-button" type="button" onClick={() => { setAuthMode('login'); setAuthError(''); setResetStep('email'); }}>{copy.resetBackToLogin}</button>}
             </form>
 
             {adminConfig.signupEnabled && <div className="auth-card-footer">
               <span>{authMode === 'signup' ? copy.authSwitchLogin : copy.authSwitchSignup}</span>
-              <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAuthError(''); }}>{authMode === 'signup' ? copy.login : copy.signup}</button>
+              <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAuthError(''); setResetStep('email'); }}>{authMode === 'signup' ? copy.login : copy.signup}</button>
             </div>}
             <p className="auth-local-note">{copy.authLocalOnly}</p>
           </section>
@@ -7156,6 +7418,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
   if (adminConfig.maintenanceMode && currentUser !== ADMIN_EMAIL) {
     return (
       <div className="auth-shell auth-shell-premium">
+        {showLaunchAnimation && <LaunchScreen appName={adminConfig.appName || copy.app} />}
         <section className="glass-panel auth-card auth-card-premium" style={{maxWidth:'460px',width:'100%'}}>
           <div className="auth-copy">
             <p className="auth-eyebrow">{adminConfig.appName || copy.app}</p>
@@ -7171,6 +7434,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
 
   return (
     <div className="app-container">
+      {showLaunchAnimation && <LaunchScreen appName={adminConfig.appName || copy.app} />}
       <aside className="glass-panel sidebar" {...tourAttrs('navigation')}>
         <div className="brand"><div className="logo-icon">P</div><h2>{adminConfig.appName || copy.app}</h2></div>
         <nav className="nav-menu" aria-label={slUi ? 'Glavna navigacija' : 'Main navigation'}>
@@ -7213,7 +7477,7 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               <span>{slUi ? 'Akcije' : 'Actions'}</span>
             </button>
             <button className="context-help-btn topbar-help-btn" type="button" onClick={() => setHelpTopic('tutorial')} title={copy.tutorialOpen} aria-label={copy.tutorialOpen}>?</button>
-            <span className="user-chip">{getUserBadge(currentUser)}</span>
+            <span className="user-chip">{getUserDisplayName(currentUser)}</span>
             <button className="action-btn-outline" type="button" onClick={logout}>{copy.logout}</button>
           </div>
         </header>
@@ -7226,7 +7490,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
         </section>
         {adminConfig.announcementEnabled && adminConfig.announcementText && <section className="glass-panel admin-announcement-banner fade-in-up"><strong>{settings.language === 'sl' ? 'Admin obvestilo' : 'Admin notice'}</strong><span>{adminConfig.announcementText}</span></section>}
         {!storageAvailable && <section className="glass-panel storage-warning-banner fade-in-up" role="alert"><div><h3>{copy.storageUnavailableTitle}</h3><p>{copy.storageUnavailableDesc}</p></div></section>}
-        {backupDue && adminConfig.backupBannerEnabled && <section className="glass-panel backup-banner fade-in-up"><div><h3>{copy.backupTitle}</h3><p>{copy.backupText}</p></div><button className="action-btn-primary" type="button" onClick={exportData}>{copy.export}</button></section>}
+        {backupDue && adminConfig.backupBannerEnabled && <section className="glass-panel backup-banner fade-in-up"><div><h3>{copy.cloudSyncTitle}</h3><p>{copy.cloudSyncDesc}</p></div><span className="sync-status-pill">{networkOnline ? (syncing ? 'Syncing' : 'Ready') : 'Offline'}</span></section>}
+        {(!networkOnline || pendingSync) && <section className="glass-panel offline-sync-banner fade-in-up" role="status"><div><h3>{networkOnline ? copy.offlinePendingTitle : copy.offlineSyncTitle}</h3><p>{networkOnline ? copy.offlinePendingDesc : copy.offlineSyncDesc}</p></div><span className="sync-status-pill">{networkOnline ? 'Pending' : '7 days'}</span></section>}
 
         {activeSection === 'dashboard' && <>
           <section className="glass-panel dashboard-hero-card fade-in-up">
@@ -7265,7 +7530,6 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               <button className="action-btn-outline" type="button" onClick={() => goToFeature('calories', 'add-meal')}>{copy.addMeal}</button>
               <button className="action-btn-outline" type="button" onClick={() => addWater(250)}>+250 ml</button>
               <button className="action-btn-outline" type="button" onClick={() => goToFeature('bodyweight', 'bodyweight-tracker')}>{copy.addWeight}</button>
-              <button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button>
             </div>
           </section>
           <div className="dashboard-grid dashboard-home-grid">
@@ -8688,8 +8952,8 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
                 <small>{settings.language === 'sl' ? 'Barva, enote, jezik in format datuma.' : 'Color, units, language, and date format.'}</small>
               </button>
               <button className="settings-guide-card" type="button" onClick={() => setHelpTopic('data')} {...tourAttrs('settings-data')}>
-                <span>{settings.language === 'sl' ? 'Backup in podatki' : 'Backup and data'}</span>
-                <small>{settings.language === 'sl' ? 'Export, import, install, clear in varnostne kopije.' : 'Export, import, install, clear, and backups.'}</small>
+                <span>{settings.language === 'sl' ? 'Sync in podatki' : 'Sync and data'}</span>
+                <small>{settings.language === 'sl' ? 'Offline vnos, avtomatski sync, install in clear.' : 'Offline entry, automatic sync, install, and clear.'}</small>
               </button>
               <button className="settings-guide-card" type="button" onClick={() => { setTutorialStep(0); setShowTutorial(true); }} {...tourAttrs('settings-help')}>
                 <span>{copy.tutorialOpen}</span>
@@ -8748,9 +9012,6 @@ Return ONLY JSON: {"bodyFatPercent":15.5,"confidence":"low|moderate|high","descr
               </div>
             </div>
             <div className="settings-button-row privacy-actions-row">
-              <button className="action-btn-outline" type="button" onClick={exportData}>{copy.export}</button>
-              <button className="action-btn-outline" type="button" onClick={exportEncryptedData}>{copy.exportEncrypted}</button>
-              <button className="action-btn-outline" type="button" onClick={() => fileInputRef.current?.click()}>{copy.import}</button>
               <a className="action-btn-outline privacy-link-btn" href={`${import.meta.env.BASE_URL}privacy.html`} target="_blank" rel="noreferrer">{copy.privacyPolicy}</a>
               <button className="action-btn-outline danger-button" type="button" onClick={clearData}>{copy.clear}</button>
             </div>

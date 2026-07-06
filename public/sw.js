@@ -59,6 +59,13 @@ self.addEventListener('fetch', (e) => {
         if (res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()));
         return res;
       })
-      .catch(() => caches.match(e.request))
+      .catch(async () => {
+        const cached = await caches.match(e.request);
+        if (cached) return cached;
+        if (e.request.mode === 'navigate' || e.request.destination === 'document') {
+          return (await caches.match(`${APP_SCOPE}index.html`)) || caches.match(APP_SCOPE);
+        }
+        return Response.error();
+      })
   );
 });
